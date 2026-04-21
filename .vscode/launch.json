@@ -3,21 +3,173 @@
   "configurations": [
     {
       "type": "java",
-      "name": "Fabric Client",
       "request": "launch",
-      "mainClass": "net.fabricmc.loader.launch.knot.KnotClient",
-      "projectName": "fabric",
-      "vmArgs": "-Dfabric-api.debug=true",
-      "args": "--accessToken dummy --uuid dummy --userProperties {} --userGameDir \\"${workspaceFolder}/runs/client\\""
+      "name": "debug fabric client",
+      "preLaunchTask": "debug fabric client",
+      "presentation": {
+        "group": "FastHarvester Debug",
+        "order": 0
+      },
+      "args": [
+        "--width",
+        "1960",
+        "--height",
+        "1080"
+      ]
     },
     {
       "type": "java",
-      "name": "NeoForge Client",
       "request": "launch",
-      "mainClass": "net.neoforged.launcher.Main",
+      "name": "debug fabric client (no related mods)",
+      "preLaunchTask": "debug fabric client (no related mods)",
+      "presentation": {
+        "group": "FastHarvester Debug",
+        "order": 1
+      },
+      "args": [
+        "--width",
+        "1960",
+        "--height",
+        "1080"
+      ]
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "debug neoforge client",
+      "preLaunchTask": "debug neoforge client",
+      "presentation": {
+        "group": "FastHarvester Debug",
+        "order": 2
+      },
+      "args": [
+        "--width",
+        "1960",
+        "--height",
+        "1080"
+      ]
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "debug neoforge client (no related mods)",
+      "preLaunchTask": "debug neoforge client (no related mods)",
+      "presentation": {
+        "group": "FastHarvester Debug",
+        "order": 3
+      },
+      "args": [
+        "--width",
+        "1960",
+        "--height",
+        "1080"
+      ]
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "debug fabric server",
+      "preLaunchTask": "debug fabric server",
+      "presentation": {
+        "group": "FastHarvester Debug",
+        "order": 4
+      }
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "debug fabric server (no related mods)",
+      "preLaunchTask": "debug fabric server (no related mods)",
+      "presentation": {
+        "group": "FastHarvester Debug",
+        "order": 5
+      }
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "debug neoforge server",
+      "preLaunchTask": "debug neoforge server",
+      "presentation": {
+        "group": "FastHarvester Debug",
+        "order": 6
+      }
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "debug neoforge server (no related mods)",
+      "preLaunchTask": "debug neoforge server (no related mods)",
+      "presentation": {
+        "group": "FastHarvester Debug",
+        "order": 7
+      }
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "NeoForge Client (:neoforge)",
+      "presentation": {
+        "group": "Mod Development - neoforge",
+        "order": 0
+      },
       "projectName": "neoforge",
-      "vmArgs": "-Dneoforge.debug=true",
-      "args": "--accessToken dummy --uuid dummy --userProperties {} --userGameDir \\"${workspaceFolder}/runs/client\\""
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@D:\\Mod_Source\\FastHarvester\\neoforge\\build\\moddev\\clientRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@D:\\Mod_Source\\FastHarvester\\neoforge\\build\\moddev\\clientRunVmArgs.txt",
+        "-Dfml.modFolders\u003dFastHarvester%%D:\\Mod_Source\\FastHarvester\\neoforge\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\neoforge\\run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "NeoForge Data (:neoforge)",
+      "presentation": {
+        "group": "Mod Development - neoforge",
+        "order": 1
+      },
+      "projectName": "neoforge",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@D:\\Mod_Source\\FastHarvester\\neoforge\\build\\moddev\\dataRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@D:\\Mod_Source\\FastHarvester\\neoforge\\build\\moddev\\dataRunVmArgs.txt",
+        "-Dfml.modFolders\u003dFastHarvester%%D:\\Mod_Source\\FastHarvester\\neoforge\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\neoforge\\run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "NeoForge Server (:neoforge)",
+      "presentation": {
+        "group": "Mod Development - neoforge",
+        "order": 2
+      },
+      "projectName": "neoforge",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@D:\\Mod_Source\\FastHarvester\\neoforge\\build\\moddev\\serverRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@D:\\Mod_Source\\FastHarvester\\neoforge\\build\\moddev\\serverRunVmArgs.txt",
+        "-Dfml.modFolders\u003dFastHarvester%%D:\\Mod_Source\\FastHarvester\\neoforge\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\neoforge\\run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
     }
   ]
 }

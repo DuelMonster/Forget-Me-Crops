@@ -2,5 +2,24 @@
     "java.configuration.updateBuildConfiguration": "automatic",
     "java.project.sourcePaths": ["common/src/main/java", "fabric/src/main/java", "neoforge/src/main/java"],
     "java.project.outputPath": "build/classes/java/main",
-    "java.compile.nullAnalysis.mode": "disabled"
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.import.gradle.enabled": true,
+    "java.import.gradle.wrapper.enabled": true,
+    "java.import.gradle.java.home": "C:/Program Files/Eclipse Adoptium/jdk-21.0.10.7-hotspot",
+    "java.jdt.ls.java.home": "C:/Program Files/Eclipse Adoptium/jdk-21.0.10.7-hotspot",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "C:/Program Files/Eclipse Adoptium/jdk-21.0.10.7-hotspot",
+            "default": true
+        }
+    ],
+    "java.project.referencedLibraries": [
+        "${workspaceFolder}/.gradle/loom-cache/remapped_mods/remapped/com/terraformersmc/modmenu-*/*/*.jar"
+    ],
+    "java.jdt.ls.vmargs": "-Xmx2G -XX:+UseG1GC -XX:+UseStringDeduplication",
+    "java.errors.incompleteClasspath.severity": "ignore",
+    "java.import.exclusions": ["**/.gradle/**", "**/build/**", "**/runs/**", "**/releases/**"],
+    "files.watcherExclude": {"**/.gradle/**": true, "**/build/**": true, "**/runs/**": true, "**/releases/**": true},
+    "search.exclude": {"**/.gradle/**": true, "**/build/**": true, "**/runs/**": true, "**/releases/**": true}
 }

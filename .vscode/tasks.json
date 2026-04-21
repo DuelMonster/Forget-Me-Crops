@@ -1,0 +1,69 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "debug fabric client",
+			"type": "shell",
+			"command": ".\\gradlew.bat",
+			"args": [":fabric:runClient"],
+			"options": {"cwd": "${workspaceFolder}"},
+			"group": "build"
+		},
+		{
+			"label": "debug fabric client (no related mods)",
+			"type": "shell",
+			"command": ".\\gradlew.bat",
+			"args": ["-PfhNoRelatedMods=true", ":fabric:runClient"],
+			"options": {"cwd": "${workspaceFolder}"},
+			"group": "build"
+		},
+		{
+			"label": "debug neoforge client",
+			"type": "shell",
+			"command": ".\\gradlew.bat",
+			"args": [":neoforge:runClient"],
+			"options": {"cwd": "${workspaceFolder}"},
+			"group": "build"
+		},
+		{
+			"label": "debug neoforge client (no related mods)",
+			"type": "shell",
+			"command": ".\\gradlew.bat",
+			"args": ["-PfhNoRelatedMods=true", ":neoforge:runClient"],
+			"options": {"cwd": "${workspaceFolder}"},
+			"group": "build"
+		},
+		{
+			"label": "debug fabric server",
+			"type": "shell",
+			"command": ".\\gradlew.bat",
+			"args": [":fabric:runServer"],
+			"options": {"cwd": "${workspaceFolder}"},
+			"group": "build"
+		},
+		{
+			"label": "debug fabric server (no related mods)",
+			"type": "shell",
+			"command": ".\\gradlew.bat",
+			"args": ["-PfhNoRelatedMods=true", ":fabric:runServer"],
+			"options": {"cwd": "${workspaceFolder}"},
+			"group": "build"
+		},
+		{
+			"label": "debug neoforge server",
+			"type": "shell",
+			"command": ".\\gradlew.bat",
+			"args": [":neoforge:runServer"],
+			"options": {"cwd": "${workspaceFolder}"},
+			"group": "build"
+		},
+		{
+			"label": "debug neoforge server (no related mods)",
+			"type": "shell",
+			"command": ".\\gradlew.bat",
+			"args": ["-PfhNoRelatedMods=true", ":neoforge:runServer"],
+			"options": {"cwd": "${workspaceFolder}"},
+			"group": "build"
+		}
+	]
+}
