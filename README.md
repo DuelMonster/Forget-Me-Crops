@@ -1,39 +1,142 @@
-# FastHarvester (v${mod_version})
+# FastHarvester
+
+FastHarvester automates crop harvesting for Fabric and NeoForge.
+
+Put a hoe in an item frame on top of a chest, grow crops around it, and the farm will harvest into that chest automatically.
+
+If you want the implementation details, config reference, and technical behavior notes, see [TECHNICAL.md](TECHNICAL.md).
+
+## Quick Setup
+
+1. Place a chest at the same height as the farm you want to automate.
+2. For normal crop farms, waterlog that chest.
+3. Put an item frame on the top face of the chest.
+4. Put any hoe in the item frame.
+5. Grow supported crops around the chest on that same level.
+
+That setup is your harvest anchor.
+
+### Important placement rules
+
+- The chest should sit on the same level as the crop blocks you want harvested.
+- FastHarvester only scans and harvests crops on the same level as the item frame.
+- It will not harvest crops above or below that layer.
+- Normal crop farms require a waterlogged chest.
+- Nether Wart farms are an exception and can use a normal chest.
+
+## What It Does
+
+FastHarvester checks farms every so often, harvests mature crops, puts the drops into the chest, and replants when it can.
+
+It also repairs common farm problems automatically:
+
+- Replants empty farmland from items stored in the chest
+- Replants Nether Wart from chest stock on Soul Sand
+- Retills dirt or grass back into farmland when a small gap appears
+- Replaces a broken hoe from chest stock if another hoe is available
+- Loads a spare hoe from the chest into an empty frame when possible
+- Avoids guessing across ambiguous border tiles, which helps stop neighboring farms from bleeding into each other
+
+Anchors run whenever their chunks are loaded. That means vanilla chunk loaders and modded chunk loaders can keep farms active even when no player is standing nearby.
+
+## Supported Crops
+
+- Wheat
+- Carrots
+- Potatoes
+- Beetroots
+- Torchflower
+- Sweet Berries
+- Nether Wart
+- Melons
+- Pumpkins
+
+Sweet berry bushes are harvested without breaking the bush. Melons and pumpkins are harvested while leaving the stems in place so they can regrow normally.
+
+## Configuration
+
+Config files: `config/fastharvester-server.toml` and `config/fastharvester-client.toml`
+
+On Fabric, if Mod Menu is installed, these settings can also be edited in-game from the mod's Configure button.
+On NeoForge, the mod now uses NeoForge's native config system and exposes the same config files through the built-in Mods list Config button.
+
+Here are the main settings you can change:
+
+| Option                  | Default     | What it does                                                                                               |
+|-------------------------|-------------|-------------------------------------------------------------------------------------------------------------|
+| `tickInterval`          | `300`       | How often each anchor runs. `300` ticks is 15 seconds.                                                     |
+| `frameRediscoveryInterval` | `100`    | How often loaded chunks are rescanned to refresh the recorded frame list.                                  |
+| `scanRange`             | `4`         | How far the farm can reach from the anchor. A value of `4` covers a 9×9 area.                              |
+| `durabilityMode`        | `normal`    | Controls how much wear the hoe takes while harvesting and repairing the farm.                               |
+| `mendingNegation`       | `true`      | If enabled, a hoe with Mending will not lose durability from this mod's actions.                            |
+| `chestFullCooldownTicks`| `100`       | How long the anchor waits before trying again when the chest is full.                                       |
+| `maxSpiralDurationTicks`| `100`       | Spreads farm work across multiple ticks to reduce lag spikes on larger farms.                               |
+| `rotationMode`         | `follow_harvest_spiral`     | Controls how the frame rotates during a harvest cycle.                                      |
+| `debugLogging`          | `false`     | Writes extra farm activity information to the log for troubleshooting.                                      |
+| `seedClutterMode`       | `reduced`   | Controls how extra wheat and beetroot seeds are handled.                                                    |
+| `seedReservePerType`    | `80`        | In `reduced` mode, this is how many seeds of each supported type the chest will keep before extras are discarded. |
+
+Client config:
+
+| Option             | Default | What it does                                   |
+|--------------------|---------|------------------------------------------------|
+| `harvestParticles` | `true`  | Turns the harvest particle effects on or off.  |
+
+### Durability Mode
+
+| Mode                | Behavior                                                                    |
+|---------------------|-----------------------------------------------------------------------------|
+| `normal`            | Uses vanilla-style durability loss and respects Unbreaking.                 |
+| `ignore_unbreaking` | Damages the hoe normally but ignores the Unbreaking enchantment.            |
+| `none`              | Disables durability loss from harvesting and farm maintenance entirely.     |
+
+### Rotation Mode
+
+| Mode                        | Behavior                                                                 |
+|-----------------------------|--------------------------------------------------------------------------|
+| `step_per_harvest`          | Advances the frame by 1 step for each full farm harvest that gets at least one crop. |
+| `full_rotation_per_harvest` | Rotates through all 8 frame steps once across the full farm harvest.     |
+| `follow_harvest_spiral`     | Rotates through all 8 frame steps multiple times across the harvest, matching the number of rings processed around the frame. |
+
+### Seed Clutter Mode
+
+| Mode      | Behavior                                                  |
+|-----------|-----------------------------------------------------------|
+| `normal`  | Keeps all supported seed drops.                           |
+| `reduced` | Keeps only a reserve amount of supported seeds in the chest. |
+| `none`    | Discards supported seed drops completely.                 |
+
+Right now seed clutter filtering only applies to Wheat Seeds and Beetroot Seeds.
+
+## Compatibility
+
+FastHarvester works with [FastItemFrames by Fuzss](https://modrinth.com/mod/fastitemframes). If that mod is installed, FastHarvester will use its faster frame lookup path automatically.
+On Fabric, that FastItemFrames lookup path is implemented in a remap-safe way so packaged release jars can enumerate loaded FIF block entities correctly, not just dev runs.
+
+On Fabric, FastHarvester exposes an in-game config screen through Mod Menu when Mod Menu is present.
+On NeoForge, FastHarvester exposes NeoForge's built-in config screen from the Mods list.
+
+Release metadata now embeds the configured mod version correctly, and Fabric debug logging now reports frame-discovery changes without repeating the same discovery line every tick.
+The Fabric Mod Menu config screen now avoids the duplicate per-frame blur call that could crash heavily modded clients while rendering UI overlays.
+The active Fabric runtime ticker now also restores the same empty-gap farmland maintenance as the shared scanner path, so retilling and replanting work again around established crop plots.
+Newly loaded anchors now wait for the first configured `tickInterval` before doing any harvest, till, replant, or hoe-replacement work.
+FastHarvester now records frames as chunks load, rescans loaded chunks on the configurable `frameRediscoveryInterval`, and marks recorded frames inactive when their chunk unloads so inactive anchors are skipped until they are seen again.
 
 ## Versions
+
 - Minecraft 1.21.11
-- Fabric Loader 0.18.2
-- Fabric API 0.139.5+1.21.11
-- NeoForge 21.11.3-beta
-# MultiLoader Template
+- Fabric Loader 0.18.6
+- Fabric API 0.141.3+1.21.11
+- NeoForge 21.11.42
 
-This project provides a Gradle project template that can compile Minecraft mods for multiple modloaders using a common project for the sources. This project does not require any third party libraries or dependencies. If you have any questions or want to discuss the project, please join our [Discord](https://discord.myceliummod.network).
+## Building
 
-## Getting Started
+```bash
+./gradlew.bat clean build
+```
 
-### IntelliJ IDEA
-This guide will show how to import the MultiLoader Template into IntelliJ IDEA. The setup process is roughly equivalent to setting up the modloaders independently and should be very familiar to anyone who has worked with their MDKs.
+Release jars are copied into `releases/`.
 
-1. Clone or download this repository to your computer.
-2. Configure the project by setting the properties in the `gradle.properties` file. You will also need to change the `rootProject.name`  property in `settings.gradle`, this should match the folder name of your project, or else IDEA may complain.
-3. Open the template's root folder as a new project in IDEA. This is the folder that contains this README.md file and the gradlew executable.
-4. If your default JVM/JDK is not Java 21 you will encounter an error when opening the project. This error is fixed by going to `File > Settings > Build, Execution, Deployment > Build Tools > Gradle > Gradle JVM` and changing the value to a valid Java 21 JVM. You will also need to set the Project SDK to Java 21. This can be done by going to `File > Project Structure > Project SDK`. Once both have been set open the Gradle tab in IDEA and click the refresh button to reload the project.
-5. Open your Run/Debug Configurations. Under the `Application` category there should now be options to run Fabric and NeoForge projects. Select one of the client options and try to run it.
-6. Assuming you were able to run the game in step 5 your workspace should now be set up.
+## License
 
-### Eclipse
-While it is possible to use this template in Eclipse it is not recommended. During the development of this template multiple critical bugs and quirks related to Eclipse were found at nearly every level of the required build tools. While we continue to work with these tools to report and resolve issues support for projects like these are not there yet. For now Eclipse is considered unsupported by this project. The development cycle for build tools is notoriously slow so there are no ETAs available.
-
-## Development Guide
-When using this template the majority of your mod should be developed in the `common` project. The `common` project is compiled against the vanilla game and is used to hold code that is shared between the different loader-specific versions of your mod. The `common` project has no knowledge or access to ModLoader specific code, apis, or concepts. Code that requires something from a specific loader must be done through the project that is specific to that loader, such as the `fabric` or `neoforge` projects.
-
-Loader specific projects such as the `fabric` and `neoforge` project are used to load the `common` project into the game. These projects also define code that is specific to that loader. Loader specific projects can access all the code in the `common` project. It is important to remember that the `common` project can not access code from loader specific projects.
-
-## Removing Platforms and Loaders
-While this template has support for many modloaders, new loaders may appear in the future, and existing loaders may become less relevant.
-
-Removing loader specific projects is as easy as deleting the folder, and removing the `include("projectname")` line from the `settings.gradle` file.
-For example if you wanted to remove support for `forge` you would follow the following steps:
-
-1. Delete the subproject folder. For example, delete `MultiLoader-Template/forge`.
-2. Remove the project from `settings.gradle`. For example, remove `include("forge")`. 
+MIT. See LICENSE.
