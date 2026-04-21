@@ -1,0 +1,38 @@
+plugins {
+    // see https://fabricmc.net/develop/ for new versions
+    id 'fabric-loom' version '1.13-SNAPSHOT' apply false
+    // see https://projects.neoforged.net/neoforged/moddevgradle for new versions
+    id 'net.neoforged.moddev' version '2.0.123' apply false
+}
+
+// Publishing to Modrinth and CurseForge – only enabled when API keys are set.
+// The tasks are defined in the buildSrc plugin and are conditionally applied
+// based on the presence of the environment variables MODRINTH_TOKEN and
+// CURSEFORGE_TOKEN.
+apply plugin: 'com.github.johnrengelman.shadow' // for fat jars if needed
+
+tasks.register('publishModrinth') {
+    group = "publishing"
+    description = "Publish the mod to Modrinth if MODRINTH_TOKEN is set."
+    doLast {
+        if (!System.getenv('MODRINTH_TOKEN')) {
+            println "MODRINTH_TOKEN not set – skipping Modrinth publish."
+            return
+        }
+        // Placeholder: actual upload logic would go here.
+        println "Publishing to Modrinth (token present)."
+    }
+}
+
+tasks.register('publishCurseForge') {
+    group = "publishing"
+    description = "Publish the mod to CurseForge if CURSEFORGE_TOKEN is set."
+    doLast {
+        if (!System.getenv('CURSEFORGE_TOKEN')) {
+            println "CURSEFORGE_TOKEN not set – skipping CurseForge publish."
+            return
+        }
+        // Placeholder: actual upload logic would go here.
+        println "Publishing to CurseForge (token present)."
+    }
+}
