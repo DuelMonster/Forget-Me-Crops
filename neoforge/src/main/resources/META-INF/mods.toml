@@ -7,7 +7,7 @@ description="Automates crop harvesting for Fabric and NeoForge."
 logoFile="assets/fastharvester/icon.png"
 credits="Jared"
 authors="Jared"
-license="CC0-1.0"
+license="MIT"
 updateJSONURL="https://api.modrinth.com/v2/project/fastharvester/version"
 updateJSONURL="https://api.curseforge.com/mods/123456"
 # Dependencies are handled by the NeoForge Gradle plugin.
