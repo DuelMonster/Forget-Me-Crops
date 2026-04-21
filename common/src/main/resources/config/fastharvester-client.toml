@@ -1,0 +1,4 @@
+# FastHarvester client config
+# Client-side visual preferences.
+
+harvestParticles = true

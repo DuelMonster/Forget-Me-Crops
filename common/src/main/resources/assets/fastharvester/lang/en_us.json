@@ -1,0 +1,13 @@
+{
+  "fastharvester.config.tickInterval": "Tick Interval",
+  "fastharvester.config.scanRange": "Scan Range",
+  "fastharvester.config.durabilityMode": "Durability Mode",
+  "fastharvester.config.mendingNegation": "Mending Negation",
+  "fastharvester.config.debugLogging": "Debug Logging",
+  "fastharvester.config.chestFullCooldownTicks": "Chest Full Cooldown Ticks",
+  "fastharvester.config.maxSpiralDurationTicks": "Max Spiral Duration Ticks",
+  "fastharvester.config.rotationMode": "Rotation Mode",
+  "fastharvester.config.seedClutterMode": "Seed Clutter Mode",
+  "fastharvester.config.seedReservePerType": "Seed Reserve Per Type",
+  "fastharvester.config.harvestParticles": "Harvest Particles"
+}
