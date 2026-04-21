@@ -1,0 +1,29 @@
+package com.fastharvester.mixin;
+
+import com.fastharvester.Constants;
+import net.minecraft.client.Minecraft;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+/**
+ * MixinMinecraft: The backstage pass to Minecraft's main class!
+ * <p>
+ * This mixin sneaks in at the end of Minecraft's constructor to let you know FastHarvester is here and ready to party.
+ * </p>
+ * <p>
+ * Why does this matter? Because sometimes you just want to say hi (and check the version).
+ * </p>
+ */
+@Mixin(Minecraft.class)
+public class MixinMinecraft {
+    /**
+     * Injects a log message at the end of Minecraft's constructor. Because every mod wants to make an entrance.
+     */
+    @Inject(at = @At("TAIL"), method = "<init>")
+    private void init(CallbackInfo info) {
+        Constants.LOG.info("This line is printed by an example mod common mixin!");
+        Constants.LOG.info("MC Version: {}", Minecraft.getInstance().getVersionType());
+    }
+}

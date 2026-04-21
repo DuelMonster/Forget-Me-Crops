@@ -4,10 +4,19 @@ import com.fastharvester.FastHarvester;
 import net.neoforged.fml.common.Mod;
 
 /**
- * NeoForge mod initializer. Wires up FastHarvester for NeoForge.
+ * FastHarvesterNeoForge: The futuristic doorman for FastHarvester on NeoForge!
+ * <p>
+ * This class is the official entrypoint for NeoForge. It sets up the mod and ensures the crops of tomorrow are ready to be harvested today.
+ * </p>
+ * <p>
+ * Why does this matter? Because NeoForge wants to feel special, and this class rolls out the red carpet.
+ * </p>
  */
 @Mod("fastharvester")
 public class FastHarvesterNeoForge {
+    /**
+     * Called by NeoForge when the mod is loaded. The future is now!
+     */
     public FastHarvesterNeoForge() {
         // Loader-specific config loading would go here
         FastHarvester.init();
