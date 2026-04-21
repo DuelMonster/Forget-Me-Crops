@@ -15,6 +15,10 @@ import com.fastharvester.enums.SeedClutterMode;
  */
 public class Config {
     /**
+     * Creates a new Config with default values. Tweak as needed for your farm's personality!
+     */
+    public Config() {}
+    /**
      * How often (in ticks) should we try to harvest? Lower = faster, higher = lazier.
      */
     public int tickInterval = 300;

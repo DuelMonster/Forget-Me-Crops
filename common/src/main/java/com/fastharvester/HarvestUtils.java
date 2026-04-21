@@ -10,5 +10,9 @@ package com.fastharvester;
  * </p>
  */
 public class HarvestUtils {
+    /**
+     * Creates a new HarvestUtils. One day, this will be a toolbox overflowing with cleverness!
+     */
+    public HarvestUtils() {}
     // Placeholder for harvest utility methods. One day, this will be a toolbox overflowing with cleverness!
 }

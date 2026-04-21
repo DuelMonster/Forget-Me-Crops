@@ -28,6 +28,9 @@ public final class ModCommon {
     /**
      * Private constructor: No one gets to make an instance of this class. It's too cool for that.
      */
+    /**
+     * Private constructor: No one gets to make an instance of this class. It's too cool for that.
+     */
     private ModCommon() {
         // Utility class – no instances allowed! (Seriously, don't try.)
     }

@@ -16,6 +16,11 @@ import net.minecraft.world.item.Items;
 public class CommonClass {
 
     /**
+     * Creates a new CommonClass. Not much to do here—this class is all about static methods!
+     */
+    public CommonClass() {}
+
+    /**
      * Initializes the common logic. Called by loader-specific entrypoints to show off how cool shared code can be.
      * <p>
      * Logs some fun facts about the environment and diamonds, because who doesn't love diamonds?

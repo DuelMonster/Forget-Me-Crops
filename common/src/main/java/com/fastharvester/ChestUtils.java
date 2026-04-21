@@ -10,5 +10,9 @@ package com.fastharvester;
  * </p>
  */
 public class ChestUtils {
+    /**
+     * Creates a new ChestUtils. Not much to see here yet, but one day this will be legendary!
+     */
+    public ChestUtils() {}
     // Placeholder for chest inventory logic. Someday, this will be filled with chesty goodness!
 }

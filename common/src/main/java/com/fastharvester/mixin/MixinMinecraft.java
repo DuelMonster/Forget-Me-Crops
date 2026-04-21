@@ -19,6 +19,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Minecraft.class)
 public class MixinMinecraft {
     /**
+     * Creates a new MixinMinecraft. For now, it's just a mixin with big dreams!
+     */
+    public MixinMinecraft() {}
+    /**
      * Injects a log message at the end of Minecraft's constructor. Because every mod wants to make an entrance.
      */
     @Inject(at = @At("TAIL"), method = "<init>")

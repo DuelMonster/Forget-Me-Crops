@@ -10,5 +10,9 @@ package com.fastharvester.crops;
  * </p>
  */
 public class NetherWartHandler {
+    /**
+     * Creates a new NetherWartHandler. One day, this will be a warty good time!
+     */
+    public NetherWartHandler() {}
     // Placeholder for Nether Wart logic. Someday, this will be a fungal fiesta!
 }

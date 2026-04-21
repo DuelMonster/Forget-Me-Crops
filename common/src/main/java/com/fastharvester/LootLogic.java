@@ -10,5 +10,9 @@ package com.fastharvester;
  * </p>
  */
 public class LootLogic {
+    /**
+     * Creates a new LootLogic. Someday, this will be the stuff of legends!
+     */
+    public LootLogic() {}
     // Placeholder for loot calculation logic. Someday, this will be the stuff of legends!
 }

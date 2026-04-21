@@ -14,6 +14,10 @@ import java.util.ServiceLoader;
  * </p>
  */
 public class Services {
+    /**
+     * Creates a new Services instance. But really, you just want the static methods!
+     */
+    public Services() {}
 
     /**
      * The platform helper: your guide to the current modding universe (Fabric, Forge, NeoForge, or whatever comes next).

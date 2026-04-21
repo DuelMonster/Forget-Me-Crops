@@ -13,6 +13,10 @@ import java.util.*;
  */
 public class FrameRegistry {
     /**
+     * Creates a new FrameRegistry. But you probably just want the static methods!
+     */
+    public FrameRegistry() {}
+    /**
      * Maps dimension IDs to their active frames. Like a VIP list for currently loaded frames.
      */
     private static final Map<String, Set<Object>> activeFrames = new HashMap<>();

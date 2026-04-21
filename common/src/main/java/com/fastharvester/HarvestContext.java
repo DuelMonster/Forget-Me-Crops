@@ -10,5 +10,9 @@ package com.fastharvester;
  * </p>
  */
 public class HarvestContext {
+    /**
+     * Creates a new HarvestContext. One day, this will be packed with context!
+     */
+    public HarvestContext() {}
     // Placeholder for context fields (e.g., anchor, world, config, etc.). Someday, this will be full of juicy details!
 }

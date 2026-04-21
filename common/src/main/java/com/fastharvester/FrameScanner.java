@@ -21,7 +21,10 @@ public class FrameScanner {
     /**
      * The maximum number of blocks to check per run. Because even farmers need a break.
      */
-    public static final int MAX_BLOCKS_PER_RUN = 3072;
+    /**
+     * Creates a new FrameScanner. Ready to scan for farming greatness!
+     */
+    public FrameScanner() {}
 
     /**
      * Anchor: The holy trinity of farm automation—chest, frame, and hoe.
@@ -39,6 +42,9 @@ public class FrameScanner {
 
         /**
          * Creates a new Anchor. It's like assembling the Avengers, but for farming.
+         * @param chest The chest at the heart of the operation.
+         * @param frame The item frame that makes it all possible.
+         * @param hoe The hoe, because you can't farm without one.
          */
         public Anchor(Object chest, Object frame, Object hoe) {
             this.chest = chest;

@@ -12,6 +12,10 @@ package com.fastharvester;
  */
 public class FastHarvester {
     /**
+     * Creates a new FastHarvester. But you probably just want the static methods!
+     */
+    public FastHarvester() {}
+    /**
      * The all-knowing, all-powerful config! Loader-specific code should fill this with love (and settings) before calling init().
      */
     public static Config CONFIG = new Config();

@@ -10,5 +10,9 @@ package com.fastharvester;
  * </p>
  */
 public class HoeUtils {
+    /**
+     * Creates a new HoeUtils. For now, it's just a vessel for future wisdom!
+     */
+    public HoeUtils() {}
     // Placeholder for hoe utility methods. Someday, this will be a shrine to tool wisdom!
 }

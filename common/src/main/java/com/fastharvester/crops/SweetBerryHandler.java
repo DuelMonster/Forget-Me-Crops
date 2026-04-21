@@ -10,5 +10,9 @@ package com.fastharvester.crops;
  * </p>
  */
 public class SweetBerryHandler {
+    /**
+     * Creates a new SweetBerryHandler. One day, this will be a berry good time!
+     */
+    public SweetBerryHandler() {}
     // Placeholder for Sweet Berry logic. One day, this will be a berry good time!
 }

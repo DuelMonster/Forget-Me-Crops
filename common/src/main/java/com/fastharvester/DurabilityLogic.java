@@ -13,6 +13,10 @@ import com.fastharvester.enums.DurabilityMode;
  */
 public class DurabilityLogic {
     /**
+     * Creates a new DurabilityLogic. For now, it's just a wise placeholder!
+     */
+    public DurabilityLogic() {}
+    /**
      * Should we damage the hoe? The eternal question.
      * @param mode The durability mode (choose your destiny).
      * @param hasUnbreaking Does the hoe have Unbreaking? (Lucky!)
