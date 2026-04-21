@@ -15,6 +15,13 @@ dependencies {
     }
     modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
+
+    // PuzzlesLib (required for config system and ModMenu integration)
+    modImplementation "fuzs.puzzleslib:puzzleslib-fabric:9.0.8"
+    // ForgeConfigAPIPort (for config UI in ModMenu)
+    modImplementation "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:9.0.4"
+    // ModMenu (optional, but recommended for in-game config UI)
+    modImplementation "com.terraformersmc:modmenu:9.0.0"
 }
 loom {
     runs {
@@ -58,3 +65,105 @@ loom.remapConfigurations.configureEach {
         }
     }
 }
+
+// --- Related Mods Handling (from baseline) ---
+def fastItemFramesFabricJarPath = providers.gradleProperty('fastItemFramesFabricJar')
+        .orElse(providers.gradleProperty('fastItemFramesJar'))
+def relatedModsDir = rootProject.file('related_mods')
+def relatedModNameTokens = ['fastitemframes', 'puzzleslib', 'fabric-api', 'forgeconfigapiport']
+def loaderToken = 'fabric'
+def skipRelatedModsInstall = providers.gradleProperty('fhNoRelatedMods').map { it.toBoolean() }.orElse(false)
+
+tasks.register('installFastItemFramesForClient') {
+    group = 'run setup'
+    description = 'Copies FastItemFrames and PuzzlesLib Fabric jars into the Fabric run mods folder.'
+
+    doLast {
+        if (skipRelatedModsInstall.get()) {
+            logger.lifecycle('Skipping related Fabric mod install (-PfhNoRelatedMods=true).')
+            return
+        }
+
+        def jarsToInstall = []
+
+        if (relatedModsDir.exists()) {
+            jarsToInstall.addAll(relatedModsDir.listFiles()?.findAll { f ->
+                def lower = f.name.toLowerCase()
+                f.isFile() && lower.endsWith('.jar') && lower.contains(loaderToken) && relatedModNameTokens.any { token -> lower.contains(token) }
+            } ?: [])
+        }
+
+        if (jarsToInstall.isEmpty() && fastItemFramesFabricJarPath.present) {
+            def sourceJar = file(fastItemFramesFabricJarPath.get())
+            if (!sourceJar.exists()) {
+                throw new GradleException("FastItemFrames jar not found: ${sourceJar}")
+            }
+            jarsToInstall.add(sourceJar)
+        }
+
+        if (jarsToInstall.isEmpty()) {
+            throw new GradleException("No Fabric FastItemFrames/PuzzlesLib jars found in ${relatedModsDir}. Expected loader name in filenames (e.g. *Fabric*.jar).")
+        }
+
+        def modsDir = file('runs/client/mods')
+        modsDir.mkdirs()
+
+        modsDir.listFiles()?.findAll { f ->
+            def lower = f.name.toLowerCase()
+            f.isFile() && lower.endsWith('.jar') && relatedModNameTokens.any { token -> lower.contains(token) }
+        }?.each { stale ->
+            stale.delete()
+        }
+
+        jarsToInstall.each { jarFile ->
+            copy {
+                from(jarFile)
+                into(modsDir)
+            }
+            logger.lifecycle("Installed Fabric related mod jar: ${jarFile.name}")
+        }
+    }
+}
+
+tasks.named('runClient') {
+    dependsOn(tasks.named('installFastItemFramesForClient'))
+
+    doFirst {
+        if (skipRelatedModsInstall.get()) {
+            logger.lifecycle('Running Fabric client without related_mods jars (-PfhNoRelatedMods=true).')
+            def modsDir = file('runs/client/mods')
+            modsDir.listFiles()?.findAll { f ->
+                def lower = f.name.toLowerCase()
+                f.isFile() && lower.endsWith('.jar') && relatedModNameTokens.any { token -> lower.contains(token) }
+            }?.each { stale ->
+                stale.delete()
+                logger.lifecycle("[FastHarvester] Removed related mod jar: ${stale.name}")
+            }
+        }
+        ['fastharvester.json', 'fastharvester-server.toml', 'fastharvester-client.toml'].each { fileName ->
+            def cfg = file("runs/client/config/${fileName}")
+            if (cfg.exists()) {
+                cfg.delete()
+                logger.lifecycle("[FastHarvester] Deleted runs/client/config/${fileName} — defaults will be regenerated.")
+            }
+        }
+    }
+}
+
+// Optionally, add similar logic for runServer if needed
+tasks.named('runServer') {
+    doFirst {
+        if (skipRelatedModsInstall.get()) {
+            logger.lifecycle('Running Fabric server without related_mods jars (-PfhNoRelatedMods=true).')
+            def modsDir = file('runs/server/mods')
+            modsDir.listFiles()?.findAll { f ->
+                def lower = f.name.toLowerCase()
+                f.isFile() && lower.endsWith('.jar') && relatedModNameTokens.any { token -> lower.contains(token) }
+            }?.each { stale ->
+                stale.delete()
+                logger.lifecycle("[FastHarvester] Removed related mod jar: ${stale.name}")
+            }
+        }
+    }
+}
+
