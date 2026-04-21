@@ -18,7 +18,11 @@ public class FastHarvesterNeoForge {
      * Called by NeoForge when the mod is loaded. The future is now!
      */
     public FastHarvesterNeoForge() {
-        // Loader-specific config loading would go here
+        // Register config with PuzzlesLib
+        fuzs.puzzleslib.api.config.v3.PuzzlesLibConfig.registerConfig(
+            "fastharvester",
+            com.fastharvester.Config.class
+        );
         FastHarvester.init();
     }
 }

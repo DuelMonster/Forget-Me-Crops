@@ -18,7 +18,11 @@ public class FastHarvesterFabric implements ModInitializer {
      */
     @Override
     public void onInitialize() {
-        // Loader-specific config loading would go here
+        // Register config with PuzzlesLib
+        fuzs.puzzleslib.api.config.v3.PuzzlesLibConfig.registerConfig(
+            "fastharvester",
+            com.fastharvester.Config.class
+        );
         FastHarvester.init();
     }
 }
