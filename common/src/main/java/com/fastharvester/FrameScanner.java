@@ -12,6 +12,14 @@ package com.fastharvester;
  * For the full adventure, see TECHNICAL.md (bring snacks).
  * </p>
  */
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.Container;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.item.ItemStack;
+
 public class FrameScanner {
     /**
      * The maximum number of frames we dare scan in a single run. Any more and the crops unionize.
@@ -33,55 +41,80 @@ public class FrameScanner {
      * </p>
      */
     public static class Anchor {
-        /** The chest at the heart of the operation. */
-        public final Object chest;
-        /** The item frame that makes it all possible. */
-        public final Object frame;
-        /** The hoe, because you can't farm without one. */
-        public final Object hoe;
+        public final Container chest;
+        public final BlockPos framePos;
+        public final ItemStack hoe;
 
-        /**
-         * Creates a new Anchor. It's like assembling the Avengers, but for farming.
-         * @param chest The chest at the heart of the operation.
-         * @param frame The item frame that makes it all possible.
-         * @param hoe The hoe, because you can't farm without one.
-         */
-        public Anchor(Object chest, Object frame, Object hoe) {
+        public Anchor(Container chest, BlockPos framePos, ItemStack hoe) {
             this.chest = chest;
-            this.frame = frame;
+            this.framePos = framePos;
             this.hoe = hoe;
         }
+        @Override
+        public String toString() { return "Anchor[pos="+framePos+",hoe="+hoe+"]"; }
     }
 
     /**
-     * Scans for a farm starting from a given anchor. Emits extremely verbose debug logs for every step.
-     * @param anchor The anchor (chest, frame, hoe) to start scanning from.
-     * @param world The world object (platform-specific, passed as Object for loader-agnostic code).
-     * @return true if a valid farm was found and scanned, false otherwise.
+    * Scans for a farm starting from a given anchor. Emits extremely verbose debug logs for every step.
+    * @param anchor The anchor (chest, frame, hoe) to start scanning from.
+    * @param level The world `Level` to scan in (server-level expected).
+    * @return true if a valid farm was found and scanned, false otherwise.
      */
-    public boolean scanFarm(Anchor anchor, Object world) {
-        Constants.LOG.info("[FastHarvester][SCAN] Starting farm scan from anchor: chest={}, frame={}, hoe={}", anchor.chest, anchor.frame, anchor.hoe);
-        if (anchor.chest == null || anchor.frame == null || anchor.hoe == null) {
-            Constants.LOG.warn("[FastHarvester][SCAN] Anchor is missing one or more components! Aborting scan.");
+    public boolean scanFarm(Anchor anchor, Level level) {
+        Constants.LOG.info("[FastHarvester][SCAN] Starting farm scan from anchor: {}", anchor);
+        if (anchor == null || anchor.chest == null || anchor.hoe == null || level == null) {
+            Constants.LOG.warn("[FastHarvester][SCAN] Anchor or environment missing, aborting scan.");
             return false;
         }
-        // Example: BFS scan (placeholder, replace with real block/entity logic)
+
         int blocksScanned = 0;
         int cropsFound = 0;
-        int maxBlocks = 128;
-        Constants.LOG.debug("[FastHarvester][SCAN] Beginning BFS scan (max {} blocks)...", maxBlocks);
-        for (int i = 0; i < maxBlocks; i++) {
-            blocksScanned++;
-            if (i % 16 == 0) {
-                Constants.LOG.debug("[FastHarvester][SCAN] Scanned {} blocks so far...", blocksScanned);
-            }
-            // Simulate finding a crop every 10 blocks
-            if (i % 10 == 0) {
-                cropsFound++;
-                Constants.LOG.info("[FastHarvester][SCAN] Found crop #{} at block {}!", cropsFound, i);
+        int range = Math.max(1, Config.scanRange);
+
+        BlockPos center = anchor.framePos;
+        for (int dx = -range; dx <= range; dx++) {
+            for (int dz = -range; dz <= range; dz++) {
+                BlockPos pos = center.offset(dx, 0, dz);
+                BlockState state = level.getBlockState(pos);
+                blocksScanned++;
+
+                try {
+                    boolean isCrop = state.getBlock() instanceof CropBlock || state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH);
+                    if (!isCrop) continue;
+
+                    // Simple maturity test: crops use an AGE property; many crops reach age 7, nether wart and berries reach 3.
+                    boolean mature = false;
+                    try {
+                        int age = state.getValue(CropBlock.AGE);
+                        int threshold = 7;
+                        if (state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH)) threshold = 3;
+                        mature = age >= threshold;
+                    } catch (Throwable t) {
+                        // best-effort fallback: if reflection failed assume mature=false
+                        mature = false;
+                    }
+
+                    if (!mature) continue;
+
+                    cropsFound++;
+                    HarvestContext ctx = new HarvestContext(anchor, level, anchor.hoe, anchor.chest, null);
+
+                    // Provide a simple isMature and getReplantState functions for HarvestUtils
+                    java.util.function.Function<BlockState, Boolean> isMatureFn = s -> {
+                        try { int a = s.getValue(CropBlock.AGE); if (s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH)) return a >= 3; return a >= 7; } catch (Throwable tt) { return true; }
+                    };
+                    java.util.function.Function<BlockState, BlockState> getReplantFn = s -> {
+                        try { return s.setValue(CropBlock.AGE, 0); } catch (Throwable tt) { return null; }
+                    };
+
+                    HarvestUtils.harvestCrop(ctx, pos, state, isMatureFn, getReplantFn);
+                } catch (Throwable t) {
+                    Constants.LOG.debug("[FastHarvester][SCAN] Exception while scanning {}: {}", center, t.toString());
+                }
             }
         }
-        Constants.LOG.info("[FastHarvester][SCAN] Scan complete. Total blocks scanned: {}, crops found: {}.", blocksScanned, cropsFound);
+
+        Constants.LOG.info("[FastHarvester][SCAN] Scan complete. Blocks scanned: {}, crops found: {}.", blocksScanned, cropsFound);
         return cropsFound > 0;
     }
 }

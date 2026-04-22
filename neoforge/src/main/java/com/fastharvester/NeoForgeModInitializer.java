@@ -11,6 +11,7 @@ import com.fastharvester.ModCommon;
 import com.fastharvester.FastHarvester;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import com.fastharvester.neoforge.FastHarvesterNeoForgeConfig;
+import com.fastharvester.neoforge.NeoForgeFarmTicker;
 
 @Mod(ModCommon.MOD_ID)
 public final class NeoForgeModInitializer {
@@ -24,6 +25,8 @@ public final class NeoForgeModInitializer {
         modEventBus.addListener(this::onConfigLoading);
         modEventBus.addListener(this::onConfigReloading);
         modEventBus.addListener(this::commonSetup);
+        // register NeoForge-specific farm discovery and ticker
+        NeoForgeFarmTicker.init(modEventBus);
     }
 
     private void onConfigLoading(ModConfigEvent.Loading event) {
