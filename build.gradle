@@ -47,3 +47,19 @@ tasks.register("publishCurseForge") {
         println "Publishing to CurseForge (token present)."
     }
 }
+
+// Release packaging: collect built artifacts into releases/${mod_version}
+tasks.register('packageReleases') {
+    group = 'release'
+    description = 'Collect Fabric/NeoForge jars into releases/<mod_version> and zip them.'
+    dependsOn(':fabric:build', ':neoforge:build')
+    doLast {
+        def out = file("releases/${mod_version}")
+        out.mkdirs()
+        fileTree('fabric/build/libs').matching { include '**/*.jar' }.each { f -> copy { from f; into out } }
+        fileTree('neoforge/build/libs').matching { include '**/*.jar' }.each { f -> copy { from f; into out } }
+        def zipFile = file("releases/${mod_version}.zip")
+        ant.zip(destfile: zipFile) { fileset(dir: out) }
+        println "Packaged release at: ${zipFile}"
+    }
+}

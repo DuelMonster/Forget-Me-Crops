@@ -1,6 +1,6 @@
 {
-  "license": "CC0-1.0",
   "schemaVersion": 1,
+  "license": "CC0-1.0",
   "icon": "assets/fastharvester/icon.png",
   "depends": {
     "minecraft": ">=1.20.1",
@@ -17,7 +17,7 @@
       "com.fastharvester.fabric.FastHarvesterFabricModMenu"
     ]
   },
-  "version": "1.0.0",
+  "version": "${mod_version}",
   "environment": "*",
   "contact": {
     "homepage": "https://github.com/duelmonster/FastHarvester",
