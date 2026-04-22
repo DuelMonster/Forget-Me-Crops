@@ -18,6 +18,8 @@ public class FastHarvesterNeoForge {
      * Called by NeoForge when the mod is loaded. The future is now!
      */
     public FastHarvesterNeoForge() {
+        FastHarvesterNeoForgeConfig.register();
+        net.neoforged.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus().addListener(FastHarvesterNeoForgeConfig::onConfigReload);
         Config.load();
         FastHarvester.init();
     }
