@@ -2,6 +2,8 @@
 
 FastHarvester automates crop harvesting for Fabric and NeoForge.
 
+> Note: Forge support was removed from this project on 2026-04-22. FastHarvester now targets Fabric and NeoForge only.
+
 Put a hoe in an item frame on top of a chest, grow crops around it, and the farm will harvest into that chest automatically.
 
 If you want the implementation details, config reference, and technical behavior notes, see [TECHNICAL.md](TECHNICAL.md).

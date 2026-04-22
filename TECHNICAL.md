@@ -2,6 +2,8 @@
 
 This file is the technical companion to README.md. It documents implementation details, scanning rules, configuration behavior, and development workflow.
 
+> Note: Forge support was removed from this project on 2026-04-22. The documentation and codebase now target Fabric and NeoForge only.
+
 ## Anchor Rules
 
 A harvest anchor is:
