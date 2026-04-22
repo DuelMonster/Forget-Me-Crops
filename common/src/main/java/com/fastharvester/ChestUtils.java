@@ -1,6 +1,7 @@
 package com.fastharvester;
 
 import net.minecraft.world.Container;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import java.util.List;
 
@@ -50,5 +51,24 @@ public class ChestUtils {
                 }
             }
         }
+    }
+
+    /**
+     * Remove a single item matching {@code item} from the chest, returning true if removed.
+     */
+    public static boolean removeOne(Container chest, Item item) {
+        if (chest == null || item == null) return false;
+        for (int i = 0; i < chest.getContainerSize(); i++) {
+            ItemStack slot = chest.getItem(i);
+            if (slot != null && !slot.isEmpty() && slot.getItem() == item) {
+                if (slot.getCount() > 1) {
+                    slot.setCount(slot.getCount() - 1);
+                } else {
+                    chest.setItem(i, ItemStack.EMPTY);
+                }
+                return true;
+            }
+        }
+        return false;
     }
 }

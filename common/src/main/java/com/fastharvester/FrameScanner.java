@@ -13,12 +13,20 @@ package com.fastharvester;
  * </p>
  */
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
+
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Comparator;
 
 public class FrameScanner {
     /**
@@ -72,6 +80,7 @@ public class FrameScanner {
         int range = Math.max(1, Config.scanRange);
 
         BlockPos center = anchor.framePos;
+        // First pass: harvest mature crops and fruit blocks (melons/pumpkins)
         for (int dx = -range; dx <= range; dx++) {
             for (int dz = -range; dz <= range; dz++) {
                 BlockPos pos = center.offset(dx, 0, dz);
@@ -79,18 +88,49 @@ public class FrameScanner {
                 blocksScanned++;
 
                 try {
-                    boolean isCrop = state.getBlock() instanceof CropBlock || state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH);
+                    Block block = state.getBlock();
+
+                    // Direct fruit blocks (melons/pumpkins): harvest the fruit block itself, no replant.
+                    if (state.is(Blocks.MELON) || state.is(Blocks.PUMPKIN)) {
+                        cropsFound++;
+                        HarvestContext ctx = new HarvestContext(anchor, level, anchor.hoe, anchor.chest, null);
+                        java.util.function.Function<BlockState, Boolean> isMatureFn = s -> true;
+                        java.util.function.Function<BlockState, BlockState> getReplantFn = s -> null;
+                        HarvestUtils.harvestCrop(ctx, pos, state, isMatureFn, getReplantFn);
+                        continue;
+                    }
+
+                    // If this is a stem, check for adjacent fruit and harvest that instead.
+                    if (state.is(Blocks.MELON_STEM) || state.is(Blocks.PUMPKIN_STEM)) {
+                        Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+                        boolean harvestedFruit = false;
+                        for (Direction d : dirs) {
+                            BlockPos npos = pos.relative(d);
+                            BlockState ns = level.getBlockState(npos);
+                            if ((ns.is(Blocks.MELON) && state.is(Blocks.MELON_STEM)) || (ns.is(Blocks.PUMPKIN) && state.is(Blocks.PUMPKIN_STEM))) {
+                                cropsFound++;
+                                HarvestContext ctx = new HarvestContext(anchor, level, anchor.hoe, anchor.chest, null);
+                                java.util.function.Function<BlockState, Boolean> isMatureFn = s -> true;
+                                java.util.function.Function<BlockState, BlockState> getReplantFn = s -> null;
+                                HarvestUtils.harvestCrop(ctx, npos, ns, isMatureFn, getReplantFn);
+                                harvestedFruit = true;
+                                break;
+                            }
+                        }
+                        if (harvestedFruit) continue;
+                    }
+
+                    // Standard crop logic
+                    boolean isCrop = block instanceof CropBlock || state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH);
                     if (!isCrop) continue;
 
-                    // Simple maturity test: crops use an AGE property; many crops reach age 7, nether wart and berries reach 3.
+                    // Maturity determination: read AGE defensively; different crops have different max ages.
+                    int threshold = (state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH)) ? 3 : 7;
                     boolean mature = false;
                     try {
                         int age = state.getValue(CropBlock.AGE);
-                        int threshold = 7;
-                        if (state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH)) threshold = 3;
                         mature = age >= threshold;
                     } catch (Throwable t) {
-                        // best-effort fallback: if reflection failed assume mature=false
                         mature = false;
                     }
 
@@ -99,12 +139,14 @@ public class FrameScanner {
                     cropsFound++;
                     HarvestContext ctx = new HarvestContext(anchor, level, anchor.hoe, anchor.chest, null);
 
-                    // Provide a simple isMature and getReplantState functions for HarvestUtils
                     java.util.function.Function<BlockState, Boolean> isMatureFn = s -> {
-                        try { int a = s.getValue(CropBlock.AGE); if (s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH)) return a >= 3; return a >= 7; } catch (Throwable tt) { return true; }
+                        try { int a = s.getValue(CropBlock.AGE); if (s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH)) return a >= 3; return a >= 7; } catch (Throwable tt) { return false; }
                     };
                     java.util.function.Function<BlockState, BlockState> getReplantFn = s -> {
-                        try { return s.setValue(CropBlock.AGE, 0); } catch (Throwable tt) { return null; }
+                        try {
+                            if (s.is(Blocks.SWEET_BERRY_BUSH)) return s.setValue(CropBlock.AGE, 1);
+                            return s.setValue(CropBlock.AGE, 0);
+                        } catch (Throwable tt) { return null; }
                     };
 
                     HarvestUtils.harvestCrop(ctx, pos, state, isMatureFn, getReplantFn);
@@ -114,7 +156,49 @@ public class FrameScanner {
             }
         }
 
+        // Second pass: attempt neighbor-dominant auto-planting on empty farmland above.
+        for (int dx = -range; dx <= range; dx++) {
+            for (int dz = -range; dz <= range; dz++) {
+                BlockPos pos = center.offset(dx, 0, dz);
+                BlockState cur = level.getBlockState(pos);
+                if (!cur.isAir()) continue;
+                BlockState below = level.getBlockState(pos.below());
+                if (below == null || below.getBlock() != Blocks.FARMLAND) continue;
+
+                Map<Block, Integer> counts = new HashMap<>();
+                Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+                for (Direction d : dirs) {
+                    BlockPos npos = pos.relative(d);
+                    BlockState ns = level.getBlockState(npos);
+                    Block b = ns.getBlock();
+                    if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) {
+                        counts.merge(b, 1, Integer::sum);
+                    }
+                }
+                if (counts.isEmpty()) continue;
+                Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
+                Item seed = seedForBlock(chosen);
+                if (seed == null) continue;
+                boolean taken = ChestUtils.removeOne(anchor.chest, seed);
+                if (!taken) continue;
+
+                BlockState plantState = chosen.defaultBlockState();
+                try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
+                level.setBlock(pos, plantState, 3);
+            }
+        }
+
         Constants.LOG.info("[FastHarvester][SCAN] Scan complete. Blocks scanned: {}, crops found: {}.", blocksScanned, cropsFound);
         return cropsFound > 0;
+    }
+
+    private static Item seedForBlock(Block b) {
+        if (b == Blocks.WHEAT) return Items.WHEAT_SEEDS;
+        if (b == Blocks.BEETROOTS) return Items.BEETROOT_SEEDS;
+        if (b == Blocks.CARROTS) return Items.CARROT;
+        if (b == Blocks.POTATOES) return Items.POTATO;
+        if (b == Blocks.MELON_STEM) return Items.MELON_SEEDS;
+        if (b == Blocks.PUMPKIN_STEM) return Items.PUMPKIN_SEEDS;
+        return null;
     }
 }
