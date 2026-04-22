@@ -1,14 +1,6 @@
 package com.fastharvester;
 
-import com.fastharvester.enums.DurabilityMode;
-import com.fastharvester.enums.RotationMode;
-import com.fastharvester.enums.SeedClutterMode;
-
-/**
- * Config: The magical spellbook of FastHarvester!
-
-package com.fastharvester;
-
+import com.fastharvester.enums.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
@@ -264,5 +256,4 @@ public class Config {
     private static String configFileForKey(String key) {
         return "harvestParticles".equals(key) ? CLIENT_CONFIG_PATH.getFileName().toString() : SERVER_CONFIG_PATH.getFileName().toString();
     }
-}
 }

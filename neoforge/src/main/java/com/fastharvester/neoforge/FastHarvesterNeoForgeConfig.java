@@ -6,48 +6,52 @@ import com.fastharvester.enums.RotationMode;
 import com.fastharvester.enums.SeedClutterMode;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
-import net.neoforged.fml.ModLoadingContext;
-import net.neoforged.fml.config.ConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class FastHarvesterNeoForgeConfig {
-    public static final ConfigSpec.Builder BUILDER = new ConfigSpec.Builder();
-    public static final ConfigSpec SPEC;
+    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    public static final ModConfigSpec SPEC;
+
+    public static ModConfigSpec.IntValue TICK_INTERVAL;
+    public static ModConfigSpec.IntValue FRAME_REDISCOVERY_INTERVAL;
+    public static ModConfigSpec.IntValue SCAN_RANGE;
+    public static ModConfigSpec.EnumValue<DurabilityMode> DURABILITY_MODE;
+    public static ModConfigSpec.BooleanValue MENDING_NEGATION;
+    public static ModConfigSpec.BooleanValue DEBUG_LOGGING;
+    public static ModConfigSpec.IntValue CHEST_FULL_COOLDOWN_TICKS;
+    public static ModConfigSpec.IntValue MAX_SPIRAL_DURATION_TICKS;
+    public static ModConfigSpec.EnumValue<RotationMode> ROTATION_MODE;
+    public static ModConfigSpec.EnumValue<SeedClutterMode> SEED_CLUTTER_MODE;
+    public static ModConfigSpec.IntValue SEED_RESERVE_PER_TYPE;
 
     static {
         BUILDER.push("FastHarvester");
-        BUILDER.defineInRange("tickInterval", 300, 1, Integer.MAX_VALUE);
-        BUILDER.defineInRange("frameRediscoveryInterval", 100, 1, Integer.MAX_VALUE);
-        BUILDER.defineInRange("scanRange", 4, 1, 64);
-        BUILDER.defineEnum("durabilityMode", DurabilityMode.NORMAL);
-        BUILDER.define("mendingNegation", true);
-        BUILDER.define("debugLogging", false);
-        BUILDER.defineInRange("chestFullCooldownTicks", 100, 0, Integer.MAX_VALUE);
-        BUILDER.defineInRange("maxSpiralDurationTicks", 100, 1, Integer.MAX_VALUE);
-        BUILDER.defineEnum("rotationMode", RotationMode.FOLLOW_HARVEST_SPIRAL);
-        BUILDER.defineEnum("seedClutterMode", SeedClutterMode.REDUCED);
-        BUILDER.defineInRange("seedReservePerType", 80, 0, 9999);
+        TICK_INTERVAL = BUILDER.defineInRange("tickInterval", 300, 1, Integer.MAX_VALUE);
+        FRAME_REDISCOVERY_INTERVAL = BUILDER.defineInRange("frameRediscoveryInterval", 100, 1, Integer.MAX_VALUE);
+        SCAN_RANGE = BUILDER.defineInRange("scanRange", 4, 1, 64);
+        DURABILITY_MODE = BUILDER.defineEnum("durabilityMode", DurabilityMode.NORMAL);
+        MENDING_NEGATION = BUILDER.define("mendingNegation", true);
+        DEBUG_LOGGING = BUILDER.define("debugLogging", false);
+        CHEST_FULL_COOLDOWN_TICKS = BUILDER.defineInRange("chestFullCooldownTicks", 100, 0, Integer.MAX_VALUE);
+        MAX_SPIRAL_DURATION_TICKS = BUILDER.defineInRange("maxSpiralDurationTicks", 100, 1, Integer.MAX_VALUE);
+        ROTATION_MODE = BUILDER.defineEnum("rotationMode", RotationMode.FOLLOW_HARVEST_SPIRAL);
+        SEED_CLUTTER_MODE = BUILDER.defineEnum("seedClutterMode", SeedClutterMode.REDUCED);
+        SEED_RESERVE_PER_TYPE = BUILDER.defineInRange("seedReservePerType", 80, 0, 9999);
         BUILDER.pop();
         SPEC = BUILDER.build();
     }
 
-    public static void register() {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
-    }
-
-    public static void onConfigReload(ModConfigEvent.Reloading event) {
-        ModConfig config = event.getConfig();
-        if (config.getSpec() != SPEC) return;
-        var conf = config.getConfigData();
-        Config.tickInterval = conf.getInt("FastHarvester.tickInterval");
-        Config.frameRediscoveryInterval = conf.getInt("FastHarvester.frameRediscoveryInterval");
-        Config.scanRange = conf.getInt("FastHarvester.scanRange");
-        Config.durabilityMode = DurabilityMode.valueOf(conf.getEnum("FastHarvester.durabilityMode", DurabilityMode.NORMAL.name()));
-        Config.mendingNegation = conf.getBoolean("FastHarvester.mendingNegation");
-        Config.debugLogging = conf.getBoolean("FastHarvester.debugLogging");
-        Config.chestFullCooldownTicks = conf.getInt("FastHarvester.chestFullCooldownTicks");
-        Config.maxSpiralDurationTicks = conf.getInt("FastHarvester.maxSpiralDurationTicks");
-        Config.rotationMode = RotationMode.valueOf(conf.getEnum("FastHarvester.rotationMode", RotationMode.FOLLOW_HARVEST_SPIRAL.name()));
-        Config.seedClutterMode = SeedClutterMode.valueOf(conf.getEnum("FastHarvester.seedClutterMode", SeedClutterMode.REDUCED.name()));
-        Config.seedReservePerType = conf.getInt("FastHarvester.seedReservePerType");
+    public static void update() {
+        Config.tickInterval = TICK_INTERVAL.get();
+        Config.frameRediscoveryInterval = FRAME_REDISCOVERY_INTERVAL.get();
+        Config.scanRange = SCAN_RANGE.get();
+        Config.durabilityMode = DURABILITY_MODE.get();
+        Config.mendingNegation = MENDING_NEGATION.get();
+        Config.debugLogging = DEBUG_LOGGING.get();
+        Config.chestFullCooldownTicks = CHEST_FULL_COOLDOWN_TICKS.get();
+        Config.maxSpiralDurationTicks = MAX_SPIRAL_DURATION_TICKS.get();
+        Config.rotationMode = ROTATION_MODE.get();
+        Config.seedClutterMode = SEED_CLUTTER_MODE.get();
+        Config.seedReservePerType = SEED_RESERVE_PER_TYPE.get();
     }
 }
