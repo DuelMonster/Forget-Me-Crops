@@ -3,6 +3,7 @@ package com.fastharvester;
 import com.fastharvester.enums.DurabilityMode;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import java.util.Map;
 
 /**
  * DurabilityLogic: The wise old sage of hoe-wear and tear!
@@ -43,14 +44,57 @@ public class DurabilityLogic {
      */
     public static void applyDamage(Level level, ItemStack hoe, Object random) {
         if (hoe == null || hoe.isEmpty()) return;
-        // Conservative defaults: common module avoids relying on specific enchantment registry types here.
-        boolean hasUnbreaking = false;
-        boolean hasMending = false;
-        if (!shouldDamageHoe(Config.durabilityMode, hasUnbreaking, hasMending)) return;
+        if (Config.durabilityMode == DurabilityMode.NONE) return;
+
+        int unbreakingLevel = 0;
+        int mendingLevel = 0;
+        try {
+            Map<String, Integer> ench = com.fastharvester.platform.Services.PLATFORM.getEnchantments(hoe);
+            if (ench == null || ench.isEmpty()) {
+                ench = com.fastharvester.util.ReflectionUtils.readEnchantmentsFromStack(hoe);
+            }
+            if (ench != null) {
+                for (Map.Entry<String, Integer> e : ench.entrySet()) {
+                    String id = e.getKey();
+                    int lvl = (e.getValue() == null) ? 0 : e.getValue();
+                    if (id != null && id.toLowerCase().contains("unbreaking")) {
+                        unbreakingLevel = Math.max(unbreakingLevel, lvl);
+                    }
+                    if (id != null && id.toLowerCase().contains("mending")) {
+                        mendingLevel = Math.max(mendingLevel, lvl);
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            // Fallback to no enchantments if something unexpected happens
+            Constants.LOG.debug("[FastHarvester][DURABILITY] Could not read enchantments: {}", t.toString());
+        }
+
+        boolean hasMending = mendingLevel > 0;
+        if (Config.mendingNegation && hasMending) return;
+
+        if (!shouldDamageHoe(Config.durabilityMode, unbreakingLevel > 0, hasMending)) return;
 
         try {
             int max = hoe.getMaxDamage();
             if (max <= 0) return;
+
+            // Compute whether unbreaking prevents this damage event
+            boolean applyDamage = true;
+            if (Config.durabilityMode == DurabilityMode.NORMAL && unbreakingLevel > 0) {
+                if (level != null) {
+                    if (level.getRandom().nextInt(unbreakingLevel + 1) != 0) {
+                        applyDamage = false;
+                    }
+                } else {
+                    if (new java.util.Random().nextInt(unbreakingLevel + 1) != 0) {
+                        applyDamage = false;
+                    }
+                }
+            }
+
+            if (!applyDamage) return;
+
             int current = hoe.getDamageValue();
             int next = current + 1;
             if (next >= max) {

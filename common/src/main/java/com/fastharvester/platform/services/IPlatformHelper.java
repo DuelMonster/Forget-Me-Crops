@@ -6,13 +6,13 @@ package com.fastharvester.platform.services;
  * This interface defines what every platform helper must do—like a checklist for being a good citizen in the modding world.
  * </p>
  * <p>
- * Why does this matter? Because every loader has its quirks, and this interface smooths out the bumps so your code can glide across Fabric, Forge, NeoForge, and beyond.
+ * Why does this matter? Because every loader has its quirks, and this interface smooths out the bumps so your code can glide across Fabric, NeoForge, and beyond.
  * </p>
  */
 public interface IPlatformHelper {
 
     /**
-     * Gets the name of the current platform. (Fabric? Forge? NeoForge? The suspense!)
+    * Gets the name of the current platform. (Fabric? NeoForge? The suspense!)
      * @return The name of the current platform.
      */
     String getPlatformName();
@@ -36,5 +36,23 @@ public interface IPlatformHelper {
      */
     default String getEnvironmentName() {
         return isDevelopmentEnvironment() ? "development" : "production";
+    }
+
+    /**
+     * Extract enchantments from an ItemStack as a simple map from enchantment id to level.
+     * Platform implementations should return accurate enchantment ids (e.g. "minecraft:unbreaking").
+     * Default implementation returns an empty map.
+     */
+    default java.util.Map<String, Integer> getEnchantments(net.minecraft.world.item.ItemStack stack) {
+        return java.util.Collections.emptyMap();
+    }
+
+    /**
+     * Platform-accurate block drops. Implementations should use the native loot/context APIs
+     * to return exact drops for the provided `state` at `pos` in `level` using the provided `tool`.
+     * The default common implementation returns an empty list indicating no platform-specific result.
+     */
+    default java.util.List<net.minecraft.world.item.ItemStack> getBlockDrops(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.item.ItemStack tool) {
+        return java.util.Collections.emptyList();
     }
 }

@@ -20,7 +20,7 @@ public class Services {
     public Services() {}
 
     /**
-     * The platform helper: your guide to the current modding universe (Fabric, Forge, NeoForge, or whatever comes next).
+     * The platform helper: your guide to the current modding universe (Fabric, NeoForge, or whatever comes next).
      * <p>
      * If you want to know what platform you're on, or if another mod is loaded, ask this friendly helper!
      */
