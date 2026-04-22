@@ -117,6 +117,7 @@ public class HarvestUtils {
         if (block == Blocks.CARROTS) return new ItemStack(Items.CARROT);
         if (block == Blocks.POTATOES) return new ItemStack(Items.POTATO);
         if (block == Blocks.NETHER_WART) return new ItemStack(Items.NETHER_WART);
+        try { if (block.getClass().getName().toLowerCase().contains("torchflower")) return new ItemStack(block.asItem()); } catch (Throwable ignored) {}
         return ItemStack.EMPTY;
     }
 
