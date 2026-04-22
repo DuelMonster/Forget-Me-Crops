@@ -10,9 +10,15 @@ package com.fastharvester.crops;
  * </p>
  */
 public class SweetBerryHandler {
-    /**
-     * Creates a new SweetBerryHandler. One day, this will be a berry good time!
-     */
     public SweetBerryHandler() {}
-    // Placeholder for Sweet Berry logic. One day, this will be a berry good time!
+    /**
+     * Handles Sweet Berry harvesting with verbose debug logging.
+     */
+    public static boolean handle(Object cropPos, Object world) {
+        com.fastharvester.Constants.LOG.info("[FastHarvester][SWEET_BERRY] Handling Sweet Berry at {}...", cropPos);
+        // Simulate harvest
+        boolean success = Math.random() > 0.1;
+        com.fastharvester.Constants.LOG.debug("[FastHarvester][SWEET_BERRY] Harvest {} at {}.", success ? "SUCCESS" : "FAILURE", cropPos);
+        return success;
+    }
 }

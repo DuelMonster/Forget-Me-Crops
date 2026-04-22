@@ -1,18 +1,54 @@
 package com.fastharvester;
 
+import net.minecraft.world.Container;
+import net.minecraft.world.item.ItemStack;
+import java.util.List;
+
 /**
- * ChestUtils: The treasure chest of utility methods!
- * <p>
- * This class is meant to hold all the clever tricks and hacks for dealing with chests, no matter the loader. Loader-specific code should implement and delegate to these methods, so everyone gets their loot.
- * </p>
- * <p>
- * Why does this matter? Because a farmer without a chest is just a gardener with commitment issues.
- * </p>
+ * ChestUtils: Simple, loader-agnostic helpers for container operations used by FastHarvester.
  */
 public class ChestUtils {
-    /**
-     * Creates a new ChestUtils. Not much to see here yet, but one day this will be legendary!
-     */
     public ChestUtils() {}
-    // Placeholder for chest inventory logic. Someday, this will be filled with chesty goodness!
+
+    public static boolean hasSpace(Container chest) {
+        if (chest == null) return false;
+        for (int i = 0; i < chest.getContainerSize(); i++) {
+            ItemStack s = chest.getItem(i);
+            if (s.isEmpty()) return true;
+            if (s.getCount() < s.getMaxStackSize()) return true;
+        }
+        return false;
+    }
+
+    public static void insertAll(Container chest, List<ItemStack> drops) {
+        if (chest == null || drops == null || drops.isEmpty()) return;
+        for (ItemStack drop : drops) {
+            if (drop == null || drop.isEmpty()) continue;
+            ItemStack remaining = drop.copy();
+            // Try to merge into existing stacks
+            for (int i = 0; i < chest.getContainerSize(); i++) {
+                ItemStack slot = chest.getItem(i);
+                if (!slot.isEmpty() && slot.getItem() == remaining.getItem()) {
+                    int space = slot.getMaxStackSize() - slot.getCount();
+                    if (space > 0) {
+                        int move = Math.min(space, remaining.getCount());
+                        slot.setCount(slot.getCount() + move);
+                        remaining.setCount(remaining.getCount() - move);
+                        if (remaining.isEmpty()) break;
+                    }
+                }
+            }
+            // Put remaining into empty slot
+            if (!remaining.isEmpty()) {
+                for (int i = 0; i < chest.getContainerSize(); i++) {
+                    ItemStack slot = chest.getItem(i);
+                    if (slot.isEmpty()) {
+                        chest.setItem(i, remaining.copy());
+                        remaining.setCount(0);
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }

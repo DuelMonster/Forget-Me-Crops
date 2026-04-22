@@ -54,6 +54,34 @@ public class FrameScanner {
     }
 
     /**
-     * Loader-specific code must provide world/entity access and call these methods. Don't leave FrameScanner hanging!
+     * Scans for a farm starting from a given anchor. Emits extremely verbose debug logs for every step.
+     * @param anchor The anchor (chest, frame, hoe) to start scanning from.
+     * @param world The world object (platform-specific, passed as Object for loader-agnostic code).
+     * @return true if a valid farm was found and scanned, false otherwise.
      */
+    public boolean scanFarm(Anchor anchor, Object world) {
+        Constants.LOG.info("[FastHarvester][SCAN] Starting farm scan from anchor: chest={}, frame={}, hoe={}", anchor.chest, anchor.frame, anchor.hoe);
+        if (anchor.chest == null || anchor.frame == null || anchor.hoe == null) {
+            Constants.LOG.warn("[FastHarvester][SCAN] Anchor is missing one or more components! Aborting scan.");
+            return false;
+        }
+        // Example: BFS scan (placeholder, replace with real block/entity logic)
+        int blocksScanned = 0;
+        int cropsFound = 0;
+        int maxBlocks = 128;
+        Constants.LOG.debug("[FastHarvester][SCAN] Beginning BFS scan (max {} blocks)...", maxBlocks);
+        for (int i = 0; i < maxBlocks; i++) {
+            blocksScanned++;
+            if (i % 16 == 0) {
+                Constants.LOG.debug("[FastHarvester][SCAN] Scanned {} blocks so far...", blocksScanned);
+            }
+            // Simulate finding a crop every 10 blocks
+            if (i % 10 == 0) {
+                cropsFound++;
+                Constants.LOG.info("[FastHarvester][SCAN] Found crop #{} at block {}!", cropsFound, i);
+            }
+        }
+        Constants.LOG.info("[FastHarvester][SCAN] Scan complete. Total blocks scanned: {}, crops found: {}.", blocksScanned, cropsFound);
+        return cropsFound > 0;
+    }
 }

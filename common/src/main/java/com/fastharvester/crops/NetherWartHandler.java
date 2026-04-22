@@ -10,9 +10,15 @@ package com.fastharvester.crops;
  * </p>
  */
 public class NetherWartHandler {
-    /**
-     * Creates a new NetherWartHandler. One day, this will be a warty good time!
-     */
     public NetherWartHandler() {}
-    // Placeholder for Nether Wart logic. Someday, this will be a fungal fiesta!
+    /**
+     * Handles Nether Wart harvesting with verbose debug logging.
+     */
+    public static boolean handle(Object cropPos, Object world) {
+        com.fastharvester.Constants.LOG.info("[FastHarvester][NETHER_WART] Handling Nether Wart at {}...", cropPos);
+        // Simulate harvest
+        boolean success = Math.random() > 0.1;
+        com.fastharvester.Constants.LOG.debug("[FastHarvester][NETHER_WART] Harvest {} at {}.", success ? "SUCCESS" : "FAILURE", cropPos);
+        return success;
+    }
 }
