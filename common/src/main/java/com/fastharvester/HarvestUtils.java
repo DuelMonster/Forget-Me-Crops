@@ -132,8 +132,38 @@ public class HarvestUtils {
             drops.removeIf(s -> s.getItem() == seedItem);
             return;
         }
-        // Reduced mode: keep at most seedReservePerType in the chest; naive implementation: do nothing for now.
-        // A future enhancement would count existing seeds in `chest` and trim `drops` accordingly.
+        if (Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.REDUCED) {
+            int reserve = Math.max(0, Config.seedReservePerType);
+            // Count existing seeds in chest
+            int existing = 0;
+            if (chest != null) {
+                for (int i = 0; i < chest.getContainerSize(); i++) {
+                    ItemStack s = chest.getItem(i);
+                    if (!s.isEmpty() && s.getItem() == seedItem) existing += s.getCount();
+                }
+            }
+
+            // Trim drops so that after insertion the chest will have at most `reserve` seeds
+            int allowed = Math.max(0, reserve - existing);
+            for (Iterator<ItemStack> it = drops.iterator(); it.hasNext();) {
+                ItemStack s = it.next();
+                if (s.getItem() == seedItem) {
+                    if (allowed <= 0) {
+                        it.remove();
+                        continue;
+                    }
+                    if (s.getCount() > allowed) {
+                        s.setCount(allowed);
+                        allowed = 0;
+                    } else {
+                        allowed -= s.getCount();
+                    }
+                }
+            }
+            return;
+        }
+
+        // Normal mode: keep all supported seed drops (no-op)
     }
 
     private static void handleBrokenHoe(HarvestContext ctx, ItemStack oldHoe) {
