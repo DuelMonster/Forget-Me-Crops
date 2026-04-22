@@ -32,10 +32,13 @@ import java.util.Map;
  * FabricFarmTicker: discovers anchors on chunk load and schedules scans on server tick.
  */
 public class FabricFarmTicker {
+    private static boolean tickSnapshotLogged = false;
     public static void init() {
         // Discover frames when chunks are loaded
         ServerChunkEvents.CHUNK_LOAD.register((ServerLevel level, LevelChunk chunk) -> {
             try {
+                // Diagnostic: log that chunk-load handler ran for this chunk
+                Constants.LOG.info("[FastHarvester][TICK] Chunk-load event for chunk {} in {}", chunk.getPos(), level.dimension().identifier().toString());
                 String dimId = level.dimension().identifier().toString();
                 int minX = chunk.getPos().getMinBlockX();
                 int minZ = chunk.getPos().getMinBlockZ();
@@ -44,30 +47,49 @@ public class FabricFarmTicker {
                 AABB box = new AABB(minX, 0, minZ, maxX + 1, 256, maxZ + 1);
 
                 // Vanilla item frames
-                List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box, ef -> ef.getDirection() == Direction.UP);
+                List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box);
+                Constants.LOG.info("[FastHarvester][TICK] Found {} item frames in chunk {} (filtering for UP and hoes afterwards).", frames.size(), chunk.getPos());
                 for (ItemFrame f : frames) {
                     try {
+                        try { Constants.LOG.info("[FastHarvester][TICK] Frame at {} direction={}", f.blockPosition(), f.getDirection()); } catch (Throwable ignored) {}
                         var held = f.getItem();
-                        if (held == null || held.isEmpty()) continue;
-                        if (!(held.getItem() instanceof HoeItem)) continue;
+                        if (held == null || held.isEmpty()) { Constants.LOG.info("[FastHarvester][TICK] Frame {} holds nothing.", f.blockPosition()); continue; }
+                        try { Constants.LOG.info("[FastHarvester][TICK] Frame {} holds item: {}", f.blockPosition(), held.getItem().getClass().getName()); } catch (Throwable ignored) {}
+                        if (f.getDirection() != Direction.UP) { Constants.LOG.info("[FastHarvester][TICK] Frame {} skipped: not facing UP ({}).", f.blockPosition(), f.getDirection()); continue; }
+                        if (!(held.getItem() instanceof HoeItem)) { Constants.LOG.info("[FastHarvester][TICK] Frame {} skipped: held item is not a hoe.", f.blockPosition()); continue; }
                         BlockPos pos = f.blockPosition();
-                        BlockEntity be = level.getBlockEntity(pos);
+                        BlockPos chestPos = pos;
+                        BlockEntity be = level.getBlockEntity(chestPos);
+                        if (!(be instanceof Container)) {
+                            BlockPos below = pos.below();
+                            BlockEntity beBelow = level.getBlockEntity(below);
+                            if (beBelow instanceof Container) {
+                                be = beBelow;
+                                chestPos = below;
+                            }
+                        }
                         if (be instanceof Container chest) {
-                            // Waterlogged-chest enforcement for nearby farmland crops
+                            // Waterlogged-chest enforcement for nearby farmland crops (check at chest position)
                             boolean chestWaterlogged = false;
-                            try { BlockState cs = level.getBlockState(pos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
+                            try { BlockState cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
                             boolean nearbyFarmlandCrop = false;
                             int r = Math.min(5, Math.max(1, Config.scanRange));
                             outer: for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
-                                BlockState ns = level.getBlockState(pos.offset(dx, 0, dz));
+                                BlockState ns = level.getBlockState(chestPos.offset(dx, 0, dz));
                                 net.minecraft.world.level.block.Block b = ns.getBlock();
                                 if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) { nearbyFarmlandCrop = true; break outer; }
                             }
-                            if (nearbyFarmlandCrop && !chestWaterlogged) continue;
+                            if (nearbyFarmlandCrop && !chestWaterlogged) {
+                                Constants.LOG.info("[FastHarvester][TICK] Skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
+                                continue;
+                            }
 
+                            Constants.LOG.info("[FastHarvester][TICK] Discovered anchor (vanilla) at {} in {}; registering.", pos, dimId);
                             FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
+                        } else {
+                            Constants.LOG.info("[FastHarvester][TICK] No container block-entity near frame pos {} (be={}).", f.blockPosition(), be == null ? "null" : be.getClass().getName());
                         }
-                    } catch (Throwable t) { /* ignore per-frame */ }
+                    } catch (Throwable t) { Constants.LOG.warn("[FastHarvester][TICK] Per-frame processing error: {}", t.toString()); }
                 }
 
                 // FastItemFrames: iterate block entities and detect FIF block-entities by classname
@@ -96,8 +118,12 @@ public class FabricFarmTicker {
                                 net.minecraft.world.level.block.Block b = ns.getBlock();
                                 if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) { nearbyFarmlandCrop = true; break outer2; }
                             }
-                            if (nearbyFarmlandCrop && !chestWaterlogged) continue;
+                            if (nearbyFarmlandCrop && !chestWaterlogged) {
+                                Constants.LOG.info("[FastHarvester][TICK] Skipping FIF anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
+                                continue;
+                            }
 
+                            Constants.LOG.info("[FastHarvester][TICK] Discovered anchor (FIF) at {} in {}; registering.", pos, dimId);
                             FrameRegistry.registerFrame(dimId, pos, chest, held.toItemStack());
                         }
                     }
@@ -148,8 +174,60 @@ public class FabricFarmTicker {
             try {
                 for (ServerLevel level : server.getAllLevels()) {
                     String dimId = level.dimension().identifier().toString();
+                    if (!tickSnapshotLogged) {
+                        Constants.LOG.info("[FastHarvester][TICK] Snapshot: recorded frames in {}: {} (active {})", dimId, FrameRegistry.countRecordedFrames(dimId), FrameRegistry.countActiveFrames(dimId));
+                        // One-time catch-up: scan currently-loaded vanilla ItemFrame entities in this level
+                        try {
+                            Constants.LOG.info("[FastHarvester][TICK] Performing one-time catch-up scan for loaded item frames in {}", dimId);
+                            AABB worldBox = new AABB(-30000000, 0, -30000000, 30000000, 256, 30000000);
+                            List<ItemFrame> loadedFrames = level.getEntitiesOfClass(ItemFrame.class, worldBox);
+                            Constants.LOG.info("[FastHarvester][TICK] Catch-up found {} item frames in {}", loadedFrames.size(), dimId);
+                            for (ItemFrame f : loadedFrames) {
+                                try {
+                                    try { Constants.LOG.info("[FastHarvester][TICK] Catch-up frame at {} direction={}", f.blockPosition(), f.getDirection()); } catch (Throwable ignored) {}
+                                    var held = f.getItem();
+                                    if (held == null || held.isEmpty()) { Constants.LOG.info("[FastHarvester][TICK] Catch-up frame {} holds nothing.", f.blockPosition()); continue; }
+                                    try { Constants.LOG.info("[FastHarvester][TICK] Catch-up frame {} holds item: {}", f.blockPosition(), held.getItem().getClass().getName()); } catch (Throwable ignored) {}
+                                    if (f.getDirection() != Direction.UP) { Constants.LOG.info("[FastHarvester][TICK] Catch-up frame {} skipped: not facing UP ({}).", f.blockPosition(), f.getDirection()); continue; }
+                                    if (!(held.getItem() instanceof HoeItem)) { Constants.LOG.info("[FastHarvester][TICK] Catch-up frame {} skipped: held item is not a hoe.", f.blockPosition()); continue; }
+                                    BlockPos pos = f.blockPosition();
+                                    BlockPos chestPos = pos;
+                                    BlockEntity be = level.getBlockEntity(chestPos);
+                                    if (!(be instanceof Container)) {
+                                        BlockPos below = pos.below();
+                                        BlockEntity beBelow = level.getBlockEntity(below);
+                                        if (beBelow instanceof Container) {
+                                            be = beBelow;
+                                            chestPos = below;
+                                        }
+                                    }
+                                    if (be instanceof Container chest) {
+                                        boolean chestWaterlogged = false;
+                                        try { BlockState cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
+                                        boolean nearbyFarmlandCrop = false;
+                                        int r = Math.min(5, Math.max(1, Config.scanRange));
+                                        outer3: for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
+                                            BlockState ns = level.getBlockState(chestPos.offset(dx, 0, dz));
+                                            net.minecraft.world.level.block.Block b = ns.getBlock();
+                                            if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) { nearbyFarmlandCrop = true; break outer3; }
+                                        }
+                                        if (nearbyFarmlandCrop && !chestWaterlogged) {
+                                            Constants.LOG.info("[FastHarvester][TICK] Catch-up skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
+                                            continue;
+                                        }
+
+                                        Constants.LOG.info("[FastHarvester][TICK] Catch-up discovered anchor (vanilla) at {} in {}; registering.", pos, dimId);
+                                        FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
+                                    } else {
+                                        Constants.LOG.info("[FastHarvester][TICK] Catch-up no container block-entity near frame pos {} (be={}).", f.blockPosition(), be == null ? "null" : be.getClass().getName());
+                                    }
+                                } catch (Throwable t) { Constants.LOG.warn("[FastHarvester][TICK] Catch-up per-frame processing error: {}", t.toString()); }
+                            }
+                        } catch (Throwable t) { Constants.LOG.warn("[FastHarvester][TICK] Catch-up discovery error: {}", t.toString()); }
+                    }
                     var ready = FrameRegistry.tickAndCollectReady(dimId);
                     if (!ready.isEmpty()) {
+                        Constants.LOG.info("[FastHarvester][TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
                         FrameScanner scanner = new FrameScanner();
                         for (var anchor : ready) {
                             try {
@@ -159,6 +237,7 @@ public class FabricFarmTicker {
                             }
                         }
                     }
+                    tickSnapshotLogged = true;
                 }
             } catch (Throwable t) {
                 Constants.LOG.warn("[FastHarvester][TICK] Unexpected ticker error: {}", t.toString());

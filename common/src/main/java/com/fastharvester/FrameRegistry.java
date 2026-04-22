@@ -44,6 +44,7 @@ public class FrameRegistry {
             existing.active = true;
             existing.lastSeenMs = System.currentTimeMillis();
             existing.ticksUntilNextRun = Math.min(existing.ticksUntilNextRun, Config.tickInterval);
+            Constants.LOG.info("[FastHarvester][REG] Refreshed frame at {} in {}.", framePos, dimensionId);
         }
     }
 

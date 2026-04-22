@@ -361,6 +361,8 @@ public class FrameScanner {
             }
         }
 
+        Constants.LOG.info("[FastHarvester][SCAN] BFS seeded {} nodes around {} (range {}).", visited.size(), center, range);
+
         while (!q.isEmpty()) {
             BlockPos cur = q.poll();
             result.add(cur);
@@ -381,6 +383,8 @@ public class FrameScanner {
                 }
             }
         }
+
+        Constants.LOG.info("[FastHarvester][SCAN] BFS discovered {} connected nodes for center {}.", result.size(), center);
 
         return result;
     }
