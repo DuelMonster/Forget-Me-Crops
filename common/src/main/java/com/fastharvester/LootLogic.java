@@ -60,7 +60,6 @@ public class LootLogic {
         boolean silk = false;
         try {
             java.util.Map<String, Integer> ench = com.fastharvester.platform.Services.PLATFORM.getEnchantments(tool);
-            if (ench == null || ench.isEmpty()) ench = com.fastharvester.util.ReflectionUtils.readEnchantmentsFromStack(tool);
             if (ench != null) {
                 for (java.util.Map.Entry<String, Integer> e : ench.entrySet()) {
                     String id = e.getKey();

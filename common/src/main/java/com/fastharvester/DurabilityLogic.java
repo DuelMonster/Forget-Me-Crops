@@ -50,9 +50,6 @@ public class DurabilityLogic {
         int mendingLevel = 0;
         try {
             Map<String, Integer> ench = com.fastharvester.platform.Services.PLATFORM.getEnchantments(hoe);
-            if (ench == null || ench.isEmpty()) {
-                ench = com.fastharvester.util.ReflectionUtils.readEnchantmentsFromStack(hoe);
-            }
             if (ench != null) {
                 for (Map.Entry<String, Integer> e : ench.entrySet()) {
                     String id = e.getKey();
