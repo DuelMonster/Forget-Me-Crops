@@ -18,7 +18,7 @@ public class FastHarvesterNeoForge {
      * Called by NeoForge when the mod is loaded. The future is now!
      */
     public FastHarvesterNeoForge() {
-        // TODO: Load config from file or NeoForge config system here
+        Config.load();
         FastHarvester.init();
     }
 }

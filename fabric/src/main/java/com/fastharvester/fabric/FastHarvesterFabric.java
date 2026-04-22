@@ -18,7 +18,7 @@ public class FastHarvesterFabric implements ModInitializer {
      */
     @Override
     public void onInitialize() {
-        // TODO: Load config from file or Fabric config system here
+        Config.load();
         FastHarvester.init();
     }
 }
