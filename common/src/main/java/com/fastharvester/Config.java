@@ -1,3 +1,16 @@
+/**
+ * Config: The grand spellbook of FastHarvester!
+ * <p>
+ * This class holds every tweakable knob, lever, and secret handshake for the mod. It loads, saves, and syncs config values
+ * across all loaders, making sure your farm is always running at peak efficiency (or maximum chaos, if you prefer).
+ * </p>
+ * <p>
+ * Why does this matter? Because a good config system is the difference between "Why isn't this working?" and "Wow, that was easy!"
+ * </p>
+ * <p>
+ * Loader: Agnostic. Mood: Helpful. Attitude: "Let me handle the boring stuff, you go grow some crops!"
+ * </p>
+ */
 package com.fastharvester;
 
 import com.fastharvester.enums.*;

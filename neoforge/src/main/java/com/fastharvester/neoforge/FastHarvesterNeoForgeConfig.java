@@ -1,3 +1,16 @@
+/**
+ * FastHarvesterNeoForgeConfig: The config wizard for NeoForge!
+ * <p>
+ * This class bridges the gap between NeoForge's config system and FastHarvester's loader-agnostic logic.
+ * It defines all the magical numbers and toggles that make your farm run smoother than a slime block on ice.
+ * </p>
+ * <p>
+ * Why does this matter? Because every great farm needs a great config—and every config needs a little love (and maybe a few jokes).
+ * </p>
+ * <p>
+ * Loader: NeoForge. Mood: Efficient. Attitude: "Let me handle the details, you handle the crops!"
+ * </p>
+ */
 package com.fastharvester.neoforge;
 
 import com.fastharvester.Config;

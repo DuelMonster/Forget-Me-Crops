@@ -1,3 +1,12 @@
+/**
+ * RotationMode: The dance card for your item frame!
+ * <p>
+ * This enum decides how the frame spins during a harvest. Will it twirl, will it march, or will it spiral like a disco ball?
+ * </p>
+ * <p>
+ * Why does this matter? Because farming is more fun when your tools have rhythm.
+ * </p>
+ */
 package com.fastharvester.enums;
 
 public enum RotationMode {
