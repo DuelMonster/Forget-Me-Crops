@@ -166,7 +166,7 @@ public class HarvestUtils {
         // Normal mode: keep all supported seed drops (no-op)
     }
 
-    private static void handleBrokenHoe(HarvestContext ctx, ItemStack oldHoe) {
+    public static void handleBrokenHoe(HarvestContext ctx, ItemStack oldHoe) {
         Constants.LOG.info("[FastHarvester][HOE] Hoe broke during harvest. Previous: {}", oldHoe);
         // Attempt to find a replacement in the chest (naive)
         if (ctx.chest == null) return;
