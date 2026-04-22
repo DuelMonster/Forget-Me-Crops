@@ -47,8 +47,6 @@ dependencies {
         }
     }
 
-    // PuzzlesLib (required for config system)
-    implementation "fuzs.puzzleslib:puzzleslib-neoforge:21.11.12"
 }
 
 sourceSets.main.resources { srcDir "src/generated/resources" }
