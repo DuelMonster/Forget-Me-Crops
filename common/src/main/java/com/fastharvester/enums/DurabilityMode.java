@@ -9,6 +9,9 @@
  */
 package com.fastharvester.enums;
 
+// 🪓 DurabilityMode: decides if your tools are treated like antiques or disposable cutlery.
+// Why it matters: preserves feelings and tool integrity.
+
 public enum DurabilityMode {
     NORMAL,
     IGNORE_UNBREAKING,

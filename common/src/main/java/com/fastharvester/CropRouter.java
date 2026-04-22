@@ -1,5 +1,8 @@
 package com.fastharvester;
 
+// 🧭 CropRouter: decides which crop handler gets to attend to each plant. It's diplomatic and prefers fairness.
+// Why it matters: routing keeps crop logic tidy and extensible.
+
 /**
  * CropRouter: The traffic cop for crops! (Well, someday.)
  * <p>

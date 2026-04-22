@@ -1,5 +1,8 @@
 package com.fastharvester;
 
+// 🧩 FastItemFrameAdapter: a gentle adapter so the mod can play nicely with FastItemFrames.
+// Emotional state: diplomatic and slightly nosy.
+
 /**
  * FastItemFrameAdapter: The detective for item frames and hoes!
  * <p>

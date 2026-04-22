@@ -9,6 +9,9 @@
  */
 package com.fastharvester.enums;
 
+// 🌱 SeedClutterMode: controls how stingy or generous the replanting is with seeds.
+// Emotional note: sometimes the code wants to hoard seeds; this tames it.
+
 public enum SeedClutterMode {
     NORMAL,
     REDUCED,

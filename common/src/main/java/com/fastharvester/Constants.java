@@ -1,5 +1,8 @@
 package com.fastharvester;
 
+// 🎯 Constants: constant companions who remind us of the mod's identity and logger etiquette.
+// Emotional aside: they're small but proud.
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

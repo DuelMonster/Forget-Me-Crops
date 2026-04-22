@@ -1,5 +1,8 @@
 package com.fastharvester;
 
+// 🎁 LootLogic: decides what goodies fall out of plants. Generous when mood is good.
+// Emotional aside: sometimes it dreams of raining golden carrots.
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;

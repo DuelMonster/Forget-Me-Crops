@@ -1,5 +1,8 @@
 package com.fastharvester;
 
+// 😊 CommonClass: a small, stoic helper. It doesn't gossip much, but it quietly helps other classes behave.
+// Why it matters: tidy glue keeps the codebase from tripping over itself.
+
 import com.fastharvester.platform.Services;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Items;

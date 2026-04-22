@@ -1,5 +1,8 @@
 package com.fastharvester;
 
+// 📚 FrameRegistry: keeps track of anchors like a diligent librarian who loves chest-and-hoe pairings.
+// Why it matters: without registration, farms would be shy and un-scheduled.
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;

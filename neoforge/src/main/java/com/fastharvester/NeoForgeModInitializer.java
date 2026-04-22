@@ -1,5 +1,8 @@
 package com.fastharvester;
 
+// ❤️ Playful note: NeoForge initializer here, quietly cheering when mods boot.
+// This little bootstrapping class wakes up the mod in NeoForge and whispers "go harvest".
+
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;

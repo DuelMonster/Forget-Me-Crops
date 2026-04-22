@@ -1,5 +1,8 @@
 package com.fastharvester;
 
+// 🧪 TestUtils: small helpers that get yelled at by unit tests when they misbehave.
+// Emotional tone: supportive but firm.
+
 public final class TestUtils {
     private TestUtils() {}
 

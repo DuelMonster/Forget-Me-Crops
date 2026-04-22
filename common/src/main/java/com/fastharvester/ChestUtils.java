@@ -1,5 +1,8 @@
 package com.fastharvester;
 
+// 🧺 ChestUtils: drawer-of-seeds and gentle-hoarder. Pulls out the right seed at the right time.
+// Emotional tone: practical and slightly maternal.
+
 import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;

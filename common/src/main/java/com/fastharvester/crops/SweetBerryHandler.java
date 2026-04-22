@@ -1,5 +1,8 @@
 package com.fastharvester.crops;
 
+// 🍓 SweetBerryHandler: handles prickly decisions with warm resolve. Berries are loved here.
+// Why it matters: different crops have different social needs.
+
 /**
  * SweetBerryHandler: The berry best at what it does!
  * <p>

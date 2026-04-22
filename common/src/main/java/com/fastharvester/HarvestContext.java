@@ -1,5 +1,8 @@
 package com.fastharvester;
 
+// 🧭 HarvestContext: carries the state and tiny hopes for a single scan. Think of it as the scanner's backpack.
+// Why it matters: neat state makes repeatable, understandable scanning decisions.
+
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;

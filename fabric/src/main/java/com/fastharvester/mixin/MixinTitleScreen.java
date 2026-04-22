@@ -1,5 +1,7 @@
 package com.fastharvester.mixin;
 
+// 🎨 Fabric title mixin: adds a little mod flair to the title screen, like a digital sticker.
+// Emotional note: proud and slightly show-offy.
 import com.fastharvester.Constants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;

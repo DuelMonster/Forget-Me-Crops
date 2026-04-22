@@ -1,5 +1,8 @@
 package com.fastharvester.fabric;
 
+// ⏱️ FabricFarmTicker: politely pokes farms to scan on a schedule. Cheerful and punctual.
+// Emotional aside: it measures time and whispers encouragement.
+
 import com.fastharvester.Config;
 import com.fastharvester.Constants;
 import com.fastharvester.FrameRegistry;

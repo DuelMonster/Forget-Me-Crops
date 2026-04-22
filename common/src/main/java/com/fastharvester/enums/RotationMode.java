@@ -9,6 +9,9 @@
  */
 package com.fastharvester.enums;
 
+// 🔄 RotationMode: decides how frames twirl their crops. Dramatic or practical — you choose.
+// Why it matters: rotation affects how natural your automated farm looks.
+
 public enum RotationMode {
     STEP_PER_HARVEST,
     FULL_ROTATION_PER_HARVEST,

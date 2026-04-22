@@ -1,5 +1,8 @@
 package com.fastharvester.neoforge;
 
+// 🌾 NeoForge ticker: quietly counts down and nudges farms to do their thing.
+// Emotional state: hopeful. It believes in your crops.
+
 import com.fastharvester.FrameRegistry;
 import com.fastharvester.FrameScanner;
 import com.fastharvester.Constants;

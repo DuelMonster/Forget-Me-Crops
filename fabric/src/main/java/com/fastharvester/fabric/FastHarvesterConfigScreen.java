@@ -1,5 +1,8 @@
 package com.fastharvester.fabric;
 
+// 🎛️ Config screen: the cozy control panel where you decide how your farms feel.
+// Emotional note: kind but opinionated defaults.
+
 import com.fastharvester.Config;
 import com.fastharvester.enums.DurabilityMode;
 import com.fastharvester.enums.RotationMode;

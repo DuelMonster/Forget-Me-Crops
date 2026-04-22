@@ -13,6 +13,9 @@
  */
 package com.fastharvester;
 
+// ⚙️ Config: the gentle puppet master of behavior. Tweak with care; it notices everything.
+// Why it matters: changes here change how your virtual garden feels.
+
 import com.fastharvester.enums.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +37,7 @@ public class Config {
     public static int scanRange = 4; // 9x9 area
     public static DurabilityMode durabilityMode = DurabilityMode.NORMAL;
     public static boolean mendingNegation = true;
-    public static boolean debugLogging = false;
+    public static boolean debugLogging = true;
     public static int chestFullCooldownTicks = 100;
     public static int maxSpiralDurationTicks = 100;
     public static boolean harvestParticles = true;

@@ -1,5 +1,8 @@
 package com.fastharvester.crops;
 
+// 🌱 crops.CropRouter: decides which crop-specific handler should lovingly tend each plant.
+// Emotional tone: fair-minded and slightly dramatic.
+
 /**
  * CropRouter: The GPS for your crops!
  * <p>

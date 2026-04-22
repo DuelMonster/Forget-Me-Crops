@@ -1,5 +1,8 @@
 package com.fastharvester.platform.services;
 
+// 🧾 IPlatformHelper: the contract that platform helpers lovingly implement.
+// Emotional aside: it's an interface, but it still believes in teamwork.
+
 /**
  * IPlatformHelper: The universal translator for mod platforms!
  * <p>

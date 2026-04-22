@@ -2,6 +2,9 @@
 
 package com.fastharvester;
 
+// 🌾 HarvestUtils: hands-on harvesting logic. It plucks, sifts, and occasionally judges wasted seeds.
+// Why it matters: this is where the magic (and occasional mayhem) of replanting happens.
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;

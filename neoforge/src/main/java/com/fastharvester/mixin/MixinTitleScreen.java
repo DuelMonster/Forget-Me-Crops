@@ -1,5 +1,8 @@
 package com.fastharvester.mixin;
 
+// 😄 Tiny mixin with big dreams: sprinkles mod info onto the title screen when it feels social.
+// Why it matters: first impressions count. Make them charming.
+
 import com.fastharvester.Constants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;

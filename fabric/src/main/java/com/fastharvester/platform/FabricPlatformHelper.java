@@ -1,5 +1,8 @@
 package com.fastharvester.platform;
 
+// 🧭 FabricPlatformHelper: translates platform specifics into friendly instructions.
+// It helps the mod keep calm and carry on across Fabric's APIs.
+
 import com.fastharvester.platform.services.IPlatformHelper;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.world.item.ItemStack;

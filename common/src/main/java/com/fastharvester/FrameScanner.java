@@ -12,6 +12,7 @@ package com.fastharvester;
  * For the full adventure, see TECHNICAL.md (bring snacks).
  * </p>
  */
+// 🔎 Emotional aside: the scanner sometimes daydreams about perfect rows of wheat. It powers through anyway.
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Container;

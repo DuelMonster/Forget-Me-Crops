@@ -1,5 +1,8 @@
 package com.fastharvester.platform;
 
+// 🤝 NeoForgePlatformHelper: bridge-builder and polite translator between mod logic and NeoForge quirks.
+// It smiles, mediates, and sometimes uses reflection when feeling brave.
+
 import com.fastharvester.platform.services.IPlatformHelper;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLLoader;

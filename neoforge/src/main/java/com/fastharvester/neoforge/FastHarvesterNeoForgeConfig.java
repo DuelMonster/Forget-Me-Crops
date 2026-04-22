@@ -13,6 +13,9 @@
  */
 package com.fastharvester.neoforge;
 
+// 🛠️ NeoForge config: holds settings and quietly judges your choices.
+// Why it matters: your harvest personality lives here.
+
 import com.fastharvester.Config;
 import com.fastharvester.enums.DurabilityMode;
 import com.fastharvester.enums.RotationMode;

@@ -1,5 +1,8 @@
 package com.fastharvester;
 
+// 🌐 ModCommon: loader-agnostic boot glue. It keeps the mod's identity intact across environments.
+// Why it matters: cross-platform calmness.
+
 /**
  * ModCommon: The universal handshake for FastHarvester!
  * <p>

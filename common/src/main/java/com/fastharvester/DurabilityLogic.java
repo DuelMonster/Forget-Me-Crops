@@ -1,5 +1,8 @@
 package com.fastharvester;
 
+// 🛡️ DurabilityLogic: keeps track of hoe feelings and when they finally give up.
+// Emotional note: handle with care; hoes have feelings too.
+
 import com.fastharvester.enums.DurabilityMode;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;

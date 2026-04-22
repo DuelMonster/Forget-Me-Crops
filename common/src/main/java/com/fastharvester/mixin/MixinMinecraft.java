@@ -1,5 +1,8 @@
 package com.fastharvester.mixin;
 
+// ✨ MixinMinecraft: sneaks tiny integrations into Minecraft classes. Quietly mischievous.
+// Why it matters: sometimes you need a gentle nudge into game behavior.
+
 import com.fastharvester.Constants;
 import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;

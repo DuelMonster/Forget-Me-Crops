@@ -1,5 +1,8 @@
 package com.fastharvester.crops;
 
+// 🧪 NetherWartHandler: specialized for gloomy soul-sand gardens. Quiet, serious, and surprisingly tender.
+// Emotional aside: it knows Nether plants need special care and a comforting pat.
+
 /**
  * NetherWartHandler: The spicy specialist for Nether Wart!
  * <p>
