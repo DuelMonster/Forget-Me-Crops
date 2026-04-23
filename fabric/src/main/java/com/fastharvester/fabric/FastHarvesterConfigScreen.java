@@ -43,7 +43,10 @@ public class FastHarvesterConfigScreen extends Screen {
         this.parent = parent;
     }
 
-
+    /**
+     * Initialize UI widgets and load current config values.
+     * Humanized aside: builds the control panel so players can decide how their farms feel.
+     */
     protected void init() {
         super.init();
         this.clearWidgets();
@@ -123,6 +126,9 @@ public class FastHarvesterConfigScreen extends Screen {
                 .pos(this.width / 2 + 2, footerY).size(100, 20).build());
     }
 
+    /**
+     * Build the client-only page of the config UI.
+     */
     private void buildClientPage() {
         int colW = 150;
         int x = this.width / 2 - colW / 2;
@@ -136,6 +142,9 @@ public class FastHarvesterConfigScreen extends Screen {
 
 
 
+    /**
+     * Helper to create and register an integer EditBox.
+     */
     private EditBox addIntField(int x, int y, int value, Consumer<String> onChange) {
         EditBox field = new EditBox(this.font, x, y + 10, 150, 20, Component.empty());
         field.setValue(Integer.toString(value));
@@ -144,6 +153,9 @@ public class FastHarvesterConfigScreen extends Screen {
         return field;
     }
 
+    /**
+     * Switch between server and client pages, rebuilding widgets as necessary.
+     */
     private void switchPage(Page page) {
         if (this.activePage != page) {
             this.activePage = page;
@@ -151,6 +163,9 @@ public class FastHarvesterConfigScreen extends Screen {
         }
     }
 
+    /**
+     * Persist settings from UI to disk and close the screen.
+     */
     private void saveAndClose() {
         try {
             Config.tickInterval = parsePositive(tickIntervalField.getValue(), "Tick Interval");
@@ -172,26 +187,41 @@ public class FastHarvesterConfigScreen extends Screen {
         }
     }
 
+    /**
+     * Parse a positive integer from a string, throwing an IllegalArgumentException on invalid input.
+     */
     private int parsePositive(String value, String label) {
         int parsed = parseInteger(value, label);
         if (parsed <= 0) throw new IllegalArgumentException(label + " must be greater than 0.");
         return parsed;
     }
+    /**
+     * Parse a non-negative integer from a string, throwing an IllegalArgumentException on invalid input.
+     */
     private int parseNonNegative(String value, String label) {
         int parsed = parseInteger(value, label);
         if (parsed < 0) throw new IllegalArgumentException(label + " must be 0 or greater.");
         return parsed;
     }
+    /**
+     * Parse an integer from a string, throwing IllegalArgumentException on invalid input.
+     */
     private int parseInteger(String value, String label) {
         try { return Integer.parseInt(value.trim()); }
         catch (NumberFormatException e) { throw new IllegalArgumentException(label + " must be a whole number."); }
     }
 
+    /**
+     * Close the config screen and return to the parent screen.
+     */
     @Override
     public void onClose() {
         this.minecraft.setScreen(parent);
     }
 
+    /**
+     * Render the config screen.
+     */
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         super.render(graphics, mouseX, mouseY, delta);

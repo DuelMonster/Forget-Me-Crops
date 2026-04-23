@@ -54,6 +54,10 @@ public class FabricPlatformHelper implements IPlatformHelper {
         return FabricLoader.getInstance().isDevelopmentEnvironment();
     }
     
+    /**
+     * Extract enchantments from an ItemStack and return them as a simple map.
+     * Humanized aside: we pry into the stack to see what magical stickers it has.
+     */
     @Override
     public java.util.Map<String, Integer> getEnchantments(ItemStack stack) {
         try {
@@ -103,6 +107,10 @@ public class FabricPlatformHelper implements IPlatformHelper {
         return java.util.Collections.emptyMap();
     }
 
+    /**
+     * Attempt to compute correct block drops using the platform's LootContext if possible.
+     * Emotional aside: we try our best to produce realistic drops so players don't feel cheated.
+     */
     @Override
     public java.util.List<ItemStack> getBlockDrops(Level level, BlockPos pos, BlockState state, ItemStack tool) {
         if (level == null || state == null) return java.util.Collections.emptyList();

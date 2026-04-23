@@ -9,6 +9,10 @@ import net.fabricmc.api.ModInitializer;
 import com.fastharvester.fabric.FabricFarmTicker;
 
 public class FastHarvesterFabric implements ModInitializer {
+    /**
+     * Fabric entrypoint: load config, init common logic, and start the farm ticker.
+     * Emotional aside: this is the tiny handshake that starts all the farming drama.
+     */
     @Override
     public void onInitialize() {
         Config.load();
