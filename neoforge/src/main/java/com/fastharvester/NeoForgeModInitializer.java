@@ -20,6 +20,9 @@ import com.fastharvester.neoforge.NeoForgeFarmTicker;
 public final class NeoForgeModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger(ModCommon.MOD_NAME);
 
+    /**
+     * NeoForge mod initializer: register config listeners and initialize the farm ticker.
+     */
     public NeoForgeModInitializer(IEventBus modEventBus, ModContainer container) {
         // Register config spec
         container.registerConfig(ModConfig.Type.COMMON, FastHarvesterNeoForgeConfig.SPEC);
@@ -32,18 +35,27 @@ public final class NeoForgeModInitializer {
         NeoForgeFarmTicker.init(modEventBus);
     }
 
+    /**
+     * Handle config loading events and update runtime values.
+     */
     private void onConfigLoading(ModConfigEvent.Loading event) {
         if (event.getConfig().getSpec() == FastHarvesterNeoForgeConfig.SPEC) {
             FastHarvesterNeoForgeConfig.update();
         }
     }
     
+    /**
+     * Handle config reload events and refresh in-memory config.
+     */
     private void onConfigReloading(ModConfigEvent.Reloading event) {
         if (event.getConfig().getSpec() == FastHarvesterNeoForgeConfig.SPEC) {
             FastHarvesterNeoForgeConfig.update();
         }
     }
 
+    /**
+     * Common setup invoked during mod initialization; boots core logic.
+     */
     private void commonSetup(FMLCommonSetupEvent event) {
         LOGGER.info("{} v{} loaded for NeoForge", ModCommon.MOD_NAME, ModCommon.MOD_VERSION);
         FastHarvester.init();

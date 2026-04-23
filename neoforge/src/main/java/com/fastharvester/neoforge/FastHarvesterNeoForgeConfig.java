@@ -70,4 +70,8 @@ public class FastHarvesterNeoForgeConfig {
         Config.seedClutterMode = SEED_CLUTTER_MODE.get();
         Config.seedReservePerType = SEED_RESERVE_PER_TYPE.get();
     }
+
+    /**
+     * Synchronize values from NeoForge config spec into the common Config class.
+     */
 }

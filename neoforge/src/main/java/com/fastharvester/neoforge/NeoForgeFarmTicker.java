@@ -27,15 +27,37 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Block;
 
 import java.util.List;
+import java.util.Map;
 
+import com.fastharvester.CatchupManager;
+import com.fastharvester.FrameDiscovery;
+import com.fastharvester.FastItemFrameAdapterImpl;
+
+/**
+ * NeoForgeFarmTicker: discovers anchors on chunk load/unload and schedules scans on server tick.
+ *
+ * This ticker behaves similarly to the Fabric ticker but uses NeoForge event hooks.
+ *
+ * Emotional aside: it likes long walks on the server and gradual, polite discovery.
+ * It queues pre-existing frames for gradual processing to avoid large single-tick work.
+ */
 public class NeoForgeFarmTicker {
     private static boolean tickSnapshotLogged = false;
+    private static final int CATCHUP_TICKS = 40;
+    /**
+     * Initialize NeoForge listeners for chunk load/unload and server tick processing.
+     * Emotional aside: behaves like Fabric's ticker but speaks NeoForge's dialect.
+     */
     public static void init(IEventBus bus) {
         bus.addListener(NeoForgeFarmTicker::onChunkLoad);
         bus.addListener(NeoForgeFarmTicker::onChunkUnload);
         bus.addListener(NeoForgeFarmTicker::onServerTick);
     }
 
+    /**
+     * Handle chunk unload events: unregister any anchors in the unloading chunk.
+     * Humanized note: we politely forget anchors when their chunks leave — no hoarding allowed.
+     */
     private static void onChunkUnload(ChunkEvent.Unload event) {
         try {
             var levelAccessor = event.getLevel();
@@ -56,14 +78,13 @@ public class NeoForgeFarmTicker {
                 try { FrameRegistry.unregisterFrame(dimId, f.blockPosition()); } catch (Throwable ignored) {}
             }
 
-            // Unregister FIF block-entities
+            // Unregister FIF block-entities (use adapter detection to avoid fragile string checks)
             try {
                 for (var e : lc.getBlockEntities().entrySet()) {
                     BlockPos pos = e.getKey();
                     BlockEntity be = e.getValue();
                     if (be == null) continue;
-                    String cls = be.getClass().getName().toLowerCase();
-                    if (!cls.contains("fastitemframes")) continue;
+                    if (!com.fastharvester.FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
                     FrameRegistry.unregisterFrame(dimId, pos);
                 }
             } catch (Throwable ignored) {}
@@ -72,6 +93,10 @@ public class NeoForgeFarmTicker {
         }
     }
 
+    /**
+     * Handle chunk load events: discover vanilla frames and FastItemFrames in the loaded chunk.
+     * Emotional aside: this is where shy anchors get discovered and invited to the registry.
+     */
     private static void onChunkLoad(ChunkEvent.Load event) {
         try {
             var levelAccessor = event.getLevel();
@@ -90,43 +115,7 @@ public class NeoForgeFarmTicker {
             Constants.LOG.info("[FastHarvester][TICK] NeoForge found {} item frames in chunk {}.", frames.size(), lc.getPos());
             for (ItemFrame f : frames) {
                 try {
-                    try { Constants.LOG.info("[FastHarvester][TICK] NeoForge frame at {} direction={}", f.blockPosition(), f.getDirection()); } catch (Throwable ignored) {}
-                    var held = f.getItem();
-                    if (held == null || held.isEmpty()) { Constants.LOG.info("[FastHarvester][TICK] NeoForge frame {} holds nothing.", f.blockPosition()); continue; }
-                    try { Constants.LOG.info("[FastHarvester][TICK] NeoForge frame {} holds item: {}", f.blockPosition(), held.getItem().getClass().getName()); } catch (Throwable ignored) {}
-                    if (f.getDirection() != Direction.UP) { Constants.LOG.info("[FastHarvester][TICK] NeoForge frame {} skipped: not facing UP ({}).", f.blockPosition(), f.getDirection()); continue; }
-                    if (!(held.getItem() instanceof HoeItem)) { Constants.LOG.info("[FastHarvester][TICK] NeoForge frame {} skipped: held item is not a hoe.", f.blockPosition()); continue; }
-                    BlockPos pos = f.blockPosition();
-                    BlockPos chestPos = pos;
-                    BlockEntity be = level.getBlockEntity(chestPos);
-                    if (!(be instanceof Container)) {
-                        BlockPos below = pos.below();
-                        BlockEntity beBelow = level.getBlockEntity(below);
-                        if (beBelow instanceof Container) {
-                            be = beBelow;
-                            chestPos = below;
-                        }
-                    }
-                    if (be instanceof Container chest) {
-                        boolean chestWaterlogged = false;
-                        try { BlockState cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
-                        boolean nearbyFarmlandCrop = false;
-                        int r = Math.min(5, Math.max(1, com.fastharvester.Config.scanRange));
-                        outer: for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
-                            BlockState ns = level.getBlockState(chestPos.offset(dx, 0, dz));
-                            Block b = ns.getBlock();
-                            if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) { nearbyFarmlandCrop = true; break outer; }
-                        }
-                        if (nearbyFarmlandCrop && !chestWaterlogged) {
-                            Constants.LOG.info("[FastHarvester][TICK] NeoForge skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
-                            continue;
-                        }
-
-                        Constants.LOG.info("[FastHarvester][TICK] NeoForge discovered anchor (vanilla) at {} in {}; registering.", pos, dimId);
-                        FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
-                    } else {
-                        Constants.LOG.info("[FastHarvester][TICK] NeoForge no container near frame pos {} (be={}).", f.blockPosition(), be == null ? "null" : be.getClass().getName());
-                    }
+                    FrameDiscovery.registerVanillaFrameIfValid(dimId, level, f);
                 } catch (Throwable t) { Constants.LOG.warn("[FastHarvester][TICK] NeoForge per-frame processing error: {}", t.toString()); }
             }
 
@@ -136,32 +125,8 @@ public class NeoForgeFarmTicker {
                     BlockPos pos = e.getKey();
                     BlockEntity be = e.getValue();
                     if (be == null) continue;
-                    String cls = be.getClass().getName().toLowerCase();
-                    if (!cls.contains("fastitemframes")) continue;
-                    // reflectively extract held item
-                    net.minecraft.world.item.ItemStack held = extractHeldItemReflectively(be);
-                    if (held == null || held.isEmpty()) continue;
-                    if (!(held.getItem() instanceof HoeItem)) continue;
-                    BlockPos chestPos = pos.below();
-                    var chestBe = level.getBlockEntity(chestPos);
-                    if (chestBe instanceof Container chest) {
-                        boolean chestWaterlogged = false;
-                        try { BlockState cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
-                        boolean nearbyFarmlandCrop = false;
-                        int r = Math.min(5, Math.max(1, com.fastharvester.Config.scanRange));
-                        outer3: for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
-                            BlockState ns = level.getBlockState(chestPos.offset(dx, 0, dz));
-                            Block b = ns.getBlock();
-                            if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) { nearbyFarmlandCrop = true; break outer3; }
-                        }
-                        if (nearbyFarmlandCrop && !chestWaterlogged) {
-                            Constants.LOG.info("[FastHarvester][TICK] Skipping FIF anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
-                            continue;
-                        }
-
-                        Constants.LOG.info("[FastHarvester][TICK] Discovered anchor (FIF) at {} in {}; registering.", pos, dimId);
-                        FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
-                    }
+                    if (!FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
+                    FrameDiscovery.registerFIFIfValid(dimId, level, be, pos);
                 }
             } catch (Throwable t) {
                 Constants.LOG.debug("[FastHarvester][FIF] NeoForge FIF discovery failed: {}", t.toString());
@@ -172,6 +137,10 @@ public class NeoForgeFarmTicker {
         }
     }
 
+    /**
+     * Server tick handler: process catch-up batches, decrement frame timers, and run scans.
+     * Friendly reminder: work is spread across ticks to keep the server calm and responsive.
+     */
     private static void onServerTick(ServerTickEvent.Post event) {
         try {
             if (!event.hasTime()) return;
@@ -179,56 +148,12 @@ public class NeoForgeFarmTicker {
             if (server == null) return;
                     for (ServerLevel level : server.getAllLevels()) {
                     String dimId = level.dimension().identifier().toString();
+                    // Capture a one-time snapshot and then process a small catch-up batch
+                    // each tick so we don't overload the server on startup.
                     if (!tickSnapshotLogged) {
-                        Constants.LOG.info("[FastHarvester][TICK] NeoForge snapshot: recorded frames in {}: {} (active {})", dimId, FrameRegistry.countRecordedFrames(dimId), FrameRegistry.countActiveFrames(dimId));
-                        try {
-                            Constants.LOG.info("[FastHarvester][TICK] NeoForge performing one-time catch-up scan for loaded item frames in {}", dimId);
-                            AABB worldBox = new AABB(-30000000, 0, -30000000, 30000000, 256, 30000000);
-                            List<ItemFrame> loadedFrames = level.getEntitiesOfClass(ItemFrame.class, worldBox);
-                            Constants.LOG.info("[FastHarvester][TICK] NeoForge catch-up found {} item frames in {}", loadedFrames.size(), dimId);
-                            for (ItemFrame f : loadedFrames) {
-                                try {
-                                    try { Constants.LOG.info("[FastHarvester][TICK] NeoForge catch-up frame at {} direction={}", f.blockPosition(), f.getDirection()); } catch (Throwable ignored) {}
-                                    var held = f.getItem();
-                                    if (held == null || held.isEmpty()) { Constants.LOG.info("[FastHarvester][TICK] NeoForge catch-up frame {} holds nothing.", f.blockPosition()); continue; }
-                                    try { Constants.LOG.info("[FastHarvester][TICK] NeoForge catch-up frame {} holds item: {}", f.blockPosition(), held.getItem().getClass().getName()); } catch (Throwable ignored) {}
-                                    if (f.getDirection() != Direction.UP) { Constants.LOG.info("[FastHarvester][TICK] NeoForge catch-up frame {} skipped: not facing UP ({}).", f.blockPosition(), f.getDirection()); continue; }
-                                    if (!(held.getItem() instanceof HoeItem)) { Constants.LOG.info("[FastHarvester][TICK] NeoForge catch-up frame {} skipped: held item is not a hoe.", f.blockPosition()); continue; }
-                                    BlockPos pos = f.blockPosition();
-                                    BlockPos chestPos = pos;
-                                    BlockEntity be = level.getBlockEntity(chestPos);
-                                    if (!(be instanceof Container)) {
-                                        BlockPos below = pos.below();
-                                        BlockEntity beBelow = level.getBlockEntity(below);
-                                        if (beBelow instanceof Container) {
-                                            be = beBelow;
-                                            chestPos = below;
-                                        }
-                                    }
-                                    if (be instanceof Container chest) {
-                                        boolean chestWaterlogged = false;
-                                        try { BlockState cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
-                                        boolean nearbyFarmlandCrop = false;
-                                        int r = Math.min(5, Math.max(1, com.fastharvester.Config.scanRange));
-                                        outer4: for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
-                                            BlockState ns = level.getBlockState(chestPos.offset(dx, 0, dz));
-                                            Block b = ns.getBlock();
-                                            if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) { nearbyFarmlandCrop = true; break outer4; }
-                                        }
-                                        if (nearbyFarmlandCrop && !chestWaterlogged) {
-                                            Constants.LOG.info("[FastHarvester][TICK] NeoForge catch-up skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
-                                            continue;
-                                        }
-
-                                        Constants.LOG.info("[FastHarvester][TICK] NeoForge catch-up discovered anchor (vanilla) at {} in {}; registering.", pos, dimId);
-                                        FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
-                                    } else {
-                                        Constants.LOG.info("[FastHarvester][TICK] NeoForge catch-up no container near frame pos {} (be={}).", f.blockPosition(), be == null ? "null" : be.getClass().getName());
-                                    }
-                                } catch (Throwable t) { Constants.LOG.warn("[FastHarvester][TICK] NeoForge catch-up per-frame error: {}", t.toString()); }
-                            }
-                        } catch (Throwable t) { Constants.LOG.warn("[FastHarvester][TICK] NeoForge catch-up discovery error: {}", t.toString()); }
+                        CatchupManager.queueLoadedFrames(level, dimId);
                     }
+                    CatchupManager.processBatch(level, dimId, CATCHUP_TICKS);
                     var ready = FrameRegistry.tickAndCollectReady(dimId);
                     if (!ready.isEmpty()) {
                         Constants.LOG.info("[FastHarvester][TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
@@ -248,18 +173,5 @@ public class NeoForgeFarmTicker {
         }
     }
 
-    private static net.minecraft.world.item.ItemStack extractHeldItemReflectively(BlockEntity be) {
-        try {
-            for (var m : be.getClass().getMethods()) {
-                String name = m.getName().toLowerCase();
-                if (name.contains("getdisplayed") || name.contains("getheld") || name.contains("getitem")) {
-                    if (m.getParameterCount() == 0) {
-                        Object res = m.invoke(be);
-                        if (res instanceof net.minecraft.world.item.ItemStack) return (net.minecraft.world.item.ItemStack) res;
-                    }
-                }
-            }
-        } catch (Throwable t) { /* ignore */ }
-        return null;
-    }
+    
 }

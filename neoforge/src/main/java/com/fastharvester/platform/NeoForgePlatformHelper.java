@@ -48,6 +48,10 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
         return !FMLLoader.getCurrent().isProduction();
     }
 
+    /**
+     * Extract enchantments from an ItemStack via reflection where necessary.
+     * Humanized aside: we peek under the hood to see what spell levels are present.
+     */
     @Override
     public java.util.Map<String, Integer> getEnchantments(net.minecraft.world.item.ItemStack stack) {
         try {
@@ -97,6 +101,10 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
         return java.util.Collections.emptyMap();
     }
 
+    /**
+     * Compute block drops using NeoForge's loot APIs when possible; otherwise fall back to reflection.
+     * Emotional aside: we do this so blocks give sensible loot and your chests stay trustworthy.
+     */
     @Override
     public java.util.List<net.minecraft.world.item.ItemStack> getBlockDrops(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.item.ItemStack tool) {
         if (level == null || state == null) return java.util.Collections.emptyList();
