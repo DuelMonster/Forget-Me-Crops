@@ -21,6 +21,9 @@ public enum SeedClutterMode {
         return name();
     }
 
+    /**
+     * Parse the config string into an enum value, falling back to REDUCED on error.
+     */
     public static SeedClutterMode fromConfigValue(String value) {
         try {
             return valueOf(value.toUpperCase());

@@ -70,6 +70,10 @@ public class FrameScanner {
             this.framePos = framePos;
             this.hoe = hoe;
         }
+        /**
+         * String representation of the anchor for logging.
+         * Emotional aside: anchors are small but full of purpose.
+         */
         @Override
         public String toString() { return "Anchor[pos="+framePos+",hoe="+hoe+"]"; }
     }
@@ -325,6 +329,10 @@ public class FrameScanner {
         return cropsFound > 0;
     }
 
+    /**
+     * Choose a seed Item for the given crop block. Returns null if unknown.
+     * Humanized aside: we try to pick the seed the plant would recognize at breakfast.
+     */
     private static Item seedForBlock(Block b) {
         if (b == Blocks.WHEAT) return Items.WHEAT_SEEDS;
         if (b == Blocks.BEETROOTS) return Items.BEETROOT_SEEDS;
@@ -341,6 +349,10 @@ public class FrameScanner {
         return null;
     }
 
+    /**
+     * BFS-based discovery for connected farm nodes starting from `center`.
+     * Emotional aside: this explores like a curious mole sniffing out crops.
+     */
     private static List<BlockPos> bfsDiscoverFarm(BlockPos center, Level level, int range) {
         List<BlockPos> result = new ArrayList<>();
         Set<BlockPos> visited = new HashSet<>();
@@ -389,6 +401,10 @@ public class FrameScanner {
         return result;
     }
 
+    /**
+     * Read the rotation of an item frame or FastItemFrames block-entity at `pos`.
+     * Humanized aside: frames have feelings; rotation is how they express them.
+     */
     private static int getFrameRotation(Level level, BlockPos pos) {
         try {
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(pos));
@@ -413,22 +429,12 @@ public class FrameScanner {
                 }
             }
 
-            // block-entity fallback (FastItemFrames)
+            // Block-entity fallback (FastItemFrames): if there is no vanilla ItemFrame
+            // at `pos` we try to read rotation from a FIF block-entity using our adapter.
+            // This keeps behavior consistent across vanilla and FastItemFrames worlds.
             BlockEntity be = level.getBlockEntity(pos);
             if (be != null) {
-                for (Method m : be.getClass().getMethods()) {
-                    String name = m.getName().toLowerCase();
-                    if ((name.contains("get") || name.contains("getitem")) && name.contains("rotation") && m.getParameterCount() == 0) {
-                        Object r = m.invoke(be);
-                        if (r instanceof Number) return ((Number) r).intValue() & 7;
-                    }
-                }
-                try {
-                    Field fld = be.getClass().getDeclaredField("rotation");
-                    fld.setAccessible(true);
-                    Object v = fld.get(be);
-                    if (v instanceof Number) return ((Number) v).intValue() & 7;
-                } catch (Throwable ignored) {}
+                try { return FastItemFrameAdapterImpl.getRotation(be); } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
             Constants.LOG.debug("[FastHarvester][ROT] getFrameRotation failed at {}: {}", pos, t.toString());
@@ -436,6 +442,10 @@ public class FrameScanner {
         return 0;
     }
 
+    /**
+     * Set the rotation of an item frame or FastItemFrames block-entity at `pos`.
+     * Emotional aside: rotate gently — it's a bit sensitive.
+     */
     private static void setFrameRotation(Level level, BlockPos pos, int newRotation) {
         try {
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(pos));
@@ -466,32 +476,13 @@ public class FrameScanner {
                 }
             }
 
-            // block-entity path
+            // Block-entity path: try setting rotation on a FIF block-entity and
+            // notify the world about the change. This is a best-effort operation
+            // and intentionally tolerant of failures (no panicking allowed).
             BlockEntity be = level.getBlockEntity(pos);
             if (be != null) {
-                for (Method m : be.getClass().getMethods()) {
-                    String name = m.getName().toLowerCase();
-                    if (name.contains("set") && name.contains("rotation") && m.getParameterCount() == 1) {
-                        Class<?> p = m.getParameterTypes()[0];
-                        if (p == int.class || p == Integer.class) {
-                            m.invoke(be, newRotation);
-                            try { be.setChanged(); } catch (Throwable ignored) {}
-                            try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
-                            return;
-                        }
-                        if (p == byte.class || p == Byte.class) {
-                            m.invoke(be, (byte) newRotation);
-                            try { be.setChanged(); } catch (Throwable ignored) {}
-                            try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
-                            return;
-                        }
-                    }
-                }
                 try {
-                    Field fld = be.getClass().getDeclaredField("rotation");
-                    fld.setAccessible(true);
-                    fld.setInt(be, newRotation & 7);
-                    try { be.setChanged(); } catch (Throwable ignored) {}
+                    FastItemFrameAdapterImpl.setRotation(be, newRotation);
                     try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
                     return;
                 } catch (Throwable ignored) {}

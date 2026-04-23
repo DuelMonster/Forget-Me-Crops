@@ -97,7 +97,10 @@ public class HarvestUtils {
         ctx.harvestedCount++;
     }
 
-    // Helper methods (consumeOneReplantDrop, replantCostItemFor, applySeedClutterPolicy, clutterSeedItemFor, etc.)
+    /**
+     * Consume a single replant item from the drops list if available.
+     * Humanized aside: we politely take one seed so the next plant won't feel abandoned.
+     */
     private static void consumeOneReplantDrop(List<ItemStack> drops, ItemStack costItem) {
         if (costItem == null || costItem.isEmpty()) return;
         for (Iterator<ItemStack> it = drops.iterator(); it.hasNext();) {
@@ -114,6 +117,10 @@ public class HarvestUtils {
         }
     }
 
+    /**
+     * Determine the item cost required to replant the given block type.
+     * @return the ItemStack representing one unit of the replant cost, or ItemStack.EMPTY if unknown.
+     */
     private static ItemStack replantCostItemFor(Block block) {
         if (block == Blocks.BEETROOTS) return new ItemStack(Items.BEETROOT_SEEDS);
         if (block == Blocks.WHEAT) return new ItemStack(Items.WHEAT_SEEDS);
@@ -124,12 +131,19 @@ public class HarvestUtils {
         return ItemStack.EMPTY;
     }
 
+    /**
+     * Return the seed Item corresponding to the block, used for seed-clutter policies.
+     */
     private static Item clutterSeedItemFor(Block block) {
         if (block == Blocks.BEETROOTS) return Items.BEETROOT_SEEDS;
         if (block == Blocks.WHEAT) return Items.WHEAT_SEEDS;
         return null;
     }
 
+    /**
+     * Apply the configured seed clutter policy to the list of drops before insertion into chest.
+     * Emotional aside: this prevents your chests from becoming overrun by tiny seed armies.
+     */
     private static void applySeedClutterPolicy(List<ItemStack> drops, Item seedItem, Container chest) {
         if (seedItem == null) return;
         if (Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.NONE) {
@@ -170,6 +184,10 @@ public class HarvestUtils {
         // Normal mode: keep all supported seed drops (no-op)
     }
 
+    /**
+     * Attempt to replace a broken hoe from the chest inventory if possible.
+     * Humanized note: replace the fallen warrior so harvesting can continue.
+     */
     public static void handleBrokenHoe(HarvestContext ctx, ItemStack oldHoe) {
         Constants.LOG.info("[FastHarvester][HOE] Hoe broke during harvest. Previous: {}", oldHoe);
         // Attempt to find a replacement in the chest (naive)
@@ -188,6 +206,10 @@ public class HarvestUtils {
         }
     }
 
+    /**
+     * Sync the frame-held hoe back to the world if loader-specific code requires it.
+     * Currently a no-op in common; present for platform implementations to hook.
+     */
     private static void syncFrameHoe(HarvestContext ctx) {
         // Loader-specific: update the frame block entity if necessary. For now just log.
         Constants.LOG.debug("[FastHarvester][HOE] syncFrameHoe called (no-op in common). Current hoe: {}", ctx.hoe);

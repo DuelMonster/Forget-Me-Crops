@@ -14,6 +14,10 @@ import java.util.List;
 public class ChestUtils {
     public ChestUtils() {}
 
+    /**
+     * Check whether the given chest has any available slot or stack room.
+     * Humanized aside: returns true if there's somewhere to tuck the seeds away.
+     */
     public static boolean hasSpace(Container chest) {
         if (chest == null) return false;
         for (int i = 0; i < chest.getContainerSize(); i++) {
@@ -24,6 +28,10 @@ public class ChestUtils {
         return false;
     }
 
+    /**
+     * Insert all provided item stacks into the chest, merging stacks where possible.
+     * Emotional aside: this is the gentle tidying routine for loot.
+     */
     public static void insertAll(Container chest, List<ItemStack> drops) {
         if (chest == null || drops == null || drops.isEmpty()) return;
         for (ItemStack drop : drops) {

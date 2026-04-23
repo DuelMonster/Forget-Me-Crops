@@ -21,6 +21,9 @@ public enum DurabilityMode {
         return name();
     }
 
+    /**
+     * Parse a config string into DurabilityMode, defaulting to NORMAL on invalid input.
+     */
     public static DurabilityMode fromConfigValue(String value) {
         try {
             return valueOf(value.toUpperCase());

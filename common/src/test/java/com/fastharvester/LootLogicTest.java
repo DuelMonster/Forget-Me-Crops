@@ -1,10 +1,18 @@
 package com.fastharvester;
 
+/*
+ * LootLogicTest — simple unit tests for `LootLogic` helpers.
+ * Humanized note: these keep loot behavior predictable and prevent dramatic chest explosions.
+ */
+
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class LootLogicTest {
 
+    /**
+     * Ensure loot calculation without Fortune stays within expected bounds.
+     */
     @Test
     public void calculateLootWithinBounds_NoFortune() {
         for (int i = 0; i < 200; i++) {
@@ -13,6 +21,9 @@ public class LootLogicTest {
         }
     }
 
+    /**
+     * Ensure loot calculation with Fortune increases possible drops but stays bounded.
+     */
     @Test
     public void calculateLootWithinBounds_WithFortune() {
         int fortune = 3;

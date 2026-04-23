@@ -66,6 +66,11 @@ public class Config {
         }
     }
 
+
+    /**
+     * Apply server-side settings programmatically.
+     * Humanized note: this lets tests and loader-specific code push config values.
+     */
     public static void applyServerSettings(int tickInterval, int frameRediscoveryInterval, int scanRange, DurabilityMode durabilityMode,
                                            boolean mendingNegation, boolean debugLogging,
                                            int chestFullCooldownTicks, int maxSpiralDurationTicks,
@@ -84,10 +89,16 @@ public class Config {
         Config.seedReservePerType = seedReservePerType;
     }
 
+    /**
+     * Apply client-side settings programmatically.
+     */
     public static void applyClientSettings(boolean harvestParticles) {
         Config.harvestParticles = harvestParticles;
     }
 
+    /**
+     * Log the currently effective configuration values (debug only).
+     */
     public static void logEffectiveConfig() {
         if (debugLogging) {
             LOGGER.info("[FastHarvester] Debug config enabled: tickInterval={}, scanRange={}, rotationMode={}, seedClutterMode={}, seedReservePerType={}, harvestParticles={}",
@@ -95,6 +106,9 @@ public class Config {
         }
     }
 
+    /**
+     * Internal: read server config file and populate values.
+     */
     private static void loadServer() throws IOException {
         if (!Files.exists(SERVER_CONFIG_PATH)) {
             writeToml(SERVER_CONFIG_PATH, serverConfigValues(), serverHeader());
@@ -115,6 +129,9 @@ public class Config {
         seedReservePerType = nonNegativeInt(values, "seedReservePerType", seedReservePerType);
     }
 
+    /**
+     * Internal: read client config file and populate values.
+     */
     private static void loadClient() throws IOException {
         if (!Files.exists(CLIENT_CONFIG_PATH)) {
             writeToml(CLIENT_CONFIG_PATH, clientConfigValues(), clientHeader());
@@ -125,6 +142,9 @@ public class Config {
         harvestParticles = booleanValue(values, "harvestParticles", harvestParticles);
     }
 
+    /**
+     * Helper: produce a map of server config keys and values for serialization.
+     */
     private static Map<String, Object> serverConfigValues() {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("tickInterval", tickInterval);
@@ -141,12 +161,18 @@ public class Config {
         return values;
     }
 
+    /**
+     * Helper: produce a map of client config keys and values for serialization.
+     */
     private static Map<String, Object> clientConfigValues() {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("harvestParticles", harvestParticles);
         return values;
     }
 
+    /**
+     * Helper: header lines for server config TOML file.
+     */
     private static List<String> serverHeader() {
         return List.of(
                 "# FastHarvester server config",
@@ -155,6 +181,9 @@ public class Config {
         );
     }
 
+    /**
+     * Helper: header lines for client config TOML file.
+     */
     private static List<String> clientHeader() {
         return List.of(
                 "# FastHarvester client config",
@@ -163,6 +192,9 @@ public class Config {
         );
     }
 
+    /**
+     * Internal: write a minimal TOML file with the provided key/value pairs.
+     */
     private static void writeToml(Path path, Map<String, Object> values, List<String> headerLines) throws IOException {
         StringBuilder builder = new StringBuilder();
         for (String headerLine : headerLines) {
@@ -177,6 +209,9 @@ public class Config {
         Files.writeString(path, builder.toString());
     }
 
+    /**
+     * Internal: read a minimal TOML-like file into a map of raw string values.
+     */
     private static Map<String, String> readToml(Path path) throws IOException {
         Map<String, String> values = new LinkedHashMap<>();
         for (String rawLine : Files.readAllLines(path)) {
@@ -197,6 +232,9 @@ public class Config {
         return values;
     }
 
+    /**
+     * Remove comments from a line while respecting quoted strings.
+     */
     private static String stripComments(String line) {
         boolean quoted = false;
         for (int index = 0; index < line.length(); index++) {
@@ -211,6 +249,9 @@ public class Config {
         return line;
     }
 
+    /**
+     * Format a Java value into a TOML-like literal for writing.
+     */
     private static String formatTomlValue(Object value) {
         if (value instanceof String stringValue) {
             return '"' + stringValue.replace("\\", "\\\\").replace("\"", "\\\"") + '"';
@@ -218,6 +259,9 @@ public class Config {
         return String.valueOf(value);
     }
 
+    /**
+     * Remove surrounding quotes and unescape common sequences.
+     */
     private static String unquote(String value) {
         if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
             String content = value.substring(1, value.length() - 1);
@@ -226,10 +270,16 @@ public class Config {
         return value;
     }
 
+    /**
+     * Helper: get a string value from parsed config map with fallback.
+     */
     private static String stringValue(Map<String, String> values, String key, String fallback) {
         return values.getOrDefault(key, fallback);
     }
 
+    /**
+     * Helper: parse a boolean value from parsed config map with fallback.
+     */
     private static boolean booleanValue(Map<String, String> values, String key, boolean fallback) {
         String rawValue = values.get(key);
         if (rawValue == null) {
@@ -245,14 +295,23 @@ public class Config {
         return fallback;
     }
 
+    /**
+     * Helper: parse a positive integer from parsed config map with fallback.
+     */
     private static int positiveInt(Map<String, String> values, String key, int fallback) {
         return boundedInt(values, key, fallback, 1);
     }
 
+    /**
+     * Helper: parse a non-negative integer from parsed config map with fallback.
+     */
     private static int nonNegativeInt(Map<String, String> values, String key, int fallback) {
         return boundedInt(values, key, fallback, 0);
     }
 
+    /**
+     * Helper: parse an integer with a minimum bound from parsed config map with fallback.
+     */
     private static int boundedInt(Map<String, String> values, String key, int fallback, int minValue) {
         String rawValue = values.get(key);
         if (rawValue == null) {
@@ -269,6 +328,9 @@ public class Config {
         return fallback;
     }
 
+    /**
+     * Helper: determine which config file a key belongs to (client vs server).
+     */
     private static String configFileForKey(String key) {
         return "harvestParticles".equals(key) ? CLIENT_CONFIG_PATH.getFileName().toString() : SERVER_CONFIG_PATH.getFileName().toString();
     }

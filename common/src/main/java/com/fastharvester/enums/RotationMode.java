@@ -21,6 +21,9 @@ public enum RotationMode {
         return name();
     }
 
+    /**
+     * Parse the config string into a RotationMode, defaulting to FOLLOW_HARVEST_SPIRAL on errors.
+     */
     public static RotationMode fromConfigValue(String value) {
         try {
             return valueOf(value.toUpperCase());

@@ -1,5 +1,10 @@
 package com.fastharvester;
 
+/*
+ * FastItemFrameAdapter — a tiny bridge so FastItemFrames and FastHarvester can hold hands.
+ * Notes: this is intentionally simple; implementations should be resilient and forgiving.
+ */
+
 // 🧩 FastItemFrameAdapter: a gentle adapter so the mod can play nicely with FastItemFrames.
 // Emotional state: diplomatic and slightly nosy.
 
