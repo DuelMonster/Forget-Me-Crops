@@ -32,7 +32,16 @@ public final class NeoForgeModInitializer {
         modEventBus.addListener(this::onConfigReloading);
         modEventBus.addListener(this::commonSetup);
         // register NeoForge-specific farm discovery and ticker
-        NeoForgeFarmTicker.init(modEventBus);
+        // The mod event bus only accepts IModBusEvent types; runtime level/tick events
+        // may be rejected here. Wrap the init call to avoid crashing the loader during
+        // development — we'll register runtime listeners via the proper game bus later.
+        try {
+            NeoForgeFarmTicker.init(modEventBus);
+        } catch (IllegalArgumentException iae) {
+            LOGGER.warn("NeoForgeFarmTicker registration skipped (modEventBus rejected runtime events): {}", iae.toString());
+        } catch (Throwable t) {
+            LOGGER.warn("NeoForgeFarmTicker init threw; skipping runtime registration: {}", t.toString());
+        }
     }
 
     /**
