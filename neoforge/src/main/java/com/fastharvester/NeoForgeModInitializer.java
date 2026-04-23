@@ -31,17 +31,9 @@ public final class NeoForgeModInitializer {
         modEventBus.addListener(this::onConfigLoading);
         modEventBus.addListener(this::onConfigReloading);
         modEventBus.addListener(this::commonSetup);
-        // Register NeoForge-specific farm discovery and ticker on the runtime/event bus
-        // Use the container's event bus rather than the incoming mod lifecycle bus so
-        // runtime events (chunk/tick) are accepted by the bus type checker.
-        try {
-            var runtimeBus = container.getEventBus();
-            NeoForgeFarmTicker.init(runtimeBus);
-        } catch (IllegalArgumentException iae) {
-            LOGGER.warn("NeoForgeFarmTicker registration skipped (runtime bus rejected events): {}", iae.toString());
-        } catch (Throwable t) {
-            LOGGER.warn("NeoForgeFarmTicker init threw; skipping runtime registration: {}", t.toString());
-        }
+        // Register NeoForge-specific farm discovery and ticker on the global NeoForge event bus.
+        // This is the bus that `EventHooks` posts runtime events to (chunk/tick/etc.).
+        NeoForgeFarmTicker.init(net.neoforged.neoforge.common.NeoForge.EVENT_BUS);
     }
 
     /**
