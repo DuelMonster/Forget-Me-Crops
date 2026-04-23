@@ -3,6 +3,12 @@ plugins {
     id "net.neoforged.moddev"
 }
 
+repositories {
+    maven { url "https://maven.shedaniel.me/" }
+    maven { url "https://maven.terraformersmc.com/releases/" }
+    mavenCentral()
+}
+
 neoForge {
     version = neoforge_version
     // Automatically enable neoforge AccessTransformers if the file exists
@@ -46,6 +52,8 @@ dependencies {
             attribute(Attribute.of('io.github.mcgradleconventions.loader', String), 'common')
         }
     }
+    // ClothConfig: prefer Maven artifact for NeoForge builds
+    implementation("me.shedaniel.cloth:cloth-config-neoforge:21.11.153")
 
 }
 

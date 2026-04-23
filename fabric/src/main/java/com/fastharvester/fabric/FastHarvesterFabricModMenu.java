@@ -19,6 +19,6 @@ public class FastHarvesterFabricModMenu implements ModMenuApi {
 	 */
 	@Override
 	public ConfigScreenFactory<?> getModConfigScreenFactory() {
-		return FastHarvesterConfigScreen::new;
+		return parent -> FastHarvesterClothConfig.create(parent);
 	}
 }

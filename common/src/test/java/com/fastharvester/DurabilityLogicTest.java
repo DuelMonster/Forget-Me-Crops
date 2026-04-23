@@ -11,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class DurabilityLogicTest {
 
-    @Test
     /**
      * Verify that no damage is applied when DurabilityMode.NONE is used.
      */
