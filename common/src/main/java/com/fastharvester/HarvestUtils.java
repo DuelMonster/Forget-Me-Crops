@@ -70,11 +70,10 @@ public class HarvestUtils {
         List<ItemStack> drops = LootLogic.getBlockDrops(ctx.level, pos, state, ctx.hoe);
         if (drops.isEmpty()) return;
 
-        // Take one for the team: use up a seed for replanting.
-        consumeOneReplantDrop(drops, replantCostItemFor(block));
         // Don't let seeds take over your chest like rabbits.
         applySeedClutterPolicy(drops, clutterSeedItemFor(block), ctx.chest);
 
+        // Insert all drops into the chest first so we can respect reserve policy
         ChestUtils.insertAll(ctx.chest, drops);
 
         ItemStack hoeBeforeDamage = ctx.hoe.copy();
@@ -86,9 +85,16 @@ public class HarvestUtils {
             syncFrameHoe(ctx);
         }
 
-        BlockState replanted = getReplantState.apply(state);
-        if (replanted != null) {
-            ctx.level.setBlock(pos, replanted, 3);
+        // Attempt to remove a seed from the chest for replanting (this respects seedReservePerType)
+        ItemStack cost = replantCostItemFor(block);
+        if (cost != null && !cost.isEmpty()) {
+            boolean taken = ChestUtils.removeOne(ctx.chest, cost.getItem());
+            if (taken) {
+                BlockState replanted = getReplantState.apply(state);
+                if (replanted != null) {
+                    ctx.level.setBlock(pos, replanted, 3);
+                }
+            }
         }
 
         // Mirror vanilla block break event so loader-specific clients see default break particles.
@@ -101,25 +107,7 @@ public class HarvestUtils {
         ctx.harvestedCount++;
     }
 
-    /**
-     * Consume a single replant item from the drops list if available.
-     * Humanized aside: we politely take one seed so the next plant won't feel abandoned.
-     */
-    private static void consumeOneReplantDrop(List<ItemStack> drops, ItemStack costItem) {
-        if (costItem == null || costItem.isEmpty()) return;
-        for (Iterator<ItemStack> it = drops.iterator(); it.hasNext();) {
-            ItemStack s = it.next();
-            if (s.getItem() == costItem.getItem()) {
-                if (s.getCount() <= 1) {
-                    it.remove();
-                } else {
-                    s.setCount(s.getCount() - 1);
-                }
-                Constants.LOG.debug("[FastHarvester][HARVEST] Consumed one {} for replanting.", costItem.getItem());
-                return;
-            }
-        }
-    }
+    
 
     /**
      * Determine the item cost required to replant the given block type.
