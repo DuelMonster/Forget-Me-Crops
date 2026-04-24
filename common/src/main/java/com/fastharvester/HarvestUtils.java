@@ -141,6 +141,12 @@ public class HarvestUtils {
     private static Item clutterSeedItemFor(Block block) {
         if (block == Blocks.BEETROOTS) return Items.BEETROOT_SEEDS;
         if (block == Blocks.WHEAT) return Items.WHEAT_SEEDS;
+        if (block == Blocks.CARROTS) return Items.CARROT;
+        if (block == Blocks.POTATOES) return Items.POTATO;
+        if (block == Blocks.MELON_STEM) return Items.MELON_SEEDS;
+        if (block == Blocks.PUMPKIN_STEM) return Items.PUMPKIN_SEEDS;
+        if (block == Blocks.NETHER_WART) return Items.NETHER_WART;
+        try { if (block.getClass().getName().toLowerCase().contains("torchflower")) return block.asItem(); } catch (Throwable ignored) {}
         return null;
     }
 

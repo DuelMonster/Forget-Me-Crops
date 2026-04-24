@@ -4,8 +4,10 @@ package com.fastharvester;
 // Emotional tone: practical and slightly maternal.
 
 import net.minecraft.world.Container;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import java.util.List;
 
 /**
@@ -34,6 +36,7 @@ public class ChestUtils {
      */
     public static void insertAll(Container chest, List<ItemStack> drops) {
         if (chest == null || drops == null || drops.isEmpty()) return;
+        boolean changed = false;
         for (ItemStack drop : drops) {
             if (drop == null || drop.isEmpty()) continue;
             ItemStack remaining = drop.copy();
@@ -46,6 +49,7 @@ public class ChestUtils {
                         int move = Math.min(space, remaining.getCount());
                         slot.setCount(slot.getCount() + move);
                         remaining.setCount(remaining.getCount() - move);
+                        changed = true;
                         if (remaining.isEmpty()) break;
                     }
                 }
@@ -57,10 +61,14 @@ public class ChestUtils {
                     if (slot.isEmpty()) {
                         chest.setItem(i, remaining.copy());
                         remaining.setCount(0);
+                        changed = true;
                         break;
                     }
                 }
             }
+        }
+        if (changed && chest instanceof BlockEntity be) {
+            try { be.setChanged(); } catch (Throwable ignored) {}
         }
     }
 
@@ -69,6 +77,12 @@ public class ChestUtils {
      */
     public static boolean removeOne(Container chest, Item item) {
         if (chest == null || item == null) return false;
+        // Respect seed reserve policy when in REDUCED mode
+        if (Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.REDUCED && isSeedItem(item)) {
+            int existing = countItem(chest, item);
+            if (existing <= Config.seedReservePerType) return false;
+        }
+
         for (int i = 0; i < chest.getContainerSize(); i++) {
             ItemStack slot = chest.getItem(i);
             if (slot != null && !slot.isEmpty() && slot.getItem() == item) {
@@ -77,9 +91,28 @@ public class ChestUtils {
                 } else {
                     chest.setItem(i, ItemStack.EMPTY);
                 }
+                if (chest instanceof BlockEntity be) {
+                    try { be.setChanged(); } catch (Throwable ignored) {}
+                }
                 return true;
             }
         }
         return false;
+    }
+
+    private static boolean isSeedItem(Item item) {
+        if (item == null) return false;
+        return item == Items.WHEAT_SEEDS || item == Items.BEETROOT_SEEDS || item == Items.CARROT || item == Items.POTATO
+                || item == Items.MELON_SEEDS || item == Items.PUMPKIN_SEEDS || item == Items.NETHER_WART;
+    }
+
+    public static int countItem(Container chest, Item item) {
+        if (chest == null || item == null) return 0;
+        int cnt = 0;
+        for (int i = 0; i < chest.getContainerSize(); i++) {
+            ItemStack s = chest.getItem(i);
+            if (s != null && !s.isEmpty() && s.getItem() == item) cnt += s.getCount();
+        }
+        return cnt;
     }
 }

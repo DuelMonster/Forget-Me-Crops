@@ -278,15 +278,15 @@ public class FrameScanner {
                     }
                 }
 
-                // Auto-till: if below is dirt/grass and surrounded by farmland, convert and plant.
+                // Auto-till: if below is dirt/grass and near farmland, convert and plant.
                 if (below != null && (below.getBlock() == Blocks.DIRT || below.getBlock() == Blocks.GRASS_BLOCK)) {
                     Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                    boolean surrounded = true;
+                    int farmlandNeighbors = 0;
                     for (Direction d : dirs) {
                         BlockState ns = level.getBlockState(belowPos.relative(d));
-                        if (ns == null || ns.getBlock() != Blocks.FARMLAND) { surrounded = false; break; }
+                        if (ns != null && ns.getBlock() == Blocks.FARMLAND) farmlandNeighbors++;
                     }
-                    if (!surrounded) continue;
+                    if (farmlandNeighbors < 1) continue;
 
                     // Avoid tilling if this looks like part of a melon/pumpkin layout (fruit or stems nearby)
                     boolean nearMelonPumpkin = false;
@@ -710,12 +710,12 @@ public class FrameScanner {
 
                         if (below != null && (below.getBlock() == Blocks.DIRT || below.getBlock() == Blocks.GRASS_BLOCK)) {
                             Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                            boolean surrounded = true;
+                            int farmlandNeighbors = 0;
                             for (Direction d : dirs) {
                                 BlockState ns = level.getBlockState(belowPos.relative(d));
-                                if (ns == null || ns.getBlock() != Blocks.FARMLAND) { surrounded = false; break; }
+                                if (ns != null && ns.getBlock() == Blocks.FARMLAND) farmlandNeighbors++;
                             }
-                            if (!surrounded) continue;
+                            if (farmlandNeighbors < 1) continue;
                             boolean nearMelonPumpkin = false;
                             for (Direction d : dirs) {
                                 BlockState ns = level.getBlockState(pos.relative(d));
