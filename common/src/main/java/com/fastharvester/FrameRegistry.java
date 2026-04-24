@@ -67,6 +67,19 @@ public class FrameRegistry {
     }
 
     /**
+     * Set a cooldown for the given anchor so it will not be retried for `ticks` ticks.
+     */
+    public static synchronized void setCooldown(String dimensionId, BlockPos framePos, int ticks) {
+        Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
+        if (map == null) return;
+        FrameEntry fe = map.get(framePos);
+        if (fe == null) return;
+        fe.ticksUntilNextRun = Math.max(0, ticks);
+        fe.active = true;
+        Constants.LOG.debug("[FastHarvester][REG] Set cooldown for {} in {}: {} ticks", framePos, dimensionId, ticks);
+    }
+
+    /**
      * Called once per server tick by the platform ticker. Decrements per-frame countdowns
      * and returns the anchors that are ready to run this tick.
      * Humanized aside: timers tick, expectations build, and the scanner gets to work.

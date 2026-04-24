@@ -62,7 +62,10 @@ public class HarvestUtils {
         Block block = state.getBlock();
         if (!isMature.apply(state)) return;
 
-        if (!ChestUtils.hasSpace(ctx.chest)) return;
+        if (!ChestUtils.hasSpace(ctx.chest)) {
+            ctx.chestFull = true;
+            return;
+        }
 
         List<ItemStack> drops = LootLogic.getBlockDrops(ctx.level, pos, state, ctx.hoe);
         if (drops.isEmpty()) return;
@@ -89,10 +92,11 @@ public class HarvestUtils {
         }
 
         // Mirror vanilla block break event so loader-specific clients see default break particles.
-        ctx.level.levelEvent(2001, pos, Block.getId(state));
+        if (Config.harvestParticles) {
+            ctx.level.levelEvent(2001, pos, Block.getId(state));
+        }
 
-        // Play sound and particles if enabled
-        // ... (see legacy for details, can add here)
+        // Play sound and particles if enabled (client-controlled via Config.harvestParticles)
 
         ctx.harvestedCount++;
     }

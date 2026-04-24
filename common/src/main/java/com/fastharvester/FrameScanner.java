@@ -189,6 +189,16 @@ public class FrameScanner {
                 } catch (Throwable t) {
                     Constants.LOG.debug("[FastHarvester][SCAN] Exception while scanning {}: {}", center, t.toString());
                 }
+
+                // If a harvest call flagged the chest as full, set a cooldown on the registry and stop the scan
+                if (ctx.chestFull) {
+                    try {
+                        String dimId = level.dimension().identifier().toString();
+                        FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
+                    } catch (Throwable ignored) {}
+                    ctx.logSummary();
+                    return cropsFound > 0;
+                }
             }
 
             // After finishing this ring, advance frame rotation according to mode if we harvested anything
@@ -317,6 +327,16 @@ public class FrameScanner {
                     try { if (plantState2.getBlock() instanceof CropBlock) plantState2 = plantState2.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
                     level.setBlock(pos, plantState2, 3);
                 }
+
+                // If a chest-full occurred while attempting to replant/till, set cooldown and stop
+                if (ctx.chestFull) {
+                    try {
+                        String dimId = level.dimension().identifier().toString();
+                        FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
+                    } catch (Throwable ignored) {}
+                    ctx.logSummary();
+                    return cropsFound > 0;
+                }
             }
         }
 
@@ -374,7 +394,7 @@ public class FrameScanner {
             }
         }
 
-        Constants.LOG.info("[FastHarvester][SCAN] BFS seeded {} nodes around {} (range {}).", visited.size(), center, range);
+        Constants.LOG.debug("[FastHarvester][SCAN] BFS seeded {} nodes around {} (range {}).", visited.size(), center, range);
 
         while (!q.isEmpty()) {
             BlockPos cur = q.poll();
@@ -397,7 +417,7 @@ public class FrameScanner {
             }
         }
 
-        Constants.LOG.info("[FastHarvester][SCAN] BFS discovered {} connected nodes for center {}.", result.size(), center);
+        Constants.LOG.debug("[FastHarvester][SCAN] BFS discovered {} connected nodes for center {}.", result.size(), center);
 
         return result;
     }
@@ -423,7 +443,7 @@ public class FrameScanner {
                     return;
                 }
             }
-            FarmScanTask task = new FarmScanTask(anchor, level);
+            FarmScanTask task = new FarmScanTask(anchor, level, dimId);
             list.add(task);
             Constants.LOG.info("[FastHarvester][SCAN] Scheduled scan task for {} in {} (will span up to {} ticks)", anchor, dimId, Config.maxSpiralDurationTicks);
         } catch (Throwable t) {
@@ -466,6 +486,7 @@ public class FrameScanner {
         final Level level;
         final BlockPos center;
         final HarvestContext ctx;
+        final String dimId;
 
         // Keep ring map for rotation decisions but drive processing by a spiral-ordered list
         final Map<Integer, List<BlockPos>> ringMap = new HashMap<>();
@@ -475,11 +496,12 @@ public class FrameScanner {
         int currentIndex = 0;
         final int positionsPerTick;
 
-        FarmScanTask(Anchor anchor, Level level) {
+        FarmScanTask(Anchor anchor, Level level, String dimId) {
             this.anchor = anchor;
             this.level = level;
             this.center = anchor.framePos;
             this.ctx = new HarvestContext(anchor, level, anchor.hoe, anchor.chest, null);
+            this.dimId = dimId;
 
             // Perform BFS discovery synchronously at task creation (seed is limited by scanRange)
             List<BlockPos> candidates = bfsDiscoverFarm(center, level, Math.max(1, Config.scanRange));
@@ -538,6 +560,13 @@ public class FrameScanner {
          * Process a slice of positions this tick. Returns true when the entire job is complete.
          */
         boolean tick() {
+            // If a previous iteration detected a full chest, set the cooldown and finish the task
+            if (ctx.chestFull) {
+                FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
+                ctx.logSummary();
+                return true;
+            }
+
             if (totalPositions == 0) {
                 ctx.logSummary();
                 return true;
@@ -592,6 +621,13 @@ public class FrameScanner {
                             });
                 } catch (Throwable t) {
                     Constants.LOG.debug("[FastHarvester][SCAN] Exception while scanning {}: {}", center, t.toString());
+                }
+
+                // If a harvest attempt flagged the chest as full, set cooldown and end the job
+                if (ctx.chestFull) {
+                    FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
+                    ctx.logSummary();
+                    return true;
                 }
             }
 
@@ -713,15 +749,21 @@ public class FrameScanner {
                         }
                     }
                 }
+                    // If a chest-full occurred during the neighbour/plant pass, set cooldown and finish
+                    if (ctx.chestFull) {
+                        FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
+                        ctx.logSummary();
+                        return true;
+                    }
 
-                // STEP_PER_HARVEST: advance by one step if we harvested anything this pass
-                if (ctx.harvestedCount > beforeHarvest && Config.rotationMode == com.fastharvester.enums.RotationMode.STEP_PER_HARVEST) {
-                    int newRot = (getFrameRotation(level, center) + 1) & 7;
-                    setFrameRotation(level, center, newRot);
-                }
+                    // STEP_PER_HARVEST: advance by one step if we harvested anything this pass
+                    if (ctx.harvestedCount > beforeHarvest && Config.rotationMode == com.fastharvester.enums.RotationMode.STEP_PER_HARVEST) {
+                        int newRot = (getFrameRotation(level, center) + 1) & 7;
+                        setFrameRotation(level, center, newRot);
+                    }
 
-                ctx.logSummary();
-                return true; // finished
+                    ctx.logSummary();
+                    return true; // finished
             }
 
             // not finished yet

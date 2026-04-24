@@ -23,6 +23,7 @@ public class HarvestContext {
     // Counters used during a harvest pass
     public int harvestedCount;
     public int blocksScanned;
+    public boolean chestFull = false;
 
     /**
      * Creates a new HarvestContext and logs all initial state.

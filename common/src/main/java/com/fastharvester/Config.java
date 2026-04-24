@@ -32,14 +32,14 @@ public class Config {
     private static final Path SERVER_CONFIG_PATH = CONFIG_DIR.resolve("fastharvester-server.toml");
     private static final Path CLIENT_CONFIG_PATH = CONFIG_DIR.resolve("fastharvester-client.toml");
 
-    public static int tickInterval = 300;
-    public static int frameRediscoveryInterval = 100;
+    public static int tickInterval = 600;
+    public static int frameRediscoveryInterval = 1200;
     public static int scanRange = 4; // 9x9 area
     public static DurabilityMode durabilityMode = DurabilityMode.NORMAL;
     public static boolean mendingNegation = true;
-    public static boolean debugLogging = true;
-    public static int chestFullCooldownTicks = 100;
-    public static int maxSpiralDurationTicks = 100;
+    public static boolean debugLogging = false;
+    public static int chestFullCooldownTicks = 300;
+    public static int maxSpiralDurationTicks = 200;
     public static boolean harvestParticles = true;
     public static RotationMode rotationMode = RotationMode.FOLLOW_HARVEST_SPIRAL;
     public static SeedClutterMode seedClutterMode = SeedClutterMode.REDUCED;

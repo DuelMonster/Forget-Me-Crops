@@ -43,6 +43,7 @@ import com.fastharvester.FastItemFrameAdapterImpl;
 public class FabricFarmTicker {
     private static boolean tickSnapshotLogged = false;
     private static final int CATCHUP_TICKS = 40;
+    private static final java.util.Map<String, Integer> rediscoveryCountdown = new java.util.HashMap<>();
 
     /**
      * Initialize Fabric listeners for chunk load/unload and server tick processing.
@@ -53,7 +54,7 @@ public class FabricFarmTicker {
         ServerChunkEvents.CHUNK_LOAD.register((ServerLevel level, LevelChunk chunk) -> {
             try {
                 // Diagnostic: log that chunk-load handler ran for this chunk
-                Constants.LOG.info("[FastHarvester][TICK] Chunk-load event for chunk {} in {}", chunk.getPos(), level.dimension().identifier().toString());
+                if (Config.debugLogging) Constants.LOG.info("[FastHarvester][TICK] Chunk-load event for chunk {} in {}", chunk.getPos(), level.dimension().identifier().toString());
                 String dimId = level.dimension().identifier().toString();
                 int minX = chunk.getPos().getMinBlockX();
                 int minZ = chunk.getPos().getMinBlockZ();
@@ -63,7 +64,7 @@ public class FabricFarmTicker {
 
                 // Vanilla item frames
                 List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box);
-                Constants.LOG.info("[FastHarvester][TICK] Found {} item frames in chunk {} (filtering for UP and hoes afterwards).", frames.size(), chunk.getPos());
+                if (Config.debugLogging) Constants.LOG.info("[FastHarvester][TICK] Found {} item frames in chunk {} (filtering for UP and hoes afterwards).", frames.size(), chunk.getPos());
                 for (ItemFrame f : frames) {
                     try {
                         FrameDiscovery.registerVanillaFrameIfValid(dimId, level, f);
@@ -126,6 +127,14 @@ public class FabricFarmTicker {
             try {
                 for (ServerLevel level : server.getAllLevels()) {
                     String dimId = level.dimension().identifier().toString();
+                    int rem = rediscoveryCountdown.getOrDefault(dimId, Config.frameRediscoveryInterval);
+                    rem--;
+                    if (rem <= 0) {
+                        Constants.LOG.info("[FastHarvester][TICK] Running rediscovery pass for {}", dimId);
+                        CatchupManager.queueLoadedFrames(level, dimId);
+                        rem = Config.frameRediscoveryInterval;
+                    }
+                    rediscoveryCountdown.put(dimId, rem);
                     // On first seen tick, capture a snapshot of loaded frames to catch-up
                     // (this is queued and processed across multiple ticks to avoid spikes).
                     if (!tickSnapshotLogged) {
@@ -133,18 +142,31 @@ public class FabricFarmTicker {
                     }
                     // Process a small batch this tick to gradually register any pre-existing frames
                     CatchupManager.processBatch(level, dimId, CATCHUP_TICKS);
-                    var ready = FrameRegistry.tickAndCollectReady(dimId);
-                    if (!ready.isEmpty()) {
-                        Constants.LOG.info("[FastHarvester][TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
-                        FrameScanner scanner = new FrameScanner();
-                        for (var anchor : ready) {
-                            try {
-                                scanner.scanFarm(anchor, level);
-                            } catch (Throwable t) {
-                                Constants.LOG.warn("[FastHarvester][TICK] Scan failed for {}: {}", anchor, t.toString());
+                        var ready = FrameRegistry.tickAndCollectReady(dimId);
+                        if (!ready.isEmpty()) {
+                            Constants.LOG.info("[FastHarvester][TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
+                            // Decide between synchronous scan (fast path) and tick-sliced scheduling
+                            FrameScanner scanner = new FrameScanner();
+                            for (var anchor : ready) {
+                                try {
+                                    if (Config.maxSpiralDurationTicks <= 1) {
+                                        try {
+                                            scanner.scanFarm(anchor, level);
+                                        } catch (Throwable t) {
+                                            Constants.LOG.warn("[FastHarvester][TICK] Scan failed for {}: {}", anchor, t.toString());
+                                        }
+                                    } else {
+                                        FrameScanner.submitScan(dimId, anchor, level);
+                                    }
+                                } catch (Throwable t) {
+                                    Constants.LOG.warn("[FastHarvester][TICK] Failed to submit/execute scan for {}: {}", anchor, t.toString());
+                                }
                             }
+
+                            // (tickScans moved out so it runs every tick)
                         }
-                    }
+                        // Tick scheduled scan tasks for this dimension (process one slice per active job)
+                        FrameScanner.tickScans(dimId, level);
                     tickSnapshotLogged = true;
                 }
             } catch (Throwable t) {

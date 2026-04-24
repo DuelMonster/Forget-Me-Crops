@@ -6,6 +6,7 @@ package com.fastharvester.neoforge;
 import com.fastharvester.FrameRegistry;
 import com.fastharvester.FrameScanner;
 import com.fastharvester.Constants;
+import com.fastharvester.Config;
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.level.ChunkEvent;
@@ -44,6 +45,7 @@ import com.fastharvester.FastItemFrameAdapterImpl;
 public class NeoForgeFarmTicker {
     private static boolean tickSnapshotLogged = false;
     private static final int CATCHUP_TICKS = 40;
+    private static final java.util.Map<String, Integer> rediscoveryCountdown = new java.util.HashMap<>();
     /**
      * Initialize NeoForge listeners for chunk load/unload and server tick processing.
      * Emotional aside: behaves like Fabric's ticker but speaks NeoForge's dialect.
@@ -112,7 +114,7 @@ public class NeoForgeFarmTicker {
 
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box);
             String dimId = level.dimension().identifier().toString();
-            Constants.LOG.info("[FastHarvester][TICK] NeoForge found {} item frames in chunk {}.", frames.size(), lc.getPos());
+            if (Config.debugLogging) Constants.LOG.info("[FastHarvester][TICK] NeoForge found {} item frames in chunk {}.", frames.size(), lc.getPos());
             for (ItemFrame f : frames) {
                 try {
                     FrameDiscovery.registerVanillaFrameIfValid(dimId, level, f);
@@ -146,27 +148,47 @@ public class NeoForgeFarmTicker {
             if (!event.hasTime()) return;
             MinecraftServer server = event.getServer();
             if (server == null) return;
-                    for (ServerLevel level : server.getAllLevels()) {
-                    String dimId = level.dimension().identifier().toString();
-                    // Capture a one-time snapshot and then process a small catch-up batch
-                    // each tick so we don't overload the server on startup.
-                    if (!tickSnapshotLogged) {
+            for (ServerLevel level : server.getAllLevels()) {
+                String dimId = level.dimension().identifier().toString();
+                    int rem = rediscoveryCountdown.getOrDefault(dimId, Config.frameRediscoveryInterval);
+                    rem--;
+                    if (rem <= 0) {
+                        Constants.LOG.info("[FastHarvester][TICK] NeoForge rediscovery pass for {}", dimId);
                         CatchupManager.queueLoadedFrames(level, dimId);
+                        rem = Config.frameRediscoveryInterval;
                     }
-                    CatchupManager.processBatch(level, dimId, CATCHUP_TICKS);
-                    var ready = FrameRegistry.tickAndCollectReady(dimId);
-                    if (!ready.isEmpty()) {
-                        Constants.LOG.info("[FastHarvester][TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
-                        FrameScanner scanner = new FrameScanner();
-                        for (var anchor : ready) {
-                            try {
-                                scanner.scanFarm(anchor, level);
-                            } catch (Throwable t) {
-                                Constants.LOG.warn("[FastHarvester][TICK] Scan failed for {}: {}", anchor, t.toString());
+                    rediscoveryCountdown.put(dimId, rem);
+                // Capture a one-time snapshot and then process a small catch-up batch
+                // each tick so we don't overload the server on startup.
+                if (!tickSnapshotLogged) {
+                    CatchupManager.queueLoadedFrames(level, dimId);
+                }
+                CatchupManager.processBatch(level, dimId, CATCHUP_TICKS);
+
+                var ready = FrameRegistry.tickAndCollectReady(dimId);
+                if (!ready.isEmpty()) {
+                    Constants.LOG.info("[FastHarvester][TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
+                    FrameScanner scanner = new FrameScanner();
+                    for (var anchor : ready) {
+                        try {
+                            if (Config.maxSpiralDurationTicks <= 1) {
+                                try {
+                                    scanner.scanFarm(anchor, level);
+                                } catch (Throwable t) {
+                                    Constants.LOG.warn("[FastHarvester][TICK] Scan failed for {}: {}", anchor, t.toString());
+                                }
+                            } else {
+                                FrameScanner.submitScan(dimId, anchor, level);
                             }
+                        } catch (Throwable t) {
+                            Constants.LOG.warn("[FastHarvester][TICK] Failed to submit/execute scan for {}: {}", anchor, t.toString());
                         }
                     }
-                    tickSnapshotLogged = true;
+                }
+
+                // Process one tick-slice for active scan jobs in this dimension
+                FrameScanner.tickScans(dimId, level);
+                tickSnapshotLogged = true;
             }
         } catch (Throwable t) {
             Constants.LOG.warn("[FastHarvester][TICK] NeoForge ticker error: {}", t.toString());
