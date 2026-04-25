@@ -14,10 +14,8 @@ package com.fastharvester;
  * </p>
  */
 public class FastHarvester {
-    /**
-     * Creates a new FastHarvester. But you probably just want the static methods!
-     */
-    public FastHarvester() {}
+    /** Utility class: do not instantiate. */
+    private FastHarvester() {}
     /**
      * The all-knowing, all-powerful config! Loader-specific code should fill this with love (and settings) before calling init().
      */

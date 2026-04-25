@@ -16,10 +16,8 @@ import org.slf4j.LoggerFactory;
  * </p>
  */
 public class Constants {
-	/**
-	 * Creates a new Constants. But you probably just want the static fields!
-	 */
-	public Constants() {}
+	/** Utility class: do not instantiate. */
+	private Constants() {}
 
 	/**
 	 * The one and only mod ID. If you change this, the universe (and your mod) may collapse.

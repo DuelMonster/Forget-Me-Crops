@@ -18,10 +18,8 @@ import java.util.Map;
  * </p>
  */
 public class DurabilityLogic {
-    /**
-     * Creates a new DurabilityLogic. For now, it's just a wise placeholder!
-     */
-    public DurabilityLogic() {}
+    /** Utility class: do not instantiate. */
+    private DurabilityLogic() {}
     /**
      * Should we damage the hoe? The eternal question.
      * @param mode The durability mode (choose your destiny).
