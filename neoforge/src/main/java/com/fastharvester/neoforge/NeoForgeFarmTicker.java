@@ -26,7 +26,7 @@ import java.util.List;
 
 import com.fastharvester.CatchupManager;
 import com.fastharvester.FrameDiscovery;
-import com.fastharvester.FastItemFrameAdapterImpl;
+import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
 
 /**
  * NeoForgeFarmTicker: discovers anchors on chunk load/unload and schedules scans on server tick.

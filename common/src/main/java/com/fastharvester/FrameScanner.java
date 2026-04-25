@@ -19,6 +19,7 @@ import net.minecraft.world.phys.AABB;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Map;
+import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
 import java.util.HashMap;
 import java.util.Comparator;
 import java.util.List;

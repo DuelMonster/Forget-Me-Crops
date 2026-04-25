@@ -1,5 +1,6 @@
-package com.fastharvester;
+package com.fastharvester.platform.adapter;
 
+import com.fastharvester.FastItemFrameAdapter;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.HoeItem;
@@ -14,10 +15,6 @@ import java.lang.reflect.Method;
  *
  * Centralizes reflective access to FastItemFrames block-entities and provides
  * convenience helpers used across Fabric/NeoForge/common code paths.
- *
- * Heads-up: this class is intentionally defensive — FastItemFrames can
- * vary between versions and obfuscations, so we try a few reflective tricks
- * before giving up. Think of it as the code equivalent of "try the doorknob."
  */
 public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
 
@@ -49,7 +46,6 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
             } else if (frame instanceof BlockEntity) {
                 held = extractHeldItem((BlockEntity) frame);
             } else {
-                // fallback: try reflectively
                 for (Method m : frame.getClass().getMethods()) {
                     String name = m.getName().toLowerCase();
                     if ((name.contains("getdisplayed") || name.contains("getheld") || name.contains("getitem")) && m.getParameterCount() == 0) {
@@ -100,7 +96,6 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                     if (res instanceof ItemStack) return (ItemStack) res;
                 }
             }
-            // Try common field names
             String[] fields = new String[]{"item", "displayedItem", "heldItem", "stack"};
             for (String fn : fields) {
                 try {

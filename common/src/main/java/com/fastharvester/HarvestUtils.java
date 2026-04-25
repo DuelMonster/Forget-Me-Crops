@@ -22,6 +22,7 @@ import net.minecraft.world.Container;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
+import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
 
 /**
  * HarvestUtils: The Swiss Army knife for all things harvest!

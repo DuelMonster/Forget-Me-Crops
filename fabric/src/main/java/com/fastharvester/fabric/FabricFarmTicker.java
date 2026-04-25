@@ -25,7 +25,7 @@ import java.util.Map;
 
 import com.fastharvester.CatchupManager;
 import com.fastharvester.FrameDiscovery;
-import com.fastharvester.FastItemFrameAdapterImpl;
+import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
 
 /**
  * FabricFarmTicker: discovers anchors on chunk load and schedules scans on server tick.

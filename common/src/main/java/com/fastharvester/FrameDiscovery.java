@@ -1,5 +1,7 @@
 package com.fastharvester;
 
+import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
+
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -83,7 +85,7 @@ public class FrameDiscovery {
      */
     public static boolean registerFIFIfValid(String dimId, ServerLevel level, BlockEntity be, BlockPos pos) {
         try {
-            net.minecraft.world.item.ItemStack held = com.fastharvester.FastItemFrameAdapterImpl.extractHeldItem(be);
+            net.minecraft.world.item.ItemStack held = FastItemFrameAdapterImpl.extractHeldItem(be);
             if (held == null || held.isEmpty()) return false;
             if (!(held.getItem() instanceof HoeItem)) return false;
             BlockPos chestPos = pos.below();

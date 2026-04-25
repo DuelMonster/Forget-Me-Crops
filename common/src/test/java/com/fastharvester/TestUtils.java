@@ -1,11 +1,5 @@
 package com.fastharvester;
 
-/*
- * TestUtils — small helpers used by tests and debugging.
- * These comments are intentionally friendly, mildly emotional,
- * and occasionally sarcastic to keep future maintainers awake.
- */
-
 /**
  * TestUtils: small helpers used by tests and debugging.
  * <p>
@@ -15,10 +9,6 @@ package com.fastharvester;
 public final class TestUtils {
     private TestUtils() {}
 
-    /**
-     * Simple deterministic-ish loot calculator used by tests.
-     * Humanized aside: it's modest but reliable — like a village duck.
-     */
     /**
      * Simple deterministic-ish loot calculator used by tests.
      * @param cropType an identifier for the crop being tested
