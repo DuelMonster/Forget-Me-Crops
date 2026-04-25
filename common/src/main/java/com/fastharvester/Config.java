@@ -42,7 +42,7 @@ public class Config {
     public static int maxSpiralDurationTicks = 200;
     public static boolean harvestParticles = true;
     public static RotationMode rotationMode = RotationMode.FOLLOW_HARVEST_SPIRAL;
-    public static SeedClutterMode seedClutterMode = SeedClutterMode.REDUCED;
+    public static SeedClutterMode seedClutterMode = SeedClutterMode.NORMAL;
     public static int seedReservePerType = 80;
 
     public static void load() {
