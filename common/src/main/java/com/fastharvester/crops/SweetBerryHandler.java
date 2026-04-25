@@ -13,9 +13,14 @@ package com.fastharvester.crops;
  * </p>
  */
 public class SweetBerryHandler {
-    public SweetBerryHandler() {}
+    /** Utility class: do not instantiate. */
+    private SweetBerryHandler() {}
+
     /**
      * Handles Sweet Berry harvesting with verbose debug logging.
+     * @param cropPos the position of the Sweet Berry crop
+     * @param world the world/context object where the crop resides
+     * @return true if the handler performed a successful harvest simulation
      */
     public static boolean handle(Object cropPos, Object world) {
         com.fastharvester.Constants.LOG.info("[FastHarvester][SWEET_BERRY] Handling Sweet Berry at {}...", cropPos);

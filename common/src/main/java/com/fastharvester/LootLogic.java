@@ -21,6 +21,9 @@ import java.util.List;
  */
 public class LootLogic {
 
+    /** Utility class: do not instantiate. */
+    private LootLogic() {}
+
     // Cached fake hoes for fortune 0–3, initialised on first harvest.
     private static ItemStack[] fortuneHoes;
 
@@ -43,6 +46,11 @@ public class LootLogic {
 
     /**
      * Gets the drops for a block, respecting fortune and silk touch. The heart of the loot party.
+     * @param level the server-level context used for loot table resolution
+     * @param pos the block position being queried
+     * @param state the block state at the position
+     * @param hoe the tool used to query drops (may affect fortune / silk-touch)
+     * @return a list of ItemStacks representing the block's drops
      */
     public static List<ItemStack> getBlockDrops(ServerLevel level, BlockPos pos, BlockState state, ItemStack hoe) {
         if (state.getBlock() == Blocks.MELON && HoeUtils.hasSilkTouch(level, hoe)) {

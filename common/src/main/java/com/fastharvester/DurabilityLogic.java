@@ -44,6 +44,9 @@ public class DurabilityLogic {
      * This implementation is intentionally conservative and will not attempt advanced
      * enchantment math — it's a safe common-side placeholder until loader-specific
      * behavior is implemented.
+     * @param level the world level in which damage is applied (may be null)
+     * @param hoe the ItemStack representing the hoe to damage
+     * @param random a source of randomness (platform-specific), may be null
      */
     public static void applyDamage(Level level, ItemStack hoe, Object random) {
         if (hoe == null || hoe.isEmpty()) return;

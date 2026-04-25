@@ -14,19 +14,35 @@ import net.minecraft.world.level.Level;
  * </p>
  */
 public class HarvestContext {
+    /** The anchor object for this harvest (typically a FrameScanner.Anchor). */
     public final Object anchor;
+    /** The world level in which harvesting occurs. */
     public final Level level;
+    /** The hoe ItemStack currently in use for this harvest pass. */
     public ItemStack hoe;
+    /** Linked chest container used for drops and replacements. */
     public final Container chest;
+    /** Loader-specific configuration object (if any). */
     public final Object config;
 
     // Counters used during a harvest pass
+    /** Number of crops harvested during this scan. */
     public int harvestedCount;
+    /** Number of blocks scanned during this scan. */
     public int blocksScanned;
+    /** Whether the linked chest became full during the scan. */
     public boolean chestFull = false;
 
     /**
      * Creates a new HarvestContext and logs all initial state.
+     */
+    /**
+     * Creates a new HarvestContext and logs all initial state.
+     * @param anchor The anchor for this harvest (FrameScanner.Anchor or similar).
+     * @param level The level in which harvesting will occur.
+     * @param hoe The hoe ItemStack used for harvesting.
+     * @param chest The linked chest container for drops and replacements.
+     * @param config Loader-specific config object if any.
      */
     public HarvestContext(Object anchor, Level level, ItemStack hoe, Container chest, Object config) {
         this.anchor = anchor;

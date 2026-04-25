@@ -1,16 +1,3 @@
-/**
- * Config: The grand spellbook of FastHarvester!
- * <p>
- * This class holds every tweakable knob, lever, and secret handshake for the mod. It loads, saves, and syncs config values
- * across all loaders, making sure your farm is always running at peak efficiency (or maximum chaos, if you prefer).
- * </p>
- * <p>
- * Why does this matter? Because a good config system is the difference between "Why isn't this working?" and "Wow, that was easy!"
- * </p>
- * <p>
- * Loader: Agnostic. Mood: Helpful. Attitude: "Let me handle the boring stuff, you go grow some crops!"
- * </p>
- */
 package com.fastharvester;
 
 // ⚙️ Config: the gentle puppet master of behavior. Tweak with care; it notices everything.
@@ -26,28 +13,57 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Config: The grand spellbook of FastHarvester!
+ * <p>
+ * This class holds every tweakable knob, lever, and secret handshake for the mod. It loads, saves, and syncs config values
+ * across all loaders, making sure your farm is always running at peak efficiency (or maximum chaos, if you prefer).
+ * </p>
+ * <p>
+ * Why does this matter? Because a good config system is the difference between "Why isn't this working?" and "Wow, that was easy!"
+ * </p>
+ * <p>
+ * Loader: Agnostic. Mood: Helpful. Attitude: "Let me handle the boring stuff, you go grow some crops!"
+ * </p>
+ */
 public class Config {
+    /** Public config holder constructor; loaders may instantiate for injection. */
+    public Config() {}
     private static final Logger LOGGER = LoggerFactory.getLogger(Config.class);
     private static final Path CONFIG_DIR = Path.of("config");
     private static final Path SERVER_CONFIG_PATH = CONFIG_DIR.resolve("fastharvester-server.toml");
     private static final Path CLIENT_CONFIG_PATH = CONFIG_DIR.resolve("fastharvester-client.toml");
 
+    /** Ticks between automatic harvest attempts. */
     public static int tickInterval = 300;
+    /** Ticks between rediscovery passes for frames. */
     public static int frameRediscoveryInterval = 600;
+    /** Scanning radius around each frame (in blocks). */
     public static int scanRange = 4; // 9x9 area
+    /** How durability and damage are applied to tools. */
     public static DurabilityMode durabilityMode = DurabilityMode.NORMAL;
+    /** Whether to negate mending behavior for replacement logic. */
     public static boolean mendingNegation = true;
+    /** Enable verbose debug logging for troubleshooting. */
     public static boolean debugLogging = false;
+    /** Cooldown applied when a linked chest is full (in ticks). */
     public static int chestFullCooldownTicks = 300;
+    /** Maximum number of ticks to spend scanning a farm spiral. */
     public static int maxSpiralDurationTicks = 200;
+    /** Whether to show harvest particles on the client. */
     public static boolean harvestParticles = true;
+    /** Rotation animation mode for frame visuals. */
     public static RotationMode rotationMode = RotationMode.FULL_ROTATION_PER_HARVEST;
-    // Minimum number of game ticks to wait between visual rotation updates for a single anchor
-    // Prevents rapid, visually jarring frame rotation when many harvest steps occur quickly.
-    
+    // Note: rotation visuals are schedule-controlled elsewhere; keep this value stable during runtime.
+
+    /** Seed clutter handling policy used when inserting drops into chests. */
     public static SeedClutterMode seedClutterMode = SeedClutterMode.REDUCED;
+    /** Minimum number of seeds to reserve per seed type in the chest. */
     public static int seedReservePerType = 80;
 
+    /**
+     * Load configuration files (server and client) from disk, creating defaults if missing.
+     */
     public static void load() {
         try {
             Files.createDirectories(CONFIG_DIR);
@@ -59,6 +75,9 @@ public class Config {
         }
     }
 
+    /**
+     * Persist current configuration values to disk for both server and client files.
+     */
     public static void save() {
         try {
             Files.createDirectories(CONFIG_DIR);
@@ -73,6 +92,17 @@ public class Config {
     /**
      * Apply server-side settings programmatically.
      * Humanized note: this lets tests and loader-specific code push config values.
+     * @param tickInterval ticks between automatic harvest attempts.
+     * @param frameRediscoveryInterval ticks between rediscovery passes.
+     * @param scanRange scanning radius around frames.
+     * @param durabilityMode how durability is handled.
+     * @param mendingNegation whether mending negation is applied.
+     * @param debugLogging whether debug logging is enabled.
+     * @param chestFullCooldownTicks cooldown when a linked chest is full.
+     * @param maxSpiralDurationTicks maximum ticks to spend scanning a farm.
+     * @param rotationMode rotation animation mode.
+     * @param seedClutterMode seed clutter handling mode.
+     * @param seedReservePerType minimum seeds to reserve per type.
      */
     public static void applyServerSettings(int tickInterval, int frameRediscoveryInterval, int scanRange, DurabilityMode durabilityMode,
                                            boolean mendingNegation, boolean debugLogging,
@@ -94,6 +124,10 @@ public class Config {
 
     /**
      * Apply client-side settings programmatically.
+     */
+    /**
+     * Apply client-side settings programmatically.
+     * @param harvestParticles whether to show harvest particles on client.
      */
     public static void applyClientSettings(boolean harvestParticles) {
         Config.harvestParticles = harvestParticles;

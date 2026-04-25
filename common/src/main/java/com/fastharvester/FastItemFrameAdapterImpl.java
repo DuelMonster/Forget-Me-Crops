@@ -21,15 +21,20 @@ import java.lang.reflect.Method;
  */
 public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
 
+    /** Singleton instance for reflective FastItemFrames access. */
     public static final FastItemFrameAdapterImpl INSTANCE = new FastItemFrameAdapterImpl();
 
-    public FastItemFrameAdapterImpl() {}
+    /** Utility: prevent external instantiation (use INSTANCE) */
+    private FastItemFrameAdapterImpl() {}
 
     /**
      * Check whether the given `frame` (vanilla `ItemFrame` or a FIF block-entity)
      * appears to be holding a hoe and is associated with a container `chest`.
      *
      * Returns true for likely anchors; false if the heuristics do not match.
+     * @param frame The frame or block-entity to inspect.
+     * @param chest The linked chest object to validate association.
+     * @return true if the inspected frame appears to be an anchor holding a hoe.
      */
     @Override
     public boolean isItemFrameWithHoe(Object frame, Object chest) {
@@ -65,6 +70,8 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
     /**
      * Heuristic to detect FastItemFrames block-entities by classname.
      * This is a best-effort check and intentionally permissive.
+     * @param be Block entity to test.
+     * @return true when the block entity appears to be a FastItemFrames BE.
      */
     public static boolean isFastItemFrameBlockEntity(BlockEntity be) {
         if (be == null) return false;
@@ -80,6 +87,8 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
      * a combination of reflective getter checks and common field names.
      *
      * Returns null if no held item could be extracted.
+     * @param be The block entity to inspect.
+     * @return the extracted ItemStack when present, or null if none.
      */
     public static ItemStack extractHeldItem(BlockEntity be) {
         if (be == null) return null;
@@ -108,6 +117,8 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
     /**
      * Read rotation from a FastItemFrames block-entity via method or field.
      * Falls back to 0 on any error.
+     * @param be The FastItemFrames block-entity to read.
+     * @return rotation value (0-7), or 0 on error.
      */
     public static int getRotation(BlockEntity be) {
         if (be == null) return 0;
@@ -132,6 +143,8 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
     /**
      * Set rotation on a FastItemFrames block-entity using setter methods or
      * by writing a `rotation` field if available. Best-effort; ignores errors.
+     * @param be The block entity to modify.
+     * @param newRotation Rotation value to set (0-7).
      */
     public static void setRotation(BlockEntity be, int newRotation) {
         if (be == null) return;

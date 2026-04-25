@@ -17,16 +17,25 @@ import net.minecraft.core.registries.Registries;
  */
 // 🌱 Extra friendly aside: treat hoes kindly and they'll last longer. Also, sing to them if you're theatrical.
 public class HoeUtils {
+    /** Utility class: do not instantiate. */
+    private HoeUtils() {}
     /**
-     * Creates a new HoeUtils. For now, it's just a vessel for future wisdom!
+     * Returns whether the provided `tool` has Silk Touch applied in the given server registry context.
+     * @param level the `ServerLevel` used to resolve enchantment registry
+     * @param tool the tool ItemStack to inspect
+     * @return true when the `tool` has Silk Touch enchantment
      */
-    public HoeUtils() {}
-
     public static boolean hasSilkTouch(ServerLevel level, ItemStack tool) {
         var silkTouch = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SILK_TOUCH);
         return EnchantmentHelper.getItemEnchantmentLevel(silkTouch, tool) > 0;
     }
 
+    /**
+     * Get the Fortune enchantment level present on the provided `tool`.
+     * @param level the `ServerLevel` used to resolve enchantment registry
+     * @param tool the tool ItemStack to inspect
+     * @return the integer Fortune level (0 when not present)
+     */
     public static int getFortuneLevel(ServerLevel level, ItemStack tool) {
         var fortune = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.FORTUNE);
         return EnchantmentHelper.getItemEnchantmentLevel(fortune, tool);

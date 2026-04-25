@@ -6,15 +6,24 @@ package com.fastharvester;
  * and occasionally sarcastic to keep future maintainers awake.
  */
 
-// 🧪 TestUtils: small helpers that get yelled at by unit tests when they misbehave.
-// Emotional tone: supportive but firm.
-
+/**
+ * TestUtils: small helpers used by tests and debugging.
+ * <p>
+ * Contains lightweight deterministic helpers used by unit tests and local validation.
+ * </p>
+ */
 public final class TestUtils {
     private TestUtils() {}
 
     /**
      * Simple deterministic-ish loot calculator used by tests.
      * Humanized aside: it's modest but reliable — like a village duck.
+     */
+    /**
+     * Simple deterministic-ish loot calculator used by tests.
+     * @param cropType an identifier for the crop being tested
+     * @param fortuneLevel the fortune level to simulate
+     * @return the simulated number of drops produced
      */
     public static int calculateLootSimple(Object cropType, int fortuneLevel) {
         int baseDrops = 1 + (int)(Math.random() * 2);

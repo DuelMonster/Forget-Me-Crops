@@ -13,6 +13,8 @@ package com.fastharvester.crops;
  * </p>
  */
 public class CropRouter {
+    /** Utility class: do not instantiate. */
+    private CropRouter() {}
     /**
      * Routes a crop to the correct handler. Emits verbose debug logs.
      * @param cropType The type of crop (String or enum, loader-agnostic).

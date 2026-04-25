@@ -13,9 +13,14 @@ package com.fastharvester.crops;
  * </p>
  */
 public class NetherWartHandler {
-    public NetherWartHandler() {}
+    /** Utility class: do not instantiate. */
+    private NetherWartHandler() {}
+
     /**
      * Handles Nether Wart harvesting with verbose debug logging.
+     * @param cropPos the position of the Nether Wart crop
+     * @param world the world/context object where the crop resides
+     * @return true if the handler performed a successful harvest simulation
      */
     public static boolean handle(Object cropPos, Object world) {
         com.fastharvester.Constants.LOG.info("[FastHarvester][NETHER_WART] Handling Nether Wart at {}...", cropPos);
