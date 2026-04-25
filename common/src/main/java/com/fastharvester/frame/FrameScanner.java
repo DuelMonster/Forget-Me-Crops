@@ -1,4 +1,6 @@
-package com.fastharvester;
+package com.fastharvester.frame;
+import com.fastharvester.Constants;
+import com.fastharvester.Config;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -19,7 +21,15 @@ import net.minecraft.world.phys.AABB;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Map;
+
 import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
+import com.fastharvester.Constants;
+import com.fastharvester.Config;
+import com.fastharvester.util.chest.ChestUtils;
+import com.fastharvester.HarvestUtils;
+import com.fastharvester.HarvestContext;
+import com.fastharvester.util.durability.DurabilityLogic;
+import com.fastharvester.util.loot.LootLogic;
 import java.util.HashMap;
 import java.util.Comparator;
 import java.util.List;
@@ -32,69 +42,25 @@ import java.util.Iterator;
 
 /**
  * FrameScanner: The intrepid explorer of your blocky world!
- * <p>
- * This class is responsible for scanning farms, finding frames, and making sure your crops get the attention they deserve. It's loader-agnostic, so it works everywhere—like a universal translator, but for farming.
- * </p>
- * <p>
- * Why does this matter? Because without it, your crops would be lost, alone, and unharvested. And nobody wants that.
- * </p>
- * <p>
- * For the full adventure, see TECHNICAL.md (bring snacks).
- * </p>
  */
 public class FrameScanner {
-    /**
-     * The maximum number of frames we dare scan in a single run. Any more and the crops unionize.
-     */
     public static final int MAX_FRAMES_PER_RUN = 24;
 
-    /**
-     * The maximum number of blocks to check per run. Because even farmers need a break.
-     */
-    /**
-     * Creates a new FrameScanner. Ready to scan for farming greatness!
-     */
     public FrameScanner() {}
 
-    /**
-     * Anchor: The holy trinity of farm automation—chest, frame, and hoe.
-     * <p>
-     * This class bundles together the key objects needed to anchor a farm. Treat it with respect (and maybe a little awe).
-     * </p>
-     */
     public static class Anchor {
-        /** Linked chest container for storing drops and replacements. */
         public final Container chest;
-        /** Position of the item frame anchoring this farm. */
         public final BlockPos framePos;
-        /** Hoe ItemStack stored/used by this anchor. */
         public final ItemStack hoe;
 
-        /**
-         * Create a new Anchor binding a chest, frame position and hoe.
-         * @param chest linked chest container
-         * @param framePos position of the item frame
-         * @param hoe the stored hoe ItemStack
-         */
         public Anchor(Container chest, BlockPos framePos, ItemStack hoe) {
             this.chest = chest;
             this.framePos = framePos;
             this.hoe = hoe;
         }
-        /**
-         * String representation of the anchor for logging.
-         * Emotional aside: anchors are small but full of purpose.
-         */
         @Override
         public String toString() { return "Anchor[pos="+framePos+",hoe="+hoe+"]"; }
     }
-
-    /**
-    * Scans for a farm starting from a given anchor. Emits extremely verbose debug logs for every step.
-    * @param anchor The anchor (chest, frame, hoe) to start scanning from.
-    * @param level The world `Level` to scan in (server-level expected).
-    * @return true if a valid farm was found and scanned, false otherwise.
-     */
 
     public boolean scanFarm(Anchor anchor, Level level) {
         Constants.LOG.info("[FastHarvester][SCAN] Starting farm scan from anchor: {}", anchor);
@@ -109,9 +75,6 @@ public class FrameScanner {
         BlockPos center = anchor.framePos;
         String dimId = level.dimension().identifier().toString();
 
-        // Ensure we have a current hoe to use: prefer the world-held hoe on the frame,
-        // otherwise attempt to pull a replacement from the chest. Update the registry
-        // so future ticks see the new hoe.
         ItemStack currentHoe = anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy();
         try {
             ItemStack frameHoe = readHoeFromFrame(level, center);
@@ -135,7 +98,6 @@ public class FrameScanner {
 
         HarvestContext ctx = new HarvestContext(anchor, level, currentHoe, anchor.chest, null);
 
-        // Generate spiral positions (ring by ring, spiral order)
         List<SpiralStep> spiral = generateSpiral(center, range);
         int spiralSteps = spiral.size();
         boolean anyHarvested = false;
@@ -149,7 +111,6 @@ public class FrameScanner {
             BlockState state = level.getBlockState(pos);
             blocksScanned++;
 
-            // Frame rotation logic
             switch (Config.rotationMode) {
                 case FOLLOW_HARVEST_SPIRAL -> {
                     if (lastDir == null || dir != lastDir) {
@@ -165,7 +126,6 @@ public class FrameScanner {
                     }
                 }
                 case STEP_PER_HARVEST -> {
-                    // Only update at end if anyHarvested
                 }
             }
 
@@ -173,13 +133,11 @@ public class FrameScanner {
             try {
                 Block block = state.getBlock();
 
-                // Direct fruit blocks (melons/pumpkins): harvest the fruit block itself, no replant.
                 if (state.is(Blocks.MELON) || state.is(Blocks.PUMPKIN)) {
                     HarvestUtils.harvestCrop(ctx, pos, state, s -> true, s -> null);
                     harvested = ctx.harvestedCount > 0;
                     cropsFound = Math.max(cropsFound, ctx.harvestedCount);
                 } else if (state.is(Blocks.MELON_STEM) || state.is(Blocks.PUMPKIN_STEM)) {
-                    // If this is a stem, check for adjacent fruit and harvest that instead.
                     Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
                     for (Direction d : dirs) {
                         BlockPos npos = pos.relative(d);
@@ -192,7 +150,6 @@ public class FrameScanner {
                         }
                     }
                 } else {
-                    // Standard crop logic
                     boolean isCrop = block instanceof CropBlock || state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH);
                     if (isCrop) {
                         int threshold = (state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH)) ? 3 : 7;
@@ -225,7 +182,6 @@ public class FrameScanner {
 
             if (harvested) anyHarvested = true;
 
-            // If a harvest call flagged the chest as full, set a cooldown on the registry and stop the scan
             if (ctx.chestFull) {
                 try {
                     FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
@@ -234,10 +190,8 @@ public class FrameScanner {
                 return cropsFound > 0;
             }
 
-            // Auto-plant/till logic (immediately after harvest)
             tryAutoPlantAndTill(anchor, ctx, pos, level);
 
-            // If a chest-full occurred while attempting to replant/till, set cooldown and stop
             if (ctx.chestFull) {
                 try {
                     FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
@@ -247,7 +201,6 @@ public class FrameScanner {
             }
         }
 
-        // STEP_PER_HARVEST: advance by one step if we harvested anything this pass
         if (anyHarvested && Config.rotationMode == com.fastharvester.enums.RotationMode.STEP_PER_HARVEST) {
             int newRot = (getFrameRotation(level, center) + 1) & 7;
             setFrameRotation(level, center, newRot);
@@ -257,7 +210,6 @@ public class FrameScanner {
         return cropsFound > 0;
     }
 
-    // Spiral step helper class
     private static class SpiralStep {
         public final BlockPos pos;
         public final Direction dir;
@@ -267,7 +219,6 @@ public class FrameScanner {
         }
     }
 
-    // Generate spiral positions with direction for each step
     private static List<SpiralStep> generateSpiral(BlockPos center, int range) {
         List<SpiralStep> spiral = new ArrayList<>();
         int x = 0, z = 0, dx = 0, dz = -1;
@@ -291,17 +242,14 @@ public class FrameScanner {
         return spiral;
     }
 
-    // Map dx/dz to spiral direction
     private static Direction getSpiralDirection(int dx, int dz) {
         if (dx == 1 && dz == 0) return Direction.EAST;
         if (dx == -1 && dz == 0) return Direction.WEST;
         if (dx == 0 && dz == 1) return Direction.SOUTH;
         if (dx == 0 && dz == -1) return Direction.NORTH;
-        // Fallback to NORTH for any other case
         return Direction.NORTH;
     }
 
-    // Map direction to rotation step (0, 2, 4, 6 for N, E, S, W)
     private static int dirToRotation(Direction dir) {
         return switch (dir) {
             case NORTH -> 0;
@@ -312,14 +260,12 @@ public class FrameScanner {
         };
     }
 
-    // Auto-plant/till logic for a single position
     private static void tryAutoPlantAndTill(Anchor anchor, HarvestContext ctx, BlockPos pos, Level level) {
         BlockState cur = level.getBlockState(pos);
         BlockPos belowPos = pos.below();
         BlockState below = level.getBlockState(belowPos);
         Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
 
-        // If we already have farmland, try to replant based on neighbors
         if (below != null && below.getBlock() == Blocks.FARMLAND && cur.isAir()) {
             Map<Block, Integer> counts = new HashMap<>();
             for (Direction d : dirs) {
@@ -341,7 +287,6 @@ public class FrameScanner {
             }
         }
 
-        // Nether-wart on soul sand: handle as a separate planting case
         if (below != null && below.getBlock() == Blocks.SOUL_SAND && cur.isAir()) {
             Map<Block, Integer> counts = new HashMap<>();
             for (Direction d : dirs) {
@@ -363,7 +308,6 @@ public class FrameScanner {
             }
         }
 
-        // Auto-till: if below is dirt/grass and near farmland, convert and plant.
         if (below != null && (below.getBlock() == Blocks.DIRT || below.getBlock() == Blocks.GRASS_BLOCK) && cur.isAir()) {
             int farmlandNeighbors = 0;
             for (Direction d : dirs) {
@@ -371,23 +315,19 @@ public class FrameScanner {
                 if (ns != null && ns.getBlock() == Blocks.FARMLAND) farmlandNeighbors++;
             }
             if (farmlandNeighbors >= 1) {
-                // Avoid tilling if this looks like part of a melon/pumpkin layout (fruit or stems nearby)
                 boolean nearMelonPumpkin = false;
                 for (Direction d : dirs) {
                     BlockState ns = level.getBlockState(pos.relative(d));
                     if (ns.is(Blocks.MELON) || ns.is(Blocks.PUMPKIN) || ns.is(Blocks.MELON_STEM) || ns.is(Blocks.PUMPKIN_STEM)) { nearMelonPumpkin = true; break; }
                 }
                 if (!nearMelonPumpkin) {
-                    // Till the dirt into farmland
                     BlockState farmland = Blocks.FARMLAND.defaultBlockState();
                     level.setBlock(belowPos, farmland, 3);
-                    // Apply hoe durability
                     ItemStack before = anchor.hoe.copy();
-                    com.fastharvester.DurabilityLogic.applyDamage(level, anchor.hoe, level.getRandom());
+                    com.fastharvester.util.durability.DurabilityLogic.applyDamage(level, anchor.hoe, level.getRandom());
                     if (anchor.hoe.isEmpty()) {
                         HarvestUtils.handleBrokenHoe(ctx, before);
                     }
-                    // After tilling, attempt neighbor-dominant planting similar to above
                     Map<Block, Integer> counts2 = new HashMap<>();
                     for (Direction d : dirs) {
                         BlockPos npos = pos.relative(d);
@@ -411,10 +351,6 @@ public class FrameScanner {
         }
     }
 
-    /**
-     * Choose a seed Item for the given crop block. Returns null if unknown.
-     * Humanized aside: we try to pick the seed the plant would recognize at breakfast.
-     */
     private static Item seedForBlock(Block b) {
         if (b == Blocks.WHEAT) return Items.WHEAT_SEEDS;
         if (b == Blocks.BEETROOTS) return Items.BEETROOT_SEEDS;
@@ -422,7 +358,6 @@ public class FrameScanner {
         if (b == Blocks.POTATOES) return Items.POTATO;
         if (b == Blocks.MELON_STEM) return Items.MELON_SEEDS;
         if (b == Blocks.PUMPKIN_STEM) return Items.PUMPKIN_SEEDS;
-        // Mod crops like Torchflower may not be in Items; fall back to block's item when plausible
         try {
             String cls = b.getClass().getName().toLowerCase();
             if (cls.contains("torchflower")) return b.asItem();
@@ -431,16 +366,11 @@ public class FrameScanner {
         return null;
     }
 
-    /**
-     * BFS-based discovery for connected farm nodes starting from `center`.
-     * Emotional aside: this explores like a curious mole sniffing out crops.
-     */
     private static List<BlockPos> bfsDiscoverFarm(BlockPos center, Level level, int range) {
         List<BlockPos> result = new ArrayList<>();
         Set<BlockPos> visited = new HashSet<>();
         Deque<BlockPos> q = new ArrayDeque<>();
 
-        // Seed BFS by finding any crop/fruit/stem within the bounding square
         for (int dx = -range; dx <= range; dx++) {
             for (int dz = -range; dz <= range; dz++) {
                 BlockPos p = center.offset(dx, 0, dz);
@@ -483,28 +413,11 @@ public class FrameScanner {
         return result;
     }
 
-    // --- Tick-sliced scanning support ---------------------------------
-    // We keep a small manager that can schedule a multi-tick scan job per-dimension.
-    // Each job performs the same work as the old synchronous scan but spreads
-    // ring processing across up to `Config.maxSpiralDurationTicks` ticks so
-    // large farms do not harvest instantly and do not cause a single-tick spike.
     private static final Map<String, List<FarmScanTask>> activeScans = new HashMap<>();
 
-    /**
-     * Schedule an asynchronous, tick-sliced scan for the provided anchor.
-     * This avoids performing a full harvest in a single server tick.
-     */
-    /**
-     * Schedule an asynchronous, tick-sliced scan for the provided anchor.
-     * This avoids performing a full harvest in a single server tick.
-     * @param dimId The dimension id for the scan.
-     * @param anchor The anchor to scan.
-     * @param level The level instance to operate in.
-     */
     public static void submitScan(String dimId, Anchor anchor, Level level) {
         try {
             List<FarmScanTask> list = activeScans.computeIfAbsent(dimId, k -> new ArrayList<>());
-            // Avoid scheduling duplicate tasks for the same anchor while one is already active
             for (FarmScanTask t : list) {
                 if (t != null && t.anchor != null && t.anchor.framePos != null && anchor.framePos != null && t.anchor.framePos.equals(anchor.framePos)) {
                     Constants.LOG.debug("[FastHarvester][SCAN] Scan already active for {}, skipping schedule.", anchor);
@@ -519,14 +432,6 @@ public class FrameScanner {
         }
     }
 
-    /**
-     * Tick active scan jobs for a dimension. Call once per server tick.
-     */
-    /**
-     * Tick active scan jobs for a dimension. Call once per server tick.
-     * @param dimId The dimension id to tick scans for.
-     * @param level The level instance for the scans.
-     */
     public static void tickScans(String dimId, Level level) {
         List<FarmScanTask> list = activeScans.get(dimId);
         if (list == null || list.isEmpty()) return;
@@ -549,11 +454,6 @@ public class FrameScanner {
         if (list.isEmpty()) activeScans.remove(dimId);
     }
 
-    /**
-     * A single farm scan job that spreads ring processing across multiple ticks.
-     * It reuses most of the original `scanFarm` logic but performs only a slice
-     * of rings each server tick.
-     */
     private static class FarmScanTask {
         final Anchor anchor;
         final Level level;
@@ -561,7 +461,6 @@ public class FrameScanner {
         final HarvestContext ctx;
         final String dimId;
 
-        // Keep ring map for rotation decisions but drive processing by a spiral-ordered list
         final Map<Integer, List<BlockPos>> ringMap = new HashMap<>();
         final List<SpiralStep> spiralPositions = new ArrayList<>();
         final int computedMaxRing;
@@ -570,13 +469,8 @@ public class FrameScanner {
         final int positionsPerTick;
         boolean anyHarvested = false;
         int lastHarvestedRing = -1;
-        // For FOLLOW_HARVEST_SPIRAL we track the last direction we displayed so
-        // we only update when the spiral direction actually changes.
         Direction lastDirection = null;
-        // For FULL_ROTATION_PER_HARVEST we animate the rotation over multiple
-        // ticks by applying one step at a time until the target is reached.
         int animationStepsRemaining = 0;
-        // Precomputed full-ring index mapping (spiral index -> position-in-ring)
         final Map<Integer, List<Integer>> ringFullIndices = new HashMap<>();
         final Map<Integer, Integer> indexToPosInRing = new HashMap<>();
         int lastComputedRotation = -1;
@@ -591,8 +485,6 @@ public class FrameScanner {
             this.level = level;
             this.center = anchor.framePos;
             this.ctx = new HarvestContext(anchor, level, anchor.hoe, anchor.chest, null);
-            // Ensure task context has an up-to-date hoe: prefer world-held hoe, otherwise attempt
-            // to pull a replacement from the chest. Update registry so future ticks see it.
             try {
                 ItemStack frameHoe = readHoeFromFrame(level, center);
                 if (frameHoe != null && !frameHoe.isEmpty() && frameHoe.getItem() instanceof HoeItem) {
@@ -609,10 +501,8 @@ public class FrameScanner {
             } catch (Throwable ignored) {}
             this.dimId = dimId;
 
-            // Perform BFS discovery synchronously at task creation (seed is limited by scanRange)
             List<BlockPos> candidates = bfsDiscoverFarm(center, level, Math.max(1, Config.scanRange));
             if (candidates.isEmpty()) {
-                // fallback: fill bounding square
                 for (int dx = -Config.scanRange; dx <= Config.scanRange; dx++) for (int dz = -Config.scanRange; dz <= Config.scanRange; dz++) candidates.add(center.offset(dx, 0, dz));
             }
 
@@ -627,16 +517,15 @@ public class FrameScanner {
             }
             this.computedMaxRing = maxRing;
 
-            // Build a spiral ordering across the bounding square and pick only discovered candidates
             int range = Math.max(1, Config.scanRange);
-            spiralPositions.add(new SpiralStep(center, Direction.NORTH)); // start at center
+            spiralPositions.add(new SpiralStep(center, Direction.NORTH));
             int x = 0, z = 0;
             int stepSize = 1;
             int[] dxs = new int[]{1, 0, -1, 0};
             int[] dzs = new int[]{0, 1, 0, -1};
             int dir = 0;
             int maxCells = (2 * range + 1) * (2 * range + 1);
-            int visitedCells = 1; // we've added the center already
+            int visitedCells = 1;
             outer:
             while (visitedCells < maxCells) {
                 for (int rep = 0; rep < 2; rep++) {
@@ -659,7 +548,6 @@ public class FrameScanner {
 
             int ticks = Math.max(1, Config.maxSpiralDurationTicks);
             this.positionsPerTick = Math.max(1, (int) Math.ceil((double) totalPositions / (double) ticks));
-            // Build full-ring index map so we can split each ring into 8 equal rotation segments
             for (int i = 0; i < spiralPositions.size(); i++) {
                 BlockPos p = spiralPositions.get(i).pos;
                 int ring = Math.max(Math.abs(p.getX() - center.getX()), Math.abs(p.getZ() - center.getZ()));
@@ -673,11 +561,7 @@ public class FrameScanner {
             Constants.LOG.debug("[FastHarvester][SCAN] Created FarmScanTask center={} totalPositions={} positionsPerTick={} computedMaxRing={} ticksNeeded={}", center, totalPositions, positionsPerTick, computedMaxRing, numberOfTicksNeeded);
         }
 
-        /**
-         * Process a slice of positions this tick. Returns true when the entire job is complete.
-         */
         boolean tick() {
-            // If a previous iteration detected a full chest, set the cooldown and finish the task
             if (ctx.chestFull) {
                 FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
                 ctx.logSummary();
@@ -689,7 +573,6 @@ public class FrameScanner {
                 return true;
             }
 
-            // advance internal tick counter and, if an animation is scheduled, apply an animation step
             tickCounter++;
             if (animationStepsRemaining > 0) {
                 try {
@@ -697,7 +580,6 @@ public class FrameScanner {
                     if (shouldApply) {
                         int before = getFrameRotation(level, center) & 7;
                         int next = (before + 1) & 7;
-                        // If this is the full-harvest animation we force the rotation (bypass cooldown)
                         setFrameRotation(level, center, next, fullAnimationScheduled);
                         int after = getFrameRotation(level, center) & 7;
                         if (after != before) animationStepsRemaining--;
@@ -711,7 +593,6 @@ public class FrameScanner {
             int baseRotation = getFrameRotation(level, center);
             int computedMaxRingLocal = computedMaxRing;
             int maxRing = computedMaxRingLocal;
-            // Map positions to rings for per-ring processing
             Map<Integer, List<Integer>> ringToIndices = new HashMap<>();
             for (int idx = currentIndex; idx <= endIndex; idx++) {
                 BlockPos pos = spiralPositions.get(idx).pos;
@@ -719,7 +600,6 @@ public class FrameScanner {
                 ringToIndices.computeIfAbsent(ring, k -> new ArrayList<>()).add(idx);
             }
 
-            // Process by ring, updating rotation after each ring if needed
             for (int ring = 0; ring <= maxRing; ring++) {
                 List<Integer> indices = ringToIndices.get(ring);
                 if (indices == null) continue;
@@ -773,7 +653,6 @@ public class FrameScanner {
                         if (harvested) ringHarvested = true;
                         if (harvested) { anyHarvested = true; lastHarvestedRing = ring; }
 
-                        // FOLLOW: split each ring into 8 equal rotation segments and follow spiral progress
                         if (Config.rotationMode == com.fastharvester.enums.RotationMode.FOLLOW_HARVEST_SPIRAL) {
                             Integer posInRing = indexToPosInRing.get(idx);
                             List<Integer> full = ringFullIndices.get(ring);
@@ -785,7 +664,6 @@ public class FrameScanner {
                                     lastComputedRotation = rot;
                                 }
                             } else {
-                                // fallback to direction-based updates if we cannot compute ring position
                                 if (lastDirection == null || !lastDirection.equals(curDir)) {
                                     setFrameRotation(level, center, dirToRotation(curDir));
                                     lastDirection = curDir;
@@ -796,42 +674,33 @@ public class FrameScanner {
                         Constants.LOG.debug("[FastHarvester][SCAN] Exception while scanning {}: {}", center, t.toString());
                     }
 
-                    // If a harvest attempt flagged the chest as full, set cooldown and end the job
                     if (ctx.chestFull) {
                         FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
                         ctx.logSummary();
                         return true;
                     }
                 }
-                // After finishing this ring, advance frame rotation according to mode if we harvested anything
                 if (ringHarvested) {
                     int newRotation = baseRotation;
                     switch (Config.rotationMode) {
                         case STEP_PER_HARVEST -> {
-                            // Will be applied once at end of pass (handled below)
                         }
                         case FULL_ROTATION_PER_HARVEST -> {
                             if (!fullAnimationScheduled) {
                                 fullAnimationScheduled = true;
                                 animationStepsRemaining = 8;
                                 animationInterval = Math.max(1, (int) Math.ceil((double) numberOfTicksNeeded / 8.0));
-                                // start applying on the next ticks according to animationInterval
                                 tickCounter = 0;
                             }
                         }
                         case FOLLOW_HARVEST_SPIRAL -> {
-                            // No-op: FOLLOW updates handled per-index on direction changes
                         }
                     }
                 }
             }
 
-
-
-
             currentIndex = endIndex + 1;
 
-            // If we've processed all positions, perform the neighbour-plant / auto-till pass synchronously now
             if (currentIndex >= totalPositions) {
                 int range = Math.max(1, Config.scanRange);
 
@@ -930,19 +799,16 @@ public class FrameScanner {
                     neighborPassDone = true;
                 }
 
-                // If a chest-full occurred during the neighbour/plant pass, set cooldown and finish
                 if (ctx.chestFull) {
                     FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
                     ctx.logSummary();
                     return true;
                 }
 
-                // If a full-harvest animation is scheduled and still running, keep the task alive
                 if (fullAnimationScheduled && animationStepsRemaining > 0) {
                     return false;
                 }
 
-                // --- Frame rotation: only update at end of spiral, and only if harvested ---
                 if (anyHarvested && lastHarvestedRing >= 0) {
                     int newRotation = 0;
                     switch (Config.rotationMode) {
@@ -951,7 +817,6 @@ public class FrameScanner {
                             setFrameRotation(level, center, newRotation);
                         }
                         case FULL_ROTATION_PER_HARVEST -> {
-                            // If a full animation ran, the animation has already displayed a full cycle; do not override final rotation.
                             if (!fullAnimationScheduled) {
                                 int steps = computedMaxRing > 0 ? (int) Math.floor((double)(lastHarvestedRing + 1) * 8.0 / (computedMaxRing + 1)) : 0;
                                 newRotation = steps & 7;
@@ -959,7 +824,6 @@ public class FrameScanner {
                             }
                         }
                         case FOLLOW_HARVEST_SPIRAL -> {
-                            // Compute a ring-aligned final rotation based on the last harvested ring's last position
                             List<Integer> full = ringFullIndices.get(lastHarvestedRing);
                             if (full != null && !full.isEmpty()) {
                                 int posIdx = Math.max(0, full.size() - 1);
@@ -972,24 +836,18 @@ public class FrameScanner {
                 }
 
                 ctx.logSummary();
-                return true; // finished
+                return true;
             }
 
-            // not finished yet
             return false;
         }
     }
 
-    /**
-     * Read the rotation of an item frame or FastItemFrames block-entity at `pos`.
-     * Humanized aside: frames have feelings; rotation is how they express them.
-     */
     private static int getFrameRotation(Level level, BlockPos pos) {
         try {
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(pos));
             for (ItemFrame f : frames) {
                 if (f.blockPosition().equals(pos)) {
-                    // try getter methods
                     for (Method m : f.getClass().getMethods()) {
                         String name = m.getName().toLowerCase();
                         if ((name.contains("get") || name.contains("getitem")) && name.contains("rotation") && m.getParameterCount() == 0) {
@@ -997,7 +855,6 @@ public class FrameScanner {
                             if (r instanceof Number) return ((Number) r).intValue() & 7;
                         }
                     }
-                    // fallback to field
                     try {
                         Field fld = f.getClass().getDeclaredField("rotation");
                         fld.setAccessible(true);
@@ -1008,9 +865,6 @@ public class FrameScanner {
                 }
             }
 
-            // Block-entity fallback (FastItemFrames): if there is no vanilla ItemFrame
-            // at `pos` we try to read rotation from a FIF block-entity using our adapter.
-            // This keeps behavior consistent across vanilla and FastItemFrames worlds.
             BlockEntity be = level.getBlockEntity(pos);
             if (be != null) {
                 try { return FastItemFrameAdapterImpl.getRotation(be); } catch (Throwable ignored) {}
@@ -1021,10 +875,6 @@ public class FrameScanner {
         return 0;
     }
 
-    /**
-     * Read the held ItemStack from a vanilla ItemFrame or a FastItemFrames block-entity at `pos`.
-     * Returns ItemStack.EMPTY when no hoe is found.
-     */
     private static ItemStack readHoeFromFrame(Level level, BlockPos pos) {
         try {
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class,
@@ -1047,10 +897,6 @@ public class FrameScanner {
         return ItemStack.EMPTY;
     }
 
-    /**
-     * Set the rotation of an item frame or FastItemFrames block-entity at `pos`.
-     * Emotional aside: rotate gently — it's a bit sensitive.
-     */
     @SuppressWarnings("null")
     private static void setFrameRotation(Level level, BlockPos pos, int newRotation) {
         setFrameRotation(level, pos, newRotation, false);
@@ -1064,7 +910,6 @@ public class FrameScanner {
         String dimId = "";
         try { dimId = level != null ? level.dimension().identifier().toString() : ""; } catch (Throwable ignored) {}
 
-        // If bypass requested, record the rotation time and apply immediately
         if (bypassCooldown) {
             try { FrameRegistry.tryRotation(dimId, pos, gameTime); } catch (Throwable ignored) {}
             try {
@@ -1075,7 +920,6 @@ public class FrameScanner {
             return;
         }
 
-        // Otherwise, schedule the rotation to be flushed once per tick (collapsing duplicates)
         try {
             if (!FrameRegistry.tryRotation(dimId, pos, gameTime)) {
                 if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Skipped rotation for {} due to cooldown (gametime={})", pos, gameTime); } catch (Throwable ignored) {}
@@ -1098,10 +942,6 @@ public class FrameScanner {
         }
     }
 
-    /**
-     * Apply a scheduled rotation immediately to the world. This contains the
-     * platform-specific logic to update item-frames or FIF block-entities.
-     */
     static void applyScheduledRotation(Level level, BlockPos pos, int newRotation) {
         try {
             long gameTime = -1L;
@@ -1111,7 +951,6 @@ public class FrameScanner {
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(pos));
             for (ItemFrame f : frames) {
                 if (f.blockPosition().equals(pos)) {
-                    // try setter methods
                     for (Method m : f.getClass().getMethods()) {
                         String name = m.getName().toLowerCase();
                         if (name.contains("set") && name.contains("rotation") && m.getParameterCount() == 1) {
@@ -1132,7 +971,6 @@ public class FrameScanner {
                             }
                         }
                     }
-                    // fallback to field
                     try {
                         Field fld = f.getClass().getDeclaredField("rotation");
                         fld.setAccessible(true);
@@ -1143,8 +981,6 @@ public class FrameScanner {
                 }
             }
 
-            // Block-entity path: try setting rotation on a FIF block-entity and
-            // notify the world about the change.
             BlockEntity be = level.getBlockEntity(pos);
             if (be != null) {
                 try {

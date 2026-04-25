@@ -5,8 +5,8 @@ package com.fastharvester.fabric;
 
 import com.fastharvester.Config;
 import com.fastharvester.Constants;
-import com.fastharvester.FrameRegistry;
-import com.fastharvester.FrameScanner;
+import com.fastharvester.frame.FrameRegistry;
+import com.fastharvester.frame.FrameScanner;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.fastharvester.CatchupManager;
-import com.fastharvester.FrameDiscovery;
+import com.fastharvester.frame.FrameDiscovery;
 import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
 
 /**

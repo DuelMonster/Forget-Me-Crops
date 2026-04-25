@@ -3,8 +3,8 @@ package com.fastharvester.neoforge;
 // 🌾 NeoForge ticker: quietly counts down and nudges farms to do their thing.
 // Emotional state: hopeful. It believes in your crops.
 
-import com.fastharvester.FrameRegistry;
-import com.fastharvester.FrameScanner;
+import com.fastharvester.frame.FrameRegistry;
+import com.fastharvester.frame.FrameScanner;
 import com.fastharvester.Constants;
 import com.fastharvester.Config;
 
@@ -25,7 +25,7 @@ import net.minecraft.world.phys.AABB;
 import java.util.List;
 
 import com.fastharvester.CatchupManager;
-import com.fastharvester.FrameDiscovery;
+import com.fastharvester.frame.FrameDiscovery;
 import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
 
 /**
@@ -93,7 +93,7 @@ public class NeoForgeFarmTicker {
                     BlockPos pos = e.getKey();
                     BlockEntity be = e.getValue();
                     if (be == null) continue;
-                    if (!com.fastharvester.FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
+                    if (!FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
                     FrameRegistry.unregisterFrame(dimId, pos);
                 }
             } catch (Throwable ignored) {}

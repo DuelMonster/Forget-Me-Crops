@@ -5,6 +5,8 @@ import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.AABB;
 
+import com.fastharvester.frame.FrameDiscovery;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Deque;
