@@ -20,8 +20,6 @@ import com.fastharvester.Config;
 import com.fastharvester.enums.DurabilityMode;
 import com.fastharvester.enums.RotationMode;
 import com.fastharvester.enums.SeedClutterMode;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class FastHarvesterNeoForgeConfig {

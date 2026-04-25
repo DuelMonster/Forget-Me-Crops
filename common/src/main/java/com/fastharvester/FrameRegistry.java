@@ -16,12 +16,17 @@ public class FrameRegistry {
 
     private static final Map<String, Map<BlockPos, FrameEntry>> framesByDimension = new HashMap<>();
     private static final Map<String, Set<BlockPos>> CHUNK_INDEX = new HashMap<>();
+    // Pending visual rotations scheduled during scans; flushed once per tick to reduce world updates
+    private static final Map<String, Map<BlockPos, Integer>> PENDING_ROTATIONS = new HashMap<>();
 
     public static class FrameEntry {
         public final FrameScanner.Anchor anchor;
         public boolean active;
         public int ticksUntilNextRun;
         public long lastSeenMs;
+        // Track the last game-time tick we applied a visual rotation for this anchor.
+        // Used to throttle frequent rotation updates coming from spiral scans.
+        public long lastRotationGameTime = -1L;
 
         /**
          * FrameEntry: holds scheduling state for a discovered anchor.
@@ -32,6 +37,7 @@ public class FrameRegistry {
             this.active = true;
             this.ticksUntilNextRun = Config.tickInterval;
             this.lastSeenMs = System.currentTimeMillis();
+            this.lastRotationGameTime = -1L;
         }
     }
 
@@ -153,8 +159,41 @@ public class FrameRegistry {
             replacement.ticksUntilNextRun = old.ticksUntilNextRun;
         }
         replacement.lastSeenMs = old.lastSeenMs;
+        replacement.lastRotationGameTime = old.lastRotationGameTime;
         map.put(framePos, replacement);
         Constants.LOG.info("[FastHarvester][REG] Updated hoe for {} in {}.", framePos, dimensionId);
+    }
+
+    /**
+     * Try to apply a rotation for the given anchor. Returns true when the rotation
+     * should proceed; returns false when the anchor is still within its rotation
+     * cooldown window. When allowed, the lastRotationGameTime is updated to
+     * the provided gameTime.
+     */
+    public static synchronized boolean tryRotation(String dimensionId, BlockPos framePos, long gameTime) {
+        // Rotation throttling config removed; allow rotations and record last rotation time.
+        Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
+        if (map == null) return true;
+        FrameEntry fe = map.get(framePos);
+        if (fe == null) return true;
+        fe.lastRotationGameTime = gameTime;
+        return true;
+    }
+
+    /**
+     * Schedule a visual rotation to be applied for the given anchor. Multiple
+     * requests during the same server tick will be collapsed to the last
+     * requested rotation. The scheduled rotations are flushed once per tick
+     * from {@link #tickAndCollectReady}.
+     */
+    public static synchronized void scheduleRotation(String dimensionId, BlockPos framePos, int rotation, long requestGameTime) {
+        Map<BlockPos, Integer> map = PENDING_ROTATIONS.computeIfAbsent(dimensionId, k -> new HashMap<>());
+        map.put(framePos, rotation & 7);
+        Map<BlockPos, FrameEntry> frames = framesByDimension.get(dimensionId);
+        if (frames != null) {
+            FrameEntry fe = frames.get(framePos);
+            if (fe != null) fe.lastRotationGameTime = requestGameTime;
+        }
     }
 
     /**
@@ -253,6 +292,20 @@ public class FrameRegistry {
                 ready.add(fe.anchor);
             }
         }
+
+        // Phase 3: flush any scheduled visual rotations for this dimension.
+        try {
+            Map<BlockPos, Integer> pending = PENDING_ROTATIONS.remove(dimensionId);
+            if (pending != null && !pending.isEmpty()) {
+                for (Map.Entry<BlockPos, Integer> p : pending.entrySet()) {
+                    try {
+                        com.fastharvester.FrameScanner.applyScheduledRotation(level, p.getKey(), p.getValue());
+                    } catch (Throwable t) {
+                        Constants.LOG.debug("[FastHarvester][ROT] Failed to apply scheduled rotation for {}: {}", p.getKey(), t.toString());
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
 
         return ready;
     }

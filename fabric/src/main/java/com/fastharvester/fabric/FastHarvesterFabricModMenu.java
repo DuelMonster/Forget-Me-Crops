@@ -6,7 +6,6 @@ package com.fastharvester.fabric;
 
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
-import net.minecraft.client.gui.screens.Screen;
 
 /**
  * ModMenu integration for FastHarvester (Fabric).

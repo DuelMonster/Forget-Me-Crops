@@ -11,11 +11,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.Container;
 
-import java.lang.reflect.Method;
-import java.util.List;
-
 /**
- * Centralized discovery & validation helpers for item-frame based anchors.
+ * Centralized discovery and validation helpers for item-frame based anchors.
  */
 public class FrameDiscovery {
 

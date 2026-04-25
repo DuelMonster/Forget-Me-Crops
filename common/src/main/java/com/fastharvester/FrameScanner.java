@@ -24,6 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
@@ -88,7 +89,7 @@ public class FrameScanner {
 
     public boolean scanFarm(Anchor anchor, Level level) {
         Constants.LOG.info("[FastHarvester][SCAN] Starting farm scan from anchor: {}", anchor);
-        if (anchor == null || anchor.chest == null || anchor.hoe == null || level == null) {
+        if (anchor == null || anchor.chest == null || level == null) {
             Constants.LOG.warn("[FastHarvester][SCAN] Anchor or environment missing, aborting scan.");
             return false;
         }
@@ -97,13 +98,41 @@ public class FrameScanner {
         int cropsFound = 0;
         int range = Math.max(1, Config.scanRange);
         BlockPos center = anchor.framePos;
-        HarvestContext ctx = new HarvestContext(anchor, level, anchor.hoe, anchor.chest, null);
+        String dimId = level.dimension().identifier().toString();
+
+        // Ensure we have a current hoe to use: prefer the world-held hoe on the frame,
+        // otherwise attempt to pull a replacement from the chest. Update the registry
+        // so future ticks see the new hoe.
+        ItemStack currentHoe = anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy();
+        try {
+            ItemStack frameHoe = readHoeFromFrame(level, center);
+            if (frameHoe != null && !frameHoe.isEmpty() && frameHoe.getItem() instanceof HoeItem) {
+                currentHoe = frameHoe.copy();
+                try { FrameRegistry.updateHoe(dimId, center, currentHoe.copy()); } catch (Throwable ignored) {}
+            } else if (currentHoe == null || currentHoe.isEmpty()) {
+                ItemStack replacement = ChestUtils.takeFirstHoe(anchor.chest);
+                if (replacement != null && !replacement.isEmpty()) {
+                    try { com.fastharvester.platform.Services.PLATFORM.updateFrameItem(level, center, replacement.copy()); } catch (Throwable ignored) {}
+                    currentHoe = replacement.copy();
+                    try { FrameRegistry.updateHoe(dimId, center, currentHoe.copy()); } catch (Throwable ignored) {}
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        if (currentHoe == null || currentHoe.isEmpty()) {
+            Constants.LOG.info("[FastHarvester][SCAN] No hoe available for anchor {}; aborting scan.", anchor);
+            return false;
+        }
+
+        HarvestContext ctx = new HarvestContext(anchor, level, currentHoe, anchor.chest, null);
 
         // Generate spiral positions (ring by ring, spiral order)
         List<SpiralStep> spiral = generateSpiral(center, range);
         int spiralSteps = spiral.size();
         boolean anyHarvested = false;
 
+        Direction lastDir = null;
+        int lastComputedRot = getFrameRotation(level, center) & 7;
         for (int i = 0; i < spiralSteps; i++) {
             SpiralStep step = spiral.get(i);
             BlockPos pos = step.pos;
@@ -114,11 +143,17 @@ public class FrameScanner {
             // Frame rotation logic
             switch (Config.rotationMode) {
                 case FOLLOW_HARVEST_SPIRAL -> {
-                    setFrameRotation(level, center, dirToRotation(dir));
+                    if (lastDir == null || dir != lastDir) {
+                        setFrameRotation(level, center, dirToRotation(dir));
+                        lastDir = dir;
+                    }
                 }
                 case FULL_ROTATION_PER_HARVEST -> {
                     int rot = (int) Math.floor((double) i * 8.0 / spiralSteps) & 7;
-                    setFrameRotation(level, center, rot);
+                    if (rot != lastComputedRot) {
+                        setFrameRotation(level, center, rot);
+                        lastComputedRot = rot;
+                    }
                 }
                 case STEP_PER_HARVEST -> {
                     // Only update at end if anyHarvested
@@ -184,7 +219,6 @@ public class FrameScanner {
             // If a harvest call flagged the chest as full, set a cooldown on the registry and stop the scan
             if (ctx.chestFull) {
                 try {
-                    String dimId = level.dimension().identifier().toString();
                     FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
                 } catch (Throwable ignored) {}
                 ctx.logSummary();
@@ -197,7 +231,6 @@ public class FrameScanner {
             // If a chest-full occurred while attempting to replant/till, set cooldown and stop
             if (ctx.chestFull) {
                 try {
-                    String dimId = level.dimension().identifier().toString();
                     FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
                 } catch (Throwable ignored) {}
                 ctx.logSummary();
@@ -509,19 +542,50 @@ public class FrameScanner {
 
         // Keep ring map for rotation decisions but drive processing by a spiral-ordered list
         final Map<Integer, List<BlockPos>> ringMap = new HashMap<>();
-        final List<BlockPos> spiralPositions = new ArrayList<>();
+        final List<SpiralStep> spiralPositions = new ArrayList<>();
         final int computedMaxRing;
         final int totalPositions;
         int currentIndex = 0;
         final int positionsPerTick;
         boolean anyHarvested = false;
         int lastHarvestedRing = -1;
+        // For FOLLOW_HARVEST_SPIRAL we track the last direction we displayed so
+        // we only update when the spiral direction actually changes.
+        Direction lastDirection = null;
+        // For FULL_ROTATION_PER_HARVEST we animate the rotation over multiple
+        // ticks by applying one step at a time until the target is reached.
+        int animationStepsRemaining = 0;
+        // Precomputed full-ring index mapping (spiral index -> position-in-ring)
+        final Map<Integer, List<Integer>> ringFullIndices = new HashMap<>();
+        final Map<Integer, Integer> indexToPosInRing = new HashMap<>();
+        int lastComputedRotation = -1;
+        int tickCounter = 0;
+        boolean neighborPassDone = false;
+        int numberOfTicksNeeded = 0;
+        boolean fullAnimationScheduled = false;
+        int animationInterval = 1;
 
         FarmScanTask(Anchor anchor, Level level, String dimId) {
             this.anchor = anchor;
             this.level = level;
             this.center = anchor.framePos;
             this.ctx = new HarvestContext(anchor, level, anchor.hoe, anchor.chest, null);
+            // Ensure task context has an up-to-date hoe: prefer world-held hoe, otherwise attempt
+            // to pull a replacement from the chest. Update registry so future ticks see it.
+            try {
+                ItemStack frameHoe = readHoeFromFrame(level, center);
+                if (frameHoe != null && !frameHoe.isEmpty() && frameHoe.getItem() instanceof HoeItem) {
+                    this.ctx.hoe = frameHoe.copy();
+                    try { FrameRegistry.updateHoe(dimId, center, this.ctx.hoe.copy()); } catch (Throwable ignored) {}
+                } else if (this.ctx.hoe == null || this.ctx.hoe.isEmpty()) {
+                    ItemStack replacement = ChestUtils.takeFirstHoe(anchor.chest);
+                    if (replacement != null && !replacement.isEmpty()) {
+                        try { com.fastharvester.platform.Services.PLATFORM.updateFrameItem(level, center, replacement.copy()); } catch (Throwable ignored) {}
+                        this.ctx.hoe = replacement.copy();
+                        try { FrameRegistry.updateHoe(dimId, center, this.ctx.hoe.copy()); } catch (Throwable ignored) {}
+                    }
+                }
+            } catch (Throwable ignored) {}
             this.dimId = dimId;
 
             // Perform BFS discovery synchronously at task creation (seed is limited by scanRange)
@@ -544,7 +608,7 @@ public class FrameScanner {
 
             // Build a spiral ordering across the bounding square and pick only discovered candidates
             int range = Math.max(1, Config.scanRange);
-            spiralPositions.add(center); // start at center
+            spiralPositions.add(new SpiralStep(center, Direction.NORTH)); // start at center
             int x = 0, z = 0;
             int stepSize = 1;
             int[] dxs = new int[]{1, 0, -1, 0};
@@ -561,7 +625,7 @@ public class FrameScanner {
                         if (Math.abs(x) <= range && Math.abs(z) <= range) {
                             visitedCells++;
                             BlockPos p = center.offset(x, 0, z);
-                            if (candidateSet.contains(p)) spiralPositions.add(p);
+                            if (candidateSet.contains(p)) spiralPositions.add(new SpiralStep(p, getSpiralDirection(dxs[dir], dzs[dir])));
                             if (visitedCells >= maxCells) break outer;
                         }
                     }
@@ -574,7 +638,18 @@ public class FrameScanner {
 
             int ticks = Math.max(1, Config.maxSpiralDurationTicks);
             this.positionsPerTick = Math.max(1, (int) Math.ceil((double) totalPositions / (double) ticks));
-            Constants.LOG.debug("[FastHarvester][SCAN] Created FarmScanTask center={} totalPositions={} positionsPerTick={} computedMaxRing={}", center, totalPositions, positionsPerTick, computedMaxRing);
+            // Build full-ring index map so we can split each ring into 8 equal rotation segments
+            for (int i = 0; i < spiralPositions.size(); i++) {
+                BlockPos p = spiralPositions.get(i).pos;
+                int ring = Math.max(Math.abs(p.getX() - center.getX()), Math.abs(p.getZ() - center.getZ()));
+                ringFullIndices.computeIfAbsent(ring, k -> new ArrayList<>()).add(i);
+            }
+            for (Map.Entry<Integer, List<Integer>> e : ringFullIndices.entrySet()) {
+                List<Integer> list = e.getValue();
+                for (int j = 0; j < list.size(); j++) indexToPosInRing.put(list.get(j), j);
+            }
+            this.numberOfTicksNeeded = (int) Math.ceil((double) this.totalPositions / (double) this.positionsPerTick);
+            Constants.LOG.debug("[FastHarvester][SCAN] Created FarmScanTask center={} totalPositions={} positionsPerTick={} computedMaxRing={} ticksNeeded={}", center, totalPositions, positionsPerTick, computedMaxRing, numberOfTicksNeeded);
         }
 
         /**
@@ -593,6 +668,22 @@ public class FrameScanner {
                 return true;
             }
 
+            // advance internal tick counter and, if an animation is scheduled, apply an animation step
+            tickCounter++;
+            if (animationStepsRemaining > 0) {
+                try {
+                    boolean shouldApply = !fullAnimationScheduled || (fullAnimationScheduled && (tickCounter % animationInterval == 0));
+                    if (shouldApply) {
+                        int before = getFrameRotation(level, center) & 7;
+                        int next = (before + 1) & 7;
+                        // If this is the full-harvest animation we force the rotation (bypass cooldown)
+                        setFrameRotation(level, center, next, fullAnimationScheduled);
+                        int after = getFrameRotation(level, center) & 7;
+                        if (after != before) animationStepsRemaining--;
+                    }
+                } catch (Throwable ignored) {}
+            }
+
             int endIndex = Math.min(totalPositions - 1, currentIndex + positionsPerTick - 1);
 
             int beforeHarvest = ctx.harvestedCount;
@@ -602,7 +693,7 @@ public class FrameScanner {
             // Map positions to rings for per-ring processing
             Map<Integer, List<Integer>> ringToIndices = new HashMap<>();
             for (int idx = currentIndex; idx <= endIndex; idx++) {
-                BlockPos pos = spiralPositions.get(idx);
+                BlockPos pos = spiralPositions.get(idx).pos;
                 int ring = Math.max(Math.abs(pos.getX() - center.getX()), Math.abs(pos.getZ() - center.getZ()));
                 ringToIndices.computeIfAbsent(ring, k -> new ArrayList<>()).add(idx);
             }
@@ -613,7 +704,8 @@ public class FrameScanner {
                 if (indices == null) continue;
                 boolean ringHarvested = false;
                 for (int idx : indices) {
-                    BlockPos pos = spiralPositions.get(idx);
+                    BlockPos pos = spiralPositions.get(idx).pos;
+                    Direction curDir = spiralPositions.get(idx).dir;
                     try {
                         BlockState state = level.getBlockState(pos);
                         ctx.incrementBlocksScanned();
@@ -659,6 +751,26 @@ public class FrameScanner {
                         }
                         if (harvested) ringHarvested = true;
                         if (harvested) { anyHarvested = true; lastHarvestedRing = ring; }
+
+                        // FOLLOW: split each ring into 8 equal rotation segments and follow spiral progress
+                        if (Config.rotationMode == com.fastharvester.enums.RotationMode.FOLLOW_HARVEST_SPIRAL) {
+                            Integer posInRing = indexToPosInRing.get(idx);
+                            List<Integer> full = ringFullIndices.get(ring);
+                            if (posInRing != null && full != null && !full.isEmpty()) {
+                                int ringSize = full.size();
+                                int rot = (int) Math.floor((double) posInRing * 8.0 / (double) ringSize) & 7;
+                                if (rot != lastComputedRotation) {
+                                    setFrameRotation(level, center, rot);
+                                    lastComputedRotation = rot;
+                                }
+                            } else {
+                                // fallback to direction-based updates if we cannot compute ring position
+                                if (lastDirection == null || !lastDirection.equals(curDir)) {
+                                    setFrameRotation(level, center, dirToRotation(curDir));
+                                    lastDirection = curDir;
+                                }
+                            }
+                        }
                     } catch (Throwable t) {
                         Constants.LOG.debug("[FastHarvester][SCAN] Exception while scanning {}: {}", center, t.toString());
                     }
@@ -678,14 +790,16 @@ public class FrameScanner {
                             // Will be applied once at end of pass (handled below)
                         }
                         case FULL_ROTATION_PER_HARVEST -> {
-                            int steps = (int) Math.floor((double)(ring + 1) * 8.0 / (maxRing + 1));
-                            newRotation = (baseRotation + steps) & 7;
-                            setFrameRotation(level, center, newRotation);
+                            if (!fullAnimationScheduled) {
+                                fullAnimationScheduled = true;
+                                animationStepsRemaining = 8;
+                                animationInterval = Math.max(1, (int) Math.ceil((double) numberOfTicksNeeded / 8.0));
+                                // start applying on the next ticks according to animationInterval
+                                tickCounter = 0;
+                            }
                         }
                         case FOLLOW_HARVEST_SPIRAL -> {
-                            int steps = (int) Math.floor((double)(ring + 1) * 8.0 * maxRing / (maxRing + 1));
-                            newRotation = (baseRotation + steps) & 7;
-                            setFrameRotation(level, center, newRotation);
+                            // No-op: FOLLOW updates handled per-index on direction changes
                         }
                     }
                 }
@@ -700,96 +814,99 @@ public class FrameScanner {
             if (currentIndex >= totalPositions) {
                 int range = Math.max(1, Config.scanRange);
 
-                for (int dx = -range; dx <= range; dx++) {
-                    for (int dz = -range; dz <= range; dz++) {
-                        BlockPos pos = center.offset(dx, 0, dz);
-                        BlockState cur = level.getBlockState(pos);
-                        if (!cur.isAir()) continue;
-                        BlockPos belowPos = pos.below();
-                        BlockState below = level.getBlockState(belowPos);
+                if (!neighborPassDone) {
+                    for (int dx = -range; dx <= range; dx++) {
+                        for (int dz = -range; dz <= range; dz++) {
+                            BlockPos pos = center.offset(dx, 0, dz);
+                            BlockState cur = level.getBlockState(pos);
+                            if (!cur.isAir()) continue;
+                            BlockPos belowPos = pos.below();
+                            BlockState below = level.getBlockState(belowPos);
 
-                        if (below != null && below.getBlock() == Blocks.FARMLAND) {
-                            Map<Block, Integer> counts = new HashMap<>();
-                            Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                            for (Direction d : dirs) {
-                                BlockPos npos = pos.relative(d);
-                                BlockState ns = level.getBlockState(npos);
-                                Block b = ns.getBlock();
-                                if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) {
-                                    counts.merge(b, 1, Integer::sum);
+                            if (below != null && below.getBlock() == Blocks.FARMLAND) {
+                                Map<Block, Integer> counts = new HashMap<>();
+                                Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+                                for (Direction d : dirs) {
+                                    BlockPos npos = pos.relative(d);
+                                    BlockState ns = level.getBlockState(npos);
+                                    Block b = ns.getBlock();
+                                    if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) {
+                                        counts.merge(b, 1, Integer::sum);
+                                    }
+                                }
+                                if (!counts.isEmpty()) {
+                                    Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
+                                    Item seed = seedForBlock(chosen);
+                                    if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
+                                        BlockState plantState = chosen.defaultBlockState();
+                                        try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
+                                        level.setBlock(pos, plantState, 3);
+                                    }
                                 }
                             }
-                            if (!counts.isEmpty()) {
-                                Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                                Item seed = seedForBlock(chosen);
-                                if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
-                                    BlockState plantState = chosen.defaultBlockState();
-                                    try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
-                                    level.setBlock(pos, plantState, 3);
+
+                            if (below != null && below.getBlock() == Blocks.SOUL_SAND) {
+                                Map<Block, Integer> counts = new HashMap<>();
+                                Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+                                for (Direction d : dirs) {
+                                    BlockPos npos = pos.relative(d);
+                                    BlockState ns = level.getBlockState(npos);
+                                    Block b = ns.getBlock();
+                                    if (b == Blocks.NETHER_WART) counts.merge(b, 1, Integer::sum);
+                                }
+                                if (!counts.isEmpty()) {
+                                    Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
+                                    Item seed = seedForBlock(chosen);
+                                    if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
+                                        BlockState plantState = chosen.defaultBlockState();
+                                        try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
+                                        level.setBlock(pos, plantState, 3);
+                                    }
                                 }
                             }
-                        }
 
-                        if (below != null && below.getBlock() == Blocks.SOUL_SAND) {
-                            Map<Block, Integer> counts = new HashMap<>();
-                            Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                            for (Direction d : dirs) {
-                                BlockPos npos = pos.relative(d);
-                                BlockState ns = level.getBlockState(npos);
-                                Block b = ns.getBlock();
-                                if (b == Blocks.NETHER_WART) counts.merge(b, 1, Integer::sum);
-                            }
-                            if (!counts.isEmpty()) {
-                                Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                                Item seed = seedForBlock(chosen);
-                                if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
-                                    BlockState plantState = chosen.defaultBlockState();
-                                    try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
-                                    level.setBlock(pos, plantState, 3);
+                            if (below != null && (below.getBlock() == Blocks.DIRT || below.getBlock() == Blocks.GRASS_BLOCK)) {
+                                Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+                                int farmlandNeighbors = 0;
+                                for (Direction d : dirs) {
+                                    BlockState ns = level.getBlockState(belowPos.relative(d));
+                                    if (ns != null && ns.getBlock() == Blocks.FARMLAND) farmlandNeighbors++;
                                 }
-                            }
-                        }
-
-                        if (below != null && (below.getBlock() == Blocks.DIRT || below.getBlock() == Blocks.GRASS_BLOCK)) {
-                            Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                            int farmlandNeighbors = 0;
-                            for (Direction d : dirs) {
-                                BlockState ns = level.getBlockState(belowPos.relative(d));
-                                if (ns != null && ns.getBlock() == Blocks.FARMLAND) farmlandNeighbors++;
-                            }
-                            if (farmlandNeighbors < 1) continue;
-                            boolean nearMelonPumpkin = false;
-                            for (Direction d : dirs) {
-                                BlockState ns = level.getBlockState(pos.relative(d));
-                                if (ns.is(Blocks.MELON) || ns.is(Blocks.PUMPKIN) || ns.is(Blocks.MELON_STEM) || ns.is(Blocks.PUMPKIN_STEM)) { nearMelonPumpkin = true; break; }
-                            }
-                            if (nearMelonPumpkin) continue;
-                            BlockState farmland = Blocks.FARMLAND.defaultBlockState();
-                            level.setBlock(belowPos, farmland, 3);
-                            ItemStack before = anchor.hoe.copy();
-                            DurabilityLogic.applyDamage(level, anchor.hoe, level.getRandom());
-                            if (anchor.hoe.isEmpty()) HarvestUtils.handleBrokenHoe(ctx, before);
-
-                            Map<Block, Integer> counts2 = new HashMap<>();
-                            for (Direction d : dirs) {
-                                BlockPos npos = pos.relative(d);
-                                BlockState ns = level.getBlockState(npos);
-                                Block b = ns.getBlock();
-                                if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) {
-                                    counts2.merge(b, 1, Integer::sum);
+                                if (farmlandNeighbors < 1) continue;
+                                boolean nearMelonPumpkin = false;
+                                for (Direction d : dirs) {
+                                    BlockState ns = level.getBlockState(pos.relative(d));
+                                    if (ns.is(Blocks.MELON) || ns.is(Blocks.PUMPKIN) || ns.is(Blocks.MELON_STEM) || ns.is(Blocks.PUMPKIN_STEM)) { nearMelonPumpkin = true; break; }
                                 }
-                            }
-                            if (!counts2.isEmpty()) {
-                                Block chosen2 = counts2.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                                Item seed2 = seedForBlock(chosen2);
-                                if (seed2 != null && ChestUtils.removeOne(anchor.chest, seed2)) {
-                                    BlockState plantState2 = chosen2.defaultBlockState();
-                                    try { if (plantState2.getBlock() instanceof CropBlock) plantState2 = plantState2.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
-                                    level.setBlock(pos, plantState2, 3);
+                                if (nearMelonPumpkin) continue;
+                                BlockState farmland = Blocks.FARMLAND.defaultBlockState();
+                                level.setBlock(belowPos, farmland, 3);
+                                ItemStack before = anchor.hoe.copy();
+                                DurabilityLogic.applyDamage(level, anchor.hoe, level.getRandom());
+                                if (anchor.hoe.isEmpty()) HarvestUtils.handleBrokenHoe(ctx, before);
+
+                                Map<Block, Integer> counts2 = new HashMap<>();
+                                for (Direction d : dirs) {
+                                    BlockPos npos = pos.relative(d);
+                                    BlockState ns = level.getBlockState(npos);
+                                    Block b = ns.getBlock();
+                                    if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) {
+                                        counts2.merge(b, 1, Integer::sum);
+                                    }
+                                }
+                                if (!counts2.isEmpty()) {
+                                    Block chosen2 = counts2.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
+                                    Item seed2 = seedForBlock(chosen2);
+                                    if (seed2 != null && ChestUtils.removeOne(anchor.chest, seed2)) {
+                                        BlockState plantState2 = chosen2.defaultBlockState();
+                                        try { if (plantState2.getBlock() instanceof CropBlock) plantState2 = plantState2.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
+                                        level.setBlock(pos, plantState2, 3);
+                                    }
                                 }
                             }
                         }
                     }
+                    neighborPassDone = true;
                 }
 
                 // If a chest-full occurred during the neighbour/plant pass, set cooldown and finish
@@ -799,6 +916,10 @@ public class FrameScanner {
                     return true;
                 }
 
+                // If a full-harvest animation is scheduled and still running, keep the task alive
+                if (fullAnimationScheduled && animationStepsRemaining > 0) {
+                    return false;
+                }
 
                 // --- Frame rotation: only update at end of spiral, and only if harvested ---
                 if (anyHarvested && lastHarvestedRing >= 0) {
@@ -806,17 +927,27 @@ public class FrameScanner {
                     switch (Config.rotationMode) {
                         case STEP_PER_HARVEST -> {
                             newRotation = (getFrameRotation(level, center) + 1) & 7;
+                            setFrameRotation(level, center, newRotation);
                         }
                         case FULL_ROTATION_PER_HARVEST -> {
-                            int steps = computedMaxRing > 0 ? (int) Math.floor((double)(lastHarvestedRing + 1) * 8.0 / (computedMaxRing + 1)) : 0;
-                            newRotation = steps & 7;
+                            // If a full animation ran, the animation has already displayed a full cycle; do not override final rotation.
+                            if (!fullAnimationScheduled) {
+                                int steps = computedMaxRing > 0 ? (int) Math.floor((double)(lastHarvestedRing + 1) * 8.0 / (computedMaxRing + 1)) : 0;
+                                newRotation = steps & 7;
+                                setFrameRotation(level, center, newRotation);
+                            }
                         }
                         case FOLLOW_HARVEST_SPIRAL -> {
-                            int steps = computedMaxRing > 0 ? (int) Math.floor((double)(lastHarvestedRing + 1) * 8.0 * computedMaxRing / (computedMaxRing + 1)) : 0;
-                            newRotation = steps & 7;
+                            // Compute a ring-aligned final rotation based on the last harvested ring's last position
+                            List<Integer> full = ringFullIndices.get(lastHarvestedRing);
+                            if (full != null && !full.isEmpty()) {
+                                int posIdx = Math.max(0, full.size() - 1);
+                                int rot = (int) Math.floor((double) posIdx * 8.0 / (double) full.size()) & 7;
+                                newRotation = rot;
+                                setFrameRotation(level, center, newRotation);
+                            }
                         }
                     }
-                    setFrameRotation(level, center, newRotation);
                 }
 
                 ctx.logSummary();
@@ -870,11 +1001,92 @@ public class FrameScanner {
     }
 
     /**
+     * Read the held ItemStack from a vanilla ItemFrame or a FastItemFrames block-entity at `pos`.
+     * Returns ItemStack.EMPTY when no hoe is found.
+     */
+    private static ItemStack readHoeFromFrame(Level level, BlockPos pos) {
+        try {
+            List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class,
+                    new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1), e -> true);
+            if (!frames.isEmpty()) {
+                ItemFrame frame = frames.get(0);
+                ItemStack s = frame.getItem();
+                if (s != null && !s.isEmpty() && s.getItem() instanceof HoeItem) return s.copy();
+            }
+        } catch (Throwable ignored) {}
+
+        try {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be != null) {
+                ItemStack s = FastItemFrameAdapterImpl.extractHeldItem(be);
+                if (s != null && !s.isEmpty() && s.getItem() instanceof HoeItem) return s.copy();
+            }
+        } catch (Throwable ignored) {}
+
+        return ItemStack.EMPTY;
+    }
+
+    /**
      * Set the rotation of an item frame or FastItemFrames block-entity at `pos`.
      * Emotional aside: rotate gently — it's a bit sensitive.
      */
+    @SuppressWarnings("null")
     private static void setFrameRotation(Level level, BlockPos pos, int newRotation) {
+        setFrameRotation(level, pos, newRotation, false);
+    }
+
+    @SuppressWarnings("null")
+    private static void setFrameRotation(Level level, BlockPos pos, int newRotation, boolean bypassCooldown) {
+        long gameTime = -1L;
+        try { gameTime = level != null ? level.getGameTime() : -1L; } catch (Throwable ignored) {}
+
+        String dimId = "";
+        try { dimId = level != null ? level.dimension().identifier().toString() : ""; } catch (Throwable ignored) {}
+
+        // If bypass requested, record the rotation time and apply immediately
+        if (bypassCooldown) {
+            try { FrameRegistry.tryRotation(dimId, pos, gameTime); } catch (Throwable ignored) {}
+            try {
+                applyScheduledRotation(level, pos, newRotation);
+            } catch (Throwable t) {
+                Constants.LOG.debug("[FastHarvester][ROT] applyScheduledRotation failed at {}: {}", pos, t.toString());
+            }
+            return;
+        }
+
+        // Otherwise, schedule the rotation to be flushed once per tick (collapsing duplicates)
         try {
+            if (!FrameRegistry.tryRotation(dimId, pos, gameTime)) {
+                if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Skipped rotation for {} due to cooldown (gametime={})", pos, gameTime); } catch (Throwable ignored) {}
+                return;
+            }
+        } catch (Throwable ignored) {}
+
+        try {
+            int cur = getFrameRotation(level, pos) & 7;
+            if (cur == (newRotation & 7)) {
+                if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] No-op rotation for {} (already {})", pos, cur); } catch (Throwable ignored) {}
+                return;
+            }
+        } catch (Throwable ignored) {}
+
+        try {
+            FrameRegistry.scheduleRotation(dimId, pos, newRotation, gameTime);
+        } catch (Throwable t) {
+            Constants.LOG.debug("[FastHarvester][ROT] Failed to schedule rotation for {}: {}", pos, t.toString());
+        }
+    }
+
+    /**
+     * Apply a scheduled rotation immediately to the world. This contains the
+     * platform-specific logic to update item-frames or FIF block-entities.
+     */
+    static void applyScheduledRotation(Level level, BlockPos pos, int newRotation) {
+        try {
+            long gameTime = -1L;
+            try { gameTime = level != null ? level.getGameTime() : -1L; } catch (Throwable ignored) {}
+            try { Constants.LOG.info("[FastHarvester][ROT] applyScheduledRotation pos={} newRot={} mode={} gametime={}", pos, newRotation, Config.rotationMode, gameTime); } catch (Throwable ignored) {}
+
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(pos));
             for (ItemFrame f : frames) {
                 if (f.blockPosition().equals(pos)) {
@@ -883,13 +1095,19 @@ public class FrameScanner {
                         String name = m.getName().toLowerCase();
                         if (name.contains("set") && name.contains("rotation") && m.getParameterCount() == 1) {
                             Class<?> p = m.getParameterTypes()[0];
-                            if (p == int.class || p == Integer.class) {
-                                m.invoke(f, newRotation);
-                                return;
-                            }
-                            if (p == byte.class || p == Byte.class) {
-                                m.invoke(f, (byte) newRotation);
-                                return;
+                            try {
+                                if (p == int.class || p == Integer.class) {
+                                    m.invoke(f, newRotation);
+                                    if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
+                                    return;
+                                }
+                                if (p == byte.class || p == Byte.class) {
+                                    m.invoke(f, (byte) newRotation);
+                                    if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
+                                    return;
+                                }
+                            } catch (Throwable t) {
+                                if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Failed to invoke setter {} on ItemFrame {}: {}", m.getName(), pos, t.toString()); } catch (Throwable ignored) {}
                             }
                         }
                     }
@@ -898,24 +1116,27 @@ public class FrameScanner {
                         Field fld = f.getClass().getDeclaredField("rotation");
                         fld.setAccessible(true);
                         fld.setInt(f, newRotation & 7);
+                        if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Applied rotation via field on ItemFrame at {} => {}", pos, newRotation & 7); } catch (Throwable ignored) {}
                         return;
                     } catch (Throwable ignored) {}
                 }
             }
 
             // Block-entity path: try setting rotation on a FIF block-entity and
-            // notify the world about the change. This is a best-effort operation
-            // and intentionally tolerant of failures (no panicking allowed).
+            // notify the world about the change.
             BlockEntity be = level.getBlockEntity(pos);
             if (be != null) {
                 try {
                     FastItemFrameAdapterImpl.setRotation(be, newRotation);
                     try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
+                    if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Applied rotation on FIF block-entity at {} => {}", pos, newRotation); } catch (Throwable ignored) {}
                     return;
-                } catch (Throwable ignored) {}
+                } catch (Throwable t) {
+                    if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Failed to apply rotation on FIF block-entity at {}: {}", pos, t.toString()); } catch (Throwable ignored) {}
+                }
             }
         } catch (Throwable t) {
-            Constants.LOG.debug("[FastHarvester][ROT] setFrameRotation failed at {}: {}", pos, t.toString());
+            Constants.LOG.debug("[FastHarvester][ROT] applyScheduledRotation failed at {}: {}", pos, t.toString());
         }
     }
 }

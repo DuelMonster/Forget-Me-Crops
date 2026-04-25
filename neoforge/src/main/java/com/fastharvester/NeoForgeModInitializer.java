@@ -10,8 +10,6 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import net.neoforged.bus.api.IEventBus;
-import com.fastharvester.ModCommon;
-import com.fastharvester.FastHarvester;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import com.fastharvester.neoforge.FastHarvesterNeoForgeConfig;
 import com.fastharvester.neoforge.NeoForgeFarmTicker;
@@ -19,9 +17,6 @@ import com.fastharvester.neoforge.FastHarvesterAutoConfig;
 import me.shedaniel.autoconfig.AutoConfig;
 import me.shedaniel.autoconfig.serializer.Toml4jConfigSerializer;
 import me.shedaniel.autoconfig.ConfigHolder;
-import me.shedaniel.autoconfig.gui.registry.DefaultGuiRegistryAccess;
-import me.shedaniel.autoconfig.gui.ConfigScreenProvider;
-import me.shedaniel.autoconfig.ConfigManager;
 import net.minecraft.client.gui.screens.Screen;
 import com.fastharvester.neoforge.NeoForgeClothConfig;
 import java.lang.reflect.Method;
@@ -36,6 +31,7 @@ public final class NeoForgeModInitializer {
     /**
      * NeoForge mod initializer: register config listeners and initialize the farm ticker.
      */
+    @SuppressWarnings("null")
     public NeoForgeModInitializer(IEventBus modEventBus, ModContainer container) {
         // Register config spec
         container.registerConfig(ModConfig.Type.COMMON, FastHarvesterNeoForgeConfig.SPEC);
@@ -58,9 +54,9 @@ public final class NeoForgeModInitializer {
             // Sync loaded values into the shared Config object
             holder.registerLoadListener((h, d) -> {
                 Config.applyServerSettings(d.tickInterval, d.frameRediscoveryInterval, d.scanRange,
-                        d.durabilityMode, d.mendingNegation, d.debugLogging,
-                        d.chestFullCooldownTicks, d.maxSpiralDurationTicks,
-                        d.rotationMode, d.seedClutterMode, d.seedReservePerType);
+                    d.durabilityMode, d.mendingNegation, d.debugLogging,
+                    d.chestFullCooldownTicks, d.maxSpiralDurationTicks,
+                    d.rotationMode, d.seedClutterMode, d.seedReservePerType);
                 Config.applyClientSettings(d.harvestParticles);
                 return InteractionResult.SUCCESS;
             });
@@ -68,9 +64,9 @@ public final class NeoForgeModInitializer {
             // When autoconfig saves, persist to our toml files.
             holder.registerSaveListener((h, d) -> {
                 Config.applyServerSettings(d.tickInterval, d.frameRediscoveryInterval, d.scanRange,
-                        d.durabilityMode, d.mendingNegation, d.debugLogging,
-                        d.chestFullCooldownTicks, d.maxSpiralDurationTicks,
-                        d.rotationMode, d.seedClutterMode, d.seedReservePerType);
+                    d.durabilityMode, d.mendingNegation, d.debugLogging,
+                    d.chestFullCooldownTicks, d.maxSpiralDurationTicks,
+                    d.rotationMode, d.seedClutterMode, d.seedReservePerType);
                 Config.applyClientSettings(d.harvestParticles);
                 Config.save();
                 return InteractionResult.SUCCESS;

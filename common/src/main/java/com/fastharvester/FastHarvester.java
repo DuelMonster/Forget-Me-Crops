@@ -36,7 +36,7 @@ public class FastHarvester {
 
         // --- Guaranteed debug log for mod initialization ---
         Constants.LOG.info("[FastHarvester] Mod initialization started! If you see this, the core logic is alive and kicking.");
-        if (CONFIG != null && CONFIG.debugLogging) {
+        if (CONFIG != null && Config.debugLogging) {
             Constants.LOG.debug("[FastHarvester] Debug logging is ENABLED! Prepare for a flood of farming facts.");
         } else {
             Constants.LOG.info("[FastHarvester] Debug logging is OFF. For more details, set debugLogging=true in your config.");

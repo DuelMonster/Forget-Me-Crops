@@ -32,8 +32,8 @@ public class Config {
     private static final Path SERVER_CONFIG_PATH = CONFIG_DIR.resolve("fastharvester-server.toml");
     private static final Path CLIENT_CONFIG_PATH = CONFIG_DIR.resolve("fastharvester-client.toml");
 
-    public static int tickInterval = 600;
-    public static int frameRediscoveryInterval = 1200;
+    public static int tickInterval = 300;
+    public static int frameRediscoveryInterval = 600;
     public static int scanRange = 4; // 9x9 area
     public static DurabilityMode durabilityMode = DurabilityMode.NORMAL;
     public static boolean mendingNegation = true;
@@ -41,8 +41,11 @@ public class Config {
     public static int chestFullCooldownTicks = 300;
     public static int maxSpiralDurationTicks = 200;
     public static boolean harvestParticles = true;
-    public static RotationMode rotationMode = RotationMode.FOLLOW_HARVEST_SPIRAL;
-    public static SeedClutterMode seedClutterMode = SeedClutterMode.NORMAL;
+    public static RotationMode rotationMode = RotationMode.FULL_ROTATION_PER_HARVEST;
+    // Minimum number of game ticks to wait between visual rotation updates for a single anchor
+    // Prevents rapid, visually jarring frame rotation when many harvest steps occur quickly.
+    
+    public static SeedClutterMode seedClutterMode = SeedClutterMode.REDUCED;
     public static int seedReservePerType = 80;
 
     public static void load() {
