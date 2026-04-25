@@ -22,3 +22,7 @@ build
 eclipse
 run
 runs
+
+# Local third-party artifacts
+related_mods/
+releases/
