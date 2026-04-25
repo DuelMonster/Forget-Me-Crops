@@ -185,7 +185,7 @@ public class NeoForgeFarmTicker {
                 }
                 CatchupManager.processBatch(level, dimId, CATCHUP_TICKS);
 
-                var ready = FrameRegistry.tickAndCollectReady(dimId);
+                var ready = FrameRegistry.tickAndCollectReady(dimId, level);
                 if (!ready.isEmpty()) {
                     Constants.LOG.info("[FastHarvester][TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
                     FrameScanner scanner = new FrameScanner();

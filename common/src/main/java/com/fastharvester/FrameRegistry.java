@@ -146,7 +146,12 @@ public class FrameRegistry {
         FrameScanner.Anchor newAnchor = new FrameScanner.Anchor(old.anchor.chest, framePos, hoe == null ? ItemStack.EMPTY : hoe.copy());
         FrameEntry replacement = new FrameEntry(newAnchor);
         replacement.active = old.active;
-        replacement.ticksUntilNextRun = old.ticksUntilNextRun;
+        if (hoe != null && !hoe.isEmpty()) {
+            // A non-empty hoe means the anchor can be retried immediately.
+            replacement.ticksUntilNextRun = 0;
+        } else {
+            replacement.ticksUntilNextRun = old.ticksUntilNextRun;
+        }
         replacement.lastSeenMs = old.lastSeenMs;
         map.put(framePos, replacement);
         Constants.LOG.info("[FastHarvester][REG] Updated hoe for {} in {}.", framePos, dimensionId);
@@ -187,10 +192,59 @@ public class FrameRegistry {
      * and returns the anchors that are ready to run this tick.
      * Humanized aside: timers tick, expectations build, and the scanner gets to work.
      */
-    public static synchronized List<FrameScanner.Anchor> tickAndCollectReady(String dimensionId) {
+    public static synchronized List<FrameScanner.Anchor> tickAndCollectReady(String dimensionId, net.minecraft.server.level.ServerLevel level) {
         List<FrameScanner.Anchor> ready = new ArrayList<>();
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
         if (map == null) return ready;
+
+        // Phase 1: detect any anchors with empty stored hoes and try to auto-resume them
+        Map<BlockPos, net.minecraft.world.item.ItemStack> pendingReplacements = new HashMap<>();
+        for (Map.Entry<BlockPos, FrameEntry> e : map.entrySet()) {
+            BlockPos pos = e.getKey();
+            FrameEntry fe = e.getValue();
+            if (!fe.active) continue;
+            try {
+                net.minecraft.world.item.ItemStack stored = fe.anchor.hoe;
+                if (stored == null || stored.isEmpty()) {
+                    // 1) Check the world item-frame entity for a hoe
+                    try {
+                        java.util.List<net.minecraft.world.entity.decoration.ItemFrame> frames = level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class, new net.minecraft.world.phys.AABB(pos));
+                        for (net.minecraft.world.entity.decoration.ItemFrame f : frames) {
+                            if (f.blockPosition().equals(pos)) {
+                                net.minecraft.world.item.ItemStack held = f.getItem();
+                                if (held != null && !held.isEmpty() && held.getItem() instanceof net.minecraft.world.item.HoeItem) {
+                                    pendingReplacements.put(pos, held.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (Throwable ignored) {}
+
+                    // 2) If not found in frame, try to take a hoe from the linked chest
+                    if (!pendingReplacements.containsKey(pos) && fe.anchor != null && fe.anchor.chest != null) {
+                        try {
+                            net.minecraft.world.item.ItemStack replacement = com.fastharvester.ChestUtils.takeFirstHoe(fe.anchor.chest);
+                            if (replacement != null && !replacement.isEmpty()) pendingReplacements.put(pos, replacement.copy());
+                        } catch (Throwable ignored) {}
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+
+        // Apply any pending replacements (this will replace the anchor entry and clear cooldown)
+        for (Map.Entry<BlockPos, net.minecraft.world.item.ItemStack> r : pendingReplacements.entrySet()) {
+            try {
+                updateHoe(dimensionId, r.getKey(), r.getValue());
+            } catch (Throwable t) {
+                Constants.LOG.debug("[FastHarvester][REG] Failed to apply auto-replacement for {}: {}", r.getKey(), t.toString());
+            }
+            try {
+                // Try to persist the frame-held item in the world
+                com.fastharvester.platform.Services.PLATFORM.updateFrameItem(level, r.getKey(), r.getValue());
+            } catch (Throwable ignored) {}
+        }
+
+        // Phase 2: normal countdown and ready collection
         for (FrameEntry fe : map.values()) {
             if (!fe.active) continue;
             fe.ticksUntilNextRun--;
@@ -199,6 +253,7 @@ public class FrameRegistry {
                 ready.add(fe.anchor);
             }
         }
+
         return ready;
     }
 

@@ -153,7 +153,7 @@ public class FabricFarmTicker {
                     }
                     // Process a small batch this tick to gradually register any pre-existing frames
                     CatchupManager.processBatch(level, dimId, CATCHUP_TICKS);
-                        var ready = FrameRegistry.tickAndCollectReady(dimId);
+                        var ready = FrameRegistry.tickAndCollectReady(dimId, level);
                         if (!ready.isEmpty()) {
                             Constants.LOG.info("[FastHarvester][TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
                             // Decide between synchronous scan (fast path) and tick-sliced scheduling
