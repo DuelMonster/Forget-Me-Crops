@@ -23,6 +23,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
 import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
+import com.fastharvester.frame.FrameRegistry;
+import com.fastharvester.frame.FrameScanner;
+import com.fastharvester.util.loot.LootLogic;
+import com.fastharvester.util.chest.ChestUtils;
+import com.fastharvester.util.durability.DurabilityLogic;
 
 /**
  * HarvestUtils: The Swiss Army knife for all things harvest!

@@ -6,6 +6,7 @@ package com.fastharvester;
  */
 
 import com.fastharvester.enums.DurabilityMode;
+import com.fastharvester.util.durability.DurabilityLogic;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

@@ -20,7 +20,7 @@ public class Constants {
 	private Constants() {}
 
 	/**
-	 * The one and only mod ID. If you change this, the universe (and your mod) may collapse.
+	 * The one and only mod ID. If you change this, the universe may collapse.
 	 */
 	public static final String MOD_ID = "FastHarvester";
 
