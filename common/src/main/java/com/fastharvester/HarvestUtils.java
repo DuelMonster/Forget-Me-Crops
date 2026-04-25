@@ -6,12 +6,19 @@ package com.fastharvester;
 // Why it matters: this is where the magic (and occasional mayhem) of replanting happens.
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ItemParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.FarmBlock;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -67,14 +74,66 @@ public class HarvestUtils {
             return;
         }
 
-        List<ItemStack> drops = LootLogic.getBlockDrops(ctx.level, pos, state, ctx.hoe);
+        List<ItemStack> drops = LootLogic.getBlockDrops((net.minecraft.server.level.ServerLevel)ctx.level, pos, state, ctx.hoe);
         if (drops.isEmpty()) return;
+        try {
+            StringBuilder sbBefore = new StringBuilder();
+            for (ItemStack s : drops) {
+                if (s == null || s.isEmpty()) continue;
+                sbBefore.append(s.getCount()).append('x').append(s.getItem()).append(',');
+            }
+            Constants.LOG.info("[FastHarvester][HARVEST] Drops before clutterPolicy: {}", sbBefore.length() > 0 ? sbBefore.toString() : "(none)");
+        } catch (Throwable ignored) {}
 
         // Don't let seeds take over your chest like rabbits.
         applySeedClutterPolicy(drops, clutterSeedItemFor(block), ctx.chest);
+        try {
+            StringBuilder sbAfter = new StringBuilder();
+            for (ItemStack s : drops) {
+                if (s == null || s.isEmpty()) continue;
+                sbAfter.append(s.getCount()).append('x').append(s.getItem()).append(',');
+            }
+            Constants.LOG.info("[FastHarvester][HARVEST] Drops after clutterPolicy: {}", sbAfter.length() > 0 ? sbAfter.toString() : "(none)");
+        } catch (Throwable ignored) {}
 
-        // Insert all drops into the chest first so we can respect reserve policy
+        // Prefer to consume a seed from the freshly-harvested drops for replanting so we don't drain the chest reserve.
+        ItemStack cost = replantCostItemFor(block);
+        boolean tookFromDropsForReplant = false;
+        if (cost != null && !cost.isEmpty()) {
+            Item seedItem = cost.getItem();
+            for (Iterator<ItemStack> it = drops.iterator(); it.hasNext();) {
+                ItemStack s = it.next();
+                if (s != null && !s.isEmpty() && s.getItem() == seedItem) {
+                    if (s.getCount() > 1) {
+                        s.setCount(s.getCount() - 1);
+                    } else {
+                        it.remove();
+                    }
+                    tookFromDropsForReplant = true;
+                    try { Constants.LOG.info("[FastHarvester][HARVEST] Took seed from drops for replant: {} at {}", seedItem, pos); } catch (Throwable ignored) {}
+                    break;
+                }
+            }
+        }
+
+        // Insert remaining drops into the chest
+        try {
+            if (cost != null && !cost.isEmpty()) {
+                Item sItem = cost.getItem();
+                int before = ChestUtils.countItem(ctx.chest, sItem);
+                try { Constants.LOG.info("[FastHarvester][HARVEST] Chest before insertAll has {} of {}", before, sItem); } catch (Throwable ignored) {}
+            }
+        } catch (Throwable ignored) {}
+
         ChestUtils.insertAll(ctx.chest, drops);
+
+        try {
+            if (cost != null && !cost.isEmpty()) {
+                Item sItem = cost.getItem();
+                int after = ChestUtils.countItem(ctx.chest, sItem);
+                try { Constants.LOG.info("[FastHarvester][HARVEST] After insertAll: chest has {} of {}", after, sItem); } catch (Throwable ignored) {}
+            }
+        } catch (Throwable ignored) {}
 
         ItemStack hoeBeforeDamage = ctx.hoe.copy();
         DurabilityLogic.applyDamage(ctx.level, ctx.hoe, ctx.level.getRandom());
@@ -85,14 +144,33 @@ public class HarvestUtils {
             syncFrameHoe(ctx);
         }
 
-        // Attempt to remove a seed from the chest for replanting (this respects seedReservePerType)
-        ItemStack cost = replantCostItemFor(block);
+        // If we already reserved a seed from the drops, use that for replant; otherwise attempt to remove from chest (respecting reserve).
         if (cost != null && !cost.isEmpty()) {
-            boolean taken = ChestUtils.removeOne(ctx.chest, cost.getItem());
-            if (taken) {
-                BlockState replanted = getReplantState.apply(state);
+            if (tookFromDropsForReplant) {
+                BlockState replanted = null;
+                try {
+                    replanted = getReplantState.apply(state);
+                } catch (Throwable ignore) {}
                 if (replanted != null) {
+                    try { if (replanted.getBlock() instanceof CropBlock) replanted = replanted.setValue(CropBlock.AGE, 1); } catch (Throwable ignored) {}
                     ctx.level.setBlock(pos, replanted, 3);
+                }
+            } else {
+                boolean taken = ChestUtils.removeOne(ctx.chest, cost.getItem());
+                if (taken) {
+                    BlockState replanted = null;
+                    try {
+                        replanted = getReplantState.apply(state);
+                    } catch (Throwable ignore) {}
+                    if (replanted != null) {
+                        try { if (replanted.getBlock() instanceof CropBlock) replanted = replanted.setValue(CropBlock.AGE, 1); } catch (Throwable ignored) {}
+                        ctx.level.setBlock(pos, replanted, 3);
+                    }
+                } else {
+                    Constants.LOG.debug("[FastHarvester][HARVEST] Could not take seed for replant: {} at {}", cost.getItem(), pos);
+                    try {
+                        ctx.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+                    } catch (Throwable ignored) {}
                 }
             }
         }
@@ -148,34 +226,10 @@ public class HarvestUtils {
             drops.removeIf(s -> s.getItem() == seedItem);
             return;
         }
-        if (Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.REDUCED) {
-            int reserve = Math.max(0, Config.seedReservePerType);
-            // Count existing seeds in chest
-            int existing = 0;
-            if (chest != null) {
-                for (int i = 0; i < chest.getContainerSize(); i++) {
-                    ItemStack s = chest.getItem(i);
-                    if (!s.isEmpty() && s.getItem() == seedItem) existing += s.getCount();
-                }
-            }
 
-            // Trim drops so that after insertion the chest will have at most `reserve` seeds
-            int allowed = Math.max(0, reserve - existing);
-            for (Iterator<ItemStack> it = drops.iterator(); it.hasNext();) {
-                ItemStack s = it.next();
-                if (s.getItem() == seedItem) {
-                    if (allowed <= 0) {
-                        it.remove();
-                        continue;
-                    }
-                    if (s.getCount() > allowed) {
-                        s.setCount(allowed);
-                        allowed = 0;
-                    } else {
-                        allowed -= s.getCount();
-                    }
-                }
-            }
+        if (Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.REDUCED) {
+            // In REDUCED mode we do not trim seed drops prior to insertion.
+            // Seed reserve enforcement happens when removing seeds for replanting (ChestUtils.removeOne).
             return;
         }
 
@@ -188,20 +242,131 @@ public class HarvestUtils {
      */
     public static void handleBrokenHoe(HarvestContext ctx, ItemStack oldHoe) {
         Constants.LOG.info("[FastHarvester][HOE] Hoe broke during harvest. Previous: {}", oldHoe);
-        // Attempt to find a replacement in the chest (naive)
+        // Play visual/sound effects for the broken hoe
+        try { playHoeBreakEffects(ctx, oldHoe); } catch (Throwable ignored) {}
         if (ctx.chest == null) return;
-        for (int i = 0; i < ctx.chest.getContainerSize(); i++) {
-            ItemStack slot = ctx.chest.getItem(i);
-            if (!slot.isEmpty() && slot.getItem() == oldHoe.getItem()) {
-                // Move one into the frame's hoe slot
-                ItemStack one = slot.copy();
-                one.setCount(1);
-                slot.setCount(slot.getCount() - 1);
-                ctx.hoe.setCount(1);
-                Constants.LOG.info("[FastHarvester][HOE] Loaded spare hoe from chest slot {}.", i);
+        try {
+            FrameScanner.Anchor anchor = null;
+            try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {}
+
+            ItemStack replacement = ChestUtils.takeFirstHoe(ctx.chest);
+            if (replacement != null && !replacement.isEmpty()) {
+                // Assign the replacement into the active context so further harvests use it
+                try {
+                    ItemStack newHoe = replacement.copy();
+                    newHoe.setCount(1);
+                    ctx.hoe = newHoe;
+                } catch (Throwable ignored) {}
+
+                // Update registry entry so future scans see the replacement
+                try {
+                    if (anchor != null) {
+                        String dimId = ctx.level.dimension().identifier().toString();
+                        FrameRegistry.updateHoe(dimId, anchor.framePos, ctx.hoe == null ? replacement.copy() : ctx.hoe.copy());
+                    }
+                } catch (Throwable ignored) {}
+
+                // Ask platform to persist the frame-held item if possible
+                try { syncFrameHoe(ctx); } catch (Throwable ignored) {}
+
+                Constants.LOG.info("[FastHarvester][HOE] Pulled replacement hoe from chest: {}", replacement);
                 return;
+            } else {
+                Constants.LOG.debug("[FastHarvester][HOE] No replacement hoe available in chest for frame at {}", anchor == null ? "unknown" : anchor.framePos);
+                try {
+                    if (anchor != null) {
+                        String dimId = ctx.level.dimension().identifier().toString();
+                        FrameRegistry.updateHoe(dimId, anchor.framePos, net.minecraft.world.item.ItemStack.EMPTY);
+                        FrameRegistry.setCooldown(dimId, anchor.framePos, Config.chestFullCooldownTicks);
+                    }
+                } catch (Throwable ignored) {}
+                try { syncFrameHoe(ctx); } catch (Throwable ignored) {}
+                // Signal scanner to stop this pass for this anchor
+                ctx.chestFull = true;
             }
+        } catch (Throwable t) {
+            Constants.LOG.warn("[FastHarvester][HOE] Error attempting to replace broken hoe: {}", t.toString());
         }
+    }
+
+    private static void playHoeBreakEffects(HarvestContext ctx, ItemStack brokenHoe) {
+        try {
+            if (ctx.level == null || ctx.anchor == null) return;
+        } catch (Throwable ignored) {}
+        try {
+            try {
+                ctx.level.playSound(
+                        null,
+                        ((FrameScanner.Anchor)ctx.anchor).framePos,
+                        (net.minecraft.sounds.SoundEvent)(Object)SoundEvents.ITEM_BREAK,
+                        SoundSource.BLOCKS,
+                        0.8F,
+                        0.8F + ctx.level.getRandom().nextFloat() * 0.4F);
+            } catch (NoSuchMethodError | ClassCastException e) {
+                // Fallback: try calling playSound with coordinates and a looser cast
+                try {
+                    ctx.level.playSound(null,
+                            ((FrameScanner.Anchor)ctx.anchor).framePos.getX() + 0.5,
+                            ((FrameScanner.Anchor)ctx.anchor).framePos.getY() + 0.5,
+                            ((FrameScanner.Anchor)ctx.anchor).framePos.getZ() + 0.5,
+                            (net.minecraft.sounds.SoundEvent)(Object)SoundEvents.ITEM_BREAK,
+                            SoundSource.BLOCKS,
+                            0.8F,
+                            0.8F + ctx.level.getRandom().nextFloat() * 0.4F);
+                } catch (Throwable ignored) {}
+            }
+
+            ItemStack particlesFrom = (brokenHoe == null || brokenHoe.isEmpty()) ? new ItemStack(Items.WOODEN_HOE) : brokenHoe.copy();
+            try {
+                if (ctx.level instanceof net.minecraft.server.level.ServerLevel server) {
+                    server.sendParticles(
+                            new ItemParticleOption(ParticleTypes.ITEM, particlesFrom),
+                            ((FrameScanner.Anchor)ctx.anchor).framePos.getX() + 0.5,
+                            ((FrameScanner.Anchor)ctx.anchor).framePos.getY() + 0.5,
+                            ((FrameScanner.Anchor)ctx.anchor).framePos.getZ() + 0.5,
+                            10,
+                            0.18,
+                            0.18,
+                            0.18,
+                            0.03);
+                }
+            } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {}
+    }
+
+    /**
+     * Rotate the item frame or FastItemFrames block-entity by one step.
+     * <p>
+     * This is used to nudge the visible frame rotation when a harvest action
+     * requests a small, local rotation (e.g. for visual feedback).
+     * </p>
+     * Emotional aside: gently nudges the frame so it looks like it's doing a tiny happy dance.
+     * @param ctx Harvest context containing anchor and level info
+     */
+    public static void spinFrame(HarvestContext ctx) {
+        try {
+            FrameScanner.Anchor anchor = null;
+            try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {}
+            if (anchor == null || ctx.level == null) return;
+            BlockPos pos = anchor.framePos;
+            try {
+                java.util.List<net.minecraft.world.entity.decoration.ItemFrame> frames = ctx.level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class,
+                        new net.minecraft.world.phys.AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX()+1, pos.getY()+1, pos.getZ()+1), e -> true);
+                if (!frames.isEmpty()) {
+                    net.minecraft.world.entity.decoration.ItemFrame frame = frames.get(0);
+                    frame.setRotation((frame.getRotation() + 1) & 7);
+                    return;
+                }
+            } catch (Throwable ignored) {}
+
+            try {
+                BlockEntity be = ctx.level.getBlockEntity(pos);
+                if (be != null) {
+                    int current = FastItemFrameAdapterImpl.getRotation(be);
+                    FastItemFrameAdapterImpl.setRotation(be, (current + 1) & 7);
+                }
+            } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {}
     }
 
     /**
@@ -209,7 +374,14 @@ public class HarvestUtils {
      * Currently a no-op in common; present for platform implementations to hook.
      */
     private static void syncFrameHoe(HarvestContext ctx) {
-        // Loader-specific: update the frame block entity if necessary. For now just log.
-        Constants.LOG.debug("[FastHarvester][HOE] syncFrameHoe called (no-op in common). Current hoe: {}", ctx.hoe);
+        // Loader-specific: update the frame/block-held item if possible.
+        Constants.LOG.debug("[FastHarvester][HOE] syncFrameHoe called. Current hoe: {}", ctx.hoe);
+        try {
+            FrameScanner.Anchor anchor = null;
+            try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {}
+            if (anchor != null && ctx.level != null) {
+                com.fastharvester.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor.framePos, ctx.hoe == null ? net.minecraft.world.item.ItemStack.EMPTY : ctx.hoe);
+            }
+        } catch (Throwable ignored) {}
     }
 }

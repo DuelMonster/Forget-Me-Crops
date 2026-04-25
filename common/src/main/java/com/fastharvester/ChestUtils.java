@@ -5,6 +5,7 @@ package com.fastharvester;
 
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -47,7 +48,10 @@ public class ChestUtils {
                     int space = slot.getMaxStackSize() - slot.getCount();
                     if (space > 0) {
                         int move = Math.min(space, remaining.getCount());
-                        slot.setCount(slot.getCount() + move);
+                        ItemStack newSlot = slot.copy();
+                        newSlot.setCount(slot.getCount() + move);
+                        chest.setItem(i, newSlot);
+                        try { Constants.LOG.info("[FastHarvester][CHEST] insertAll: merged {} x{} into slot {} (slotnow={})", remaining.getItem(), move, i, newSlot.getCount()); } catch (Throwable ignored) {}
                         remaining.setCount(remaining.getCount() - move);
                         changed = true;
                         if (remaining.isEmpty()) break;
@@ -60,6 +64,7 @@ public class ChestUtils {
                     ItemStack slot = chest.getItem(i);
                     if (slot.isEmpty()) {
                         chest.setItem(i, remaining.copy());
+                        try { Constants.LOG.info("[FastHarvester][CHEST] insertAll: placed {} x{} into empty slot {}", remaining.getItem(), remaining.getCount(), i); } catch (Throwable ignored) {}
                         remaining.setCount(0);
                         changed = true;
                         break;
@@ -77,27 +82,61 @@ public class ChestUtils {
      */
     public static boolean removeOne(Container chest, Item item) {
         if (chest == null || item == null) return false;
-        // Respect seed reserve policy when in REDUCED mode
-        if (Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.REDUCED && isSeedItem(item)) {
+        // Enforce seed reserve for seed items in all modes
+            if (isSeedItem(item)) {
             int existing = countItem(chest, item);
-            if (existing <= Config.seedReservePerType) return false;
+            if (existing <= Config.seedReservePerType) {
+                try { Constants.LOG.info("[FastHarvester][CHEST] removeOne: refusing to remove {} because existing {} <= reserve {}", item, existing, Config.seedReservePerType); } catch (Throwable ignored) {}
+                return false;
+            }
         }
 
         for (int i = 0; i < chest.getContainerSize(); i++) {
             ItemStack slot = chest.getItem(i);
             if (slot != null && !slot.isEmpty() && slot.getItem() == item) {
                 if (slot.getCount() > 1) {
-                    slot.setCount(slot.getCount() - 1);
+                    ItemStack newSlot = slot.copy();
+                    newSlot.setCount(slot.getCount() - 1);
+                    chest.setItem(i, newSlot);
                 } else {
                     chest.setItem(i, ItemStack.EMPTY);
                 }
                 if (chest instanceof BlockEntity be) {
                     try { be.setChanged(); } catch (Throwable ignored) {}
                 }
+                try { Constants.LOG.debug("[FastHarvester][CHEST] removeOne: removed one {} from chest (slot {}) - remaining total {}", item, i, countItem(chest, item)); } catch (Throwable ignored) {}
                 return true;
             }
         }
+        try { Constants.LOG.debug("[FastHarvester][CHEST] removeOne: no {} found in chest", item); } catch (Throwable ignored) {}
         return false;
+    }
+
+    /**
+     * Take the first hoe found in the chest and return a single-item copy of it.
+     * This will decrement the source slot and mark the block entity changed.
+     */
+    public static net.minecraft.world.item.ItemStack takeFirstHoe(Container chest) {
+        if (chest == null) return net.minecraft.world.item.ItemStack.EMPTY;
+        for (int i = 0; i < chest.getContainerSize(); i++) {
+            ItemStack slot = chest.getItem(i);
+            if (slot != null && !slot.isEmpty() && slot.getItem() instanceof HoeItem) {
+                ItemStack taken = slot.copy();
+                taken.setCount(1);
+                if (slot.getCount() > 1) {
+                    ItemStack remaining = slot.copy();
+                    remaining.setCount(slot.getCount() - 1);
+                    chest.setItem(i, remaining);
+                } else {
+                    chest.setItem(i, ItemStack.EMPTY);
+                }
+                if (chest instanceof BlockEntity be) {
+                    try { be.setChanged(); } catch (Throwable ignored) {}
+                }
+                return taken;
+            }
+        }
+        return net.minecraft.world.item.ItemStack.EMPTY;
     }
 
     private static boolean isSeedItem(Item item) {

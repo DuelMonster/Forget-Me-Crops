@@ -16,7 +16,7 @@ import net.minecraft.world.level.Level;
 public class HarvestContext {
     public final Object anchor;
     public final Level level;
-    public final ItemStack hoe;
+    public ItemStack hoe;
     public final Container chest;
     public final Object config;
 

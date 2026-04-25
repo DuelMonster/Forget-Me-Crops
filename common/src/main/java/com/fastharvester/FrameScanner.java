@@ -85,6 +85,7 @@ public class FrameScanner {
     * @param level The world `Level` to scan in (server-level expected).
     * @return true if a valid farm was found and scanned, false otherwise.
      */
+
     public boolean scanFarm(Anchor anchor, Level level) {
         Constants.LOG.info("[FastHarvester][SCAN] Starting farm scan from anchor: {}", anchor);
         if (anchor == null || anchor.chest == null || anchor.hoe == null || level == null) {
@@ -95,248 +96,112 @@ public class FrameScanner {
         int blocksScanned = 0;
         int cropsFound = 0;
         int range = Math.max(1, Config.scanRange);
-
         BlockPos center = anchor.framePos;
         HarvestContext ctx = new HarvestContext(anchor, level, anchor.hoe, anchor.chest, null);
 
-        int maxRing = range;
-        int baseRotation = getFrameRotation(level, center);
+        // Generate spiral positions (ring by ring, spiral order)
+        List<SpiralStep> spiral = generateSpiral(center, range);
+        int spiralSteps = spiral.size();
         boolean anyHarvested = false;
 
-        // Use BFS-based discovery to find a connected farm area (complements previous ring scan).
-        List<BlockPos> candidates = bfsDiscoverFarm(center, level, range);
+        for (int i = 0; i < spiralSteps; i++) {
+            SpiralStep step = spiral.get(i);
+            BlockPos pos = step.pos;
+            Direction dir = step.dir;
+            BlockState state = level.getBlockState(pos);
+            blocksScanned++;
 
-        // If BFS found nothing, fall back to the old ring-style scan to preserve behavior
-        if (candidates.isEmpty()) {
-            Constants.LOG.debug("[FastHarvester][SCAN] BFS found no candidates, falling back to ring scan.");
-            candidates = new ArrayList<>();
-            for (int dx = -range; dx <= range; dx++) for (int dz = -range; dz <= range; dz++) candidates.add(center.offset(dx, 0, dz));
-        }
+            // Frame rotation logic
+            switch (Config.rotationMode) {
+                case FOLLOW_HARVEST_SPIRAL -> {
+                    setFrameRotation(level, center, dirToRotation(dir));
+                }
+                case FULL_ROTATION_PER_HARVEST -> {
+                    int rot = (int) Math.floor((double) i * 8.0 / spiralSteps) & 7;
+                    setFrameRotation(level, center, rot);
+                }
+                case STEP_PER_HARVEST -> {
+                    // Only update at end if anyHarvested
+                }
+            }
 
-        // Group candidates by ring distance so rotation pacing still works
-        Map<Integer, List<BlockPos>> ringMap = new HashMap<>();
-        int computedMaxRing = 0;
-        for (BlockPos p : candidates) {
-            int ring = Math.max(Math.abs(p.getX() - center.getX()), Math.abs(p.getZ() - center.getZ()));
-            if (ring > maxRing) continue;
-            ringMap.computeIfAbsent(ring, k -> new ArrayList<>()).add(p);
-            computedMaxRing = Math.max(computedMaxRing, ring);
-        }
+            boolean harvested = false;
+            try {
+                Block block = state.getBlock();
 
-        for (int ring = 0; ring <= computedMaxRing; ring++) {
-            List<BlockPos> positions = ringMap.getOrDefault(ring, new ArrayList<>());
-            for (BlockPos pos : positions) {
-                BlockState state = level.getBlockState(pos);
-                blocksScanned++;
-
-                try {
-                    Block block = state.getBlock();
-
-                    // Direct fruit blocks (melons/pumpkins): harvest the fruit block itself, no replant.
-                    if (state.is(Blocks.MELON) || state.is(Blocks.PUMPKIN)) {
-                        HarvestUtils.harvestCrop(ctx, pos, state, s -> true, s -> null);
-                        anyHarvested = ctx.harvestedCount > 0;
-                        cropsFound = Math.max(cropsFound, ctx.harvestedCount);
-                        continue;
-                    }
-
+                // Direct fruit blocks (melons/pumpkins): harvest the fruit block itself, no replant.
+                if (state.is(Blocks.MELON) || state.is(Blocks.PUMPKIN)) {
+                    HarvestUtils.harvestCrop(ctx, pos, state, s -> true, s -> null);
+                    harvested = ctx.harvestedCount > 0;
+                    cropsFound = Math.max(cropsFound, ctx.harvestedCount);
+                } else if (state.is(Blocks.MELON_STEM) || state.is(Blocks.PUMPKIN_STEM)) {
                     // If this is a stem, check for adjacent fruit and harvest that instead.
-                    if (state.is(Blocks.MELON_STEM) || state.is(Blocks.PUMPKIN_STEM)) {
-                        Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                        boolean harvestedFruit = false;
-                        for (Direction d : dirs) {
-                            BlockPos npos = pos.relative(d);
-                            BlockState ns = level.getBlockState(npos);
-                            if ((ns.is(Blocks.MELON) && state.is(Blocks.MELON_STEM)) || (ns.is(Blocks.PUMPKIN) && state.is(Blocks.PUMPKIN_STEM))) {
-                                HarvestUtils.harvestCrop(ctx, npos, ns, s -> true, s -> null);
-                                harvestedFruit = true;
-                                anyHarvested = ctx.harvestedCount > 0;
-                                cropsFound = Math.max(cropsFound, ctx.harvestedCount);
-                                break;
-                            }
+                    Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+                    for (Direction d : dirs) {
+                        BlockPos npos = pos.relative(d);
+                        BlockState ns = level.getBlockState(npos);
+                        if ((ns.is(Blocks.MELON) && state.is(Blocks.MELON_STEM)) || (ns.is(Blocks.PUMPKIN) && state.is(Blocks.PUMPKIN_STEM))) {
+                            HarvestUtils.harvestCrop(ctx, npos, ns, s -> true, s -> null);
+                            harvested = ctx.harvestedCount > 0;
+                            cropsFound = Math.max(cropsFound, ctx.harvestedCount);
+                            break;
                         }
-                        if (harvestedFruit) continue;
                     }
-
+                } else {
                     // Standard crop logic
                     boolean isCrop = block instanceof CropBlock || state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH);
-                    if (!isCrop) continue;
-
-                    // Maturity determination: read AGE defensively; different crops have different max ages.
-                    int threshold = (state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH)) ? 3 : 7;
-                    boolean mature = false;
-                    try {
-                        int age = state.getValue(CropBlock.AGE);
-                        mature = age >= threshold;
-                    } catch (Throwable t) {
-                        mature = false;
+                    if (isCrop) {
+                        int threshold = (state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH)) ? 3 : 7;
+                        boolean mature = false;
+                        try {
+                            int age = state.getValue(CropBlock.AGE);
+                            mature = age >= threshold;
+                        } catch (Throwable t) {
+                            mature = false;
+                        }
+                        if (mature) {
+                            HarvestUtils.harvestCrop(ctx, pos, state,
+                                    s -> {
+                                        try { int a = s.getValue(CropBlock.AGE); if (s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH)) return a >= 3; return a >= 7; } catch (Throwable tt) { return false; }
+                                    },
+                                    s -> {
+                                        try {
+                                            if (s.is(Blocks.SWEET_BERRY_BUSH)) return s.setValue(CropBlock.AGE, 1);
+                                            return s.setValue(CropBlock.AGE, 0);
+                                        } catch (Throwable tt) { return null; }
+                                    });
+                            harvested = ctx.harvestedCount > 0;
+                            cropsFound = Math.max(cropsFound, ctx.harvestedCount);
+                        }
                     }
-
-                    if (!mature) continue;
-
-                    HarvestUtils.harvestCrop(ctx, pos, state,
-                            s -> {
-                                try { int a = s.getValue(CropBlock.AGE); if (s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH)) return a >= 3; return a >= 7; } catch (Throwable tt) { return false; }
-                            },
-                            s -> {
-                                try {
-                                    if (s.is(Blocks.SWEET_BERRY_BUSH)) return s.setValue(CropBlock.AGE, 1);
-                                    return s.setValue(CropBlock.AGE, 0);
-                                } catch (Throwable tt) { return null; }
-                            });
-                    anyHarvested = ctx.harvestedCount > 0;
-                    cropsFound = Math.max(cropsFound, ctx.harvestedCount);
-                } catch (Throwable t) {
-                    Constants.LOG.debug("[FastHarvester][SCAN] Exception while scanning {}: {}", center, t.toString());
                 }
-
-                // If a harvest call flagged the chest as full, set a cooldown on the registry and stop the scan
-                if (ctx.chestFull) {
-                    try {
-                        String dimId = level.dimension().identifier().toString();
-                        FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
-                    } catch (Throwable ignored) {}
-                    ctx.logSummary();
-                    return cropsFound > 0;
-                }
+            } catch (Throwable t) {
+                Constants.LOG.debug("[FastHarvester][SCAN] Exception while scanning {}: {}", pos, t.toString());
             }
 
-            // After finishing this ring, advance frame rotation according to mode if we harvested anything
-            if (anyHarvested) {
-                int newRotation = baseRotation;
-                switch (Config.rotationMode) {
-                    case STEP_PER_HARVEST -> {
-                        // Will be applied once at end of pass (handled below)
-                    }
-                    case FULL_ROTATION_PER_HARVEST -> {
-                        int steps = (int) Math.floor((double)(ring + 1) * 8.0 / (maxRing + 1));
-                        newRotation = (baseRotation + steps) & 7;
-                        setFrameRotation(level, center, newRotation);
-                    }
-                    case FOLLOW_HARVEST_SPIRAL -> {
-                        int steps = (int) Math.floor((double)(ring + 1) * 8.0 * maxRing / (maxRing + 1));
-                        newRotation = (baseRotation + steps) & 7;
-                        setFrameRotation(level, center, newRotation);
-                    }
-                }
+            if (harvested) anyHarvested = true;
+
+            // If a harvest call flagged the chest as full, set a cooldown on the registry and stop the scan
+            if (ctx.chestFull) {
+                try {
+                    String dimId = level.dimension().identifier().toString();
+                    FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
+                } catch (Throwable ignored) {}
+                ctx.logSummary();
+                return cropsFound > 0;
             }
-        }
 
-        // Second pass: attempt neighbor-dominant auto-planting on empty farmland above, and auto-till repair when suitable.
-        for (int dx = -range; dx <= range; dx++) {
-            for (int dz = -range; dz <= range; dz++) {
-                BlockPos pos = center.offset(dx, 0, dz);
-                BlockState cur = level.getBlockState(pos);
-                if (!cur.isAir()) continue;
-                BlockPos belowPos = pos.below();
-                BlockState below = level.getBlockState(belowPos);
+            // Auto-plant/till logic (immediately after harvest)
+            tryAutoPlantAndTill(anchor, ctx, pos, level);
 
-                // If we already have farmland, try to replant based on neighbors
-                if (below != null && below.getBlock() == Blocks.FARMLAND) {
-                    Map<Block, Integer> counts = new HashMap<>();
-                    Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                    for (Direction d : dirs) {
-                        BlockPos npos = pos.relative(d);
-                        BlockState ns = level.getBlockState(npos);
-                        Block b = ns.getBlock();
-                        if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) {
-                            counts.merge(b, 1, Integer::sum);
-                        }
-                    }
-                    if (counts.isEmpty()) continue;
-                    Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                    Item seed = seedForBlock(chosen);
-                    if (seed == null) continue;
-                    boolean taken = ChestUtils.removeOne(anchor.chest, seed);
-                    if (!taken) continue;
-
-                    BlockState plantState = chosen.defaultBlockState();
-                    try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
-                    level.setBlock(pos, plantState, 3);
-                }
-
-                // Nether-wart on soul sand: handle as a separate planting case
-                if (below != null && below.getBlock() == Blocks.SOUL_SAND) {
-                    Map<Block, Integer> counts = new HashMap<>();
-                    Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                    for (Direction d : dirs) {
-                        BlockPos npos = pos.relative(d);
-                        BlockState ns = level.getBlockState(npos);
-                        Block b = ns.getBlock();
-                        if (b == Blocks.NETHER_WART) {
-                            counts.merge(b, 1, Integer::sum);
-                        }
-                    }
-                    if (!counts.isEmpty()) {
-                        Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                        Item seed = seedForBlock(chosen);
-                        if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
-                            BlockState plantState = chosen.defaultBlockState();
-                            try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
-                            level.setBlock(pos, plantState, 3);
-                        }
-                    }
-                }
-
-                // Auto-till: if below is dirt/grass and near farmland, convert and plant.
-                if (below != null && (below.getBlock() == Blocks.DIRT || below.getBlock() == Blocks.GRASS_BLOCK)) {
-                    Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                    int farmlandNeighbors = 0;
-                    for (Direction d : dirs) {
-                        BlockState ns = level.getBlockState(belowPos.relative(d));
-                        if (ns != null && ns.getBlock() == Blocks.FARMLAND) farmlandNeighbors++;
-                    }
-                    if (farmlandNeighbors < 1) continue;
-
-                    // Avoid tilling if this looks like part of a melon/pumpkin layout (fruit or stems nearby)
-                    boolean nearMelonPumpkin = false;
-                    for (Direction d : dirs) {
-                        BlockState ns = level.getBlockState(pos.relative(d));
-                        if (ns.is(Blocks.MELON) || ns.is(Blocks.PUMPKIN) || ns.is(Blocks.MELON_STEM) || ns.is(Blocks.PUMPKIN_STEM)) { nearMelonPumpkin = true; break; }
-                    }
-                    if (nearMelonPumpkin) continue;
-
-                    // Till the dirt into farmland
-                    BlockState farmland = Blocks.FARMLAND.defaultBlockState();
-                    level.setBlock(belowPos, farmland, 3);
-
-                    // Apply hoe durability
-                    ItemStack before = anchor.hoe.copy();
-                    com.fastharvester.DurabilityLogic.applyDamage(level, anchor.hoe, level.getRandom());
-                    if (anchor.hoe.isEmpty()) {
-                        HarvestUtils.handleBrokenHoe(ctx, before);
-                    }
-
-                    // After tilling, attempt neighbor-dominant planting similar to above
-                    Map<Block, Integer> counts2 = new HashMap<>();
-                    for (Direction d : dirs) {
-                        BlockPos npos = pos.relative(d);
-                        BlockState ns = level.getBlockState(npos);
-                        Block b = ns.getBlock();
-                        if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) {
-                            counts2.merge(b, 1, Integer::sum);
-                        }
-                    }
-                    if (counts2.isEmpty()) continue;
-                    Block chosen2 = counts2.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                    Item seed2 = seedForBlock(chosen2);
-                    if (seed2 == null) continue;
-                    boolean taken2 = ChestUtils.removeOne(anchor.chest, seed2);
-                    if (!taken2) continue;
-                    BlockState plantState2 = chosen2.defaultBlockState();
-                    try { if (plantState2.getBlock() instanceof CropBlock) plantState2 = plantState2.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
-                    level.setBlock(pos, plantState2, 3);
-                }
-
-                // If a chest-full occurred while attempting to replant/till, set cooldown and stop
-                if (ctx.chestFull) {
-                    try {
-                        String dimId = level.dimension().identifier().toString();
-                        FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
-                    } catch (Throwable ignored) {}
-                    ctx.logSummary();
-                    return cropsFound > 0;
-                }
+            // If a chest-full occurred while attempting to replant/till, set cooldown and stop
+            if (ctx.chestFull) {
+                try {
+                    String dimId = level.dimension().identifier().toString();
+                    FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
+                } catch (Throwable ignored) {}
+                ctx.logSummary();
+                return cropsFound > 0;
             }
         }
 
@@ -348,6 +213,160 @@ public class FrameScanner {
 
         Constants.LOG.info("[FastHarvester][SCAN] Scan complete. Blocks scanned: {}, crops found: {}.", blocksScanned, cropsFound);
         return cropsFound > 0;
+    }
+
+    // Spiral step helper class
+    private static class SpiralStep {
+        public final BlockPos pos;
+        public final Direction dir;
+        public SpiralStep(BlockPos pos, Direction dir) {
+            this.pos = pos;
+            this.dir = dir;
+        }
+    }
+
+    // Generate spiral positions with direction for each step
+    private static List<SpiralStep> generateSpiral(BlockPos center, int range) {
+        List<SpiralStep> spiral = new ArrayList<>();
+        int x = 0, z = 0, dx = 0, dz = -1;
+        int max = (range * 2 + 1) * (range * 2 + 1);
+        for (int i = 0; i < max; i++) {
+            int px = center.getX() + x;
+            int pz = center.getZ() + z;
+            int dist = Math.max(Math.abs(x), Math.abs(z));
+            if (dist <= range) {
+                Direction dir = getSpiralDirection(dx, dz);
+                spiral.add(new SpiralStep(new BlockPos(px, center.getY(), pz), dir));
+            }
+            if (x == z || (x < 0 && x == -z) || (x > 0 && x == 1 - z)) {
+                int temp = dx;
+                dx = -dz;
+                dz = temp;
+            }
+            x += dx;
+            z += dz;
+        }
+        return spiral;
+    }
+
+    // Map dx/dz to spiral direction
+    private static Direction getSpiralDirection(int dx, int dz) {
+        if (dx == 1 && dz == 0) return Direction.EAST;
+        if (dx == -1 && dz == 0) return Direction.WEST;
+        if (dx == 0 && dz == 1) return Direction.SOUTH;
+        if (dx == 0 && dz == -1) return Direction.NORTH;
+        // Fallback to NORTH for any other case
+        return Direction.NORTH;
+    }
+
+    // Map direction to rotation step (0, 2, 4, 6 for N, E, S, W)
+    private static int dirToRotation(Direction dir) {
+        return switch (dir) {
+            case NORTH -> 0;
+            case EAST -> 2;
+            case SOUTH -> 4;
+            case WEST -> 6;
+            default -> 0;
+        };
+    }
+
+    // Auto-plant/till logic for a single position
+    private static void tryAutoPlantAndTill(Anchor anchor, HarvestContext ctx, BlockPos pos, Level level) {
+        BlockState cur = level.getBlockState(pos);
+        BlockPos belowPos = pos.below();
+        BlockState below = level.getBlockState(belowPos);
+        Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+
+        // If we already have farmland, try to replant based on neighbors
+        if (below != null && below.getBlock() == Blocks.FARMLAND && cur.isAir()) {
+            Map<Block, Integer> counts = new HashMap<>();
+            for (Direction d : dirs) {
+                BlockPos npos = pos.relative(d);
+                BlockState ns = level.getBlockState(npos);
+                Block b = ns.getBlock();
+                if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) {
+                    counts.merge(b, 1, Integer::sum);
+                }
+            }
+            if (!counts.isEmpty()) {
+                Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
+                Item seed = seedForBlock(chosen);
+                if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
+                    BlockState plantState = chosen.defaultBlockState();
+                    try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
+                    level.setBlock(pos, plantState, 3);
+                }
+            }
+        }
+
+        // Nether-wart on soul sand: handle as a separate planting case
+        if (below != null && below.getBlock() == Blocks.SOUL_SAND && cur.isAir()) {
+            Map<Block, Integer> counts = new HashMap<>();
+            for (Direction d : dirs) {
+                BlockPos npos = pos.relative(d);
+                BlockState ns = level.getBlockState(npos);
+                Block b = ns.getBlock();
+                if (b == Blocks.NETHER_WART) {
+                    counts.merge(b, 1, Integer::sum);
+                }
+            }
+            if (!counts.isEmpty()) {
+                Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
+                Item seed = seedForBlock(chosen);
+                if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
+                    BlockState plantState = chosen.defaultBlockState();
+                    try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
+                    level.setBlock(pos, plantState, 3);
+                }
+            }
+        }
+
+        // Auto-till: if below is dirt/grass and near farmland, convert and plant.
+        if (below != null && (below.getBlock() == Blocks.DIRT || below.getBlock() == Blocks.GRASS_BLOCK) && cur.isAir()) {
+            int farmlandNeighbors = 0;
+            for (Direction d : dirs) {
+                BlockState ns = level.getBlockState(belowPos.relative(d));
+                if (ns != null && ns.getBlock() == Blocks.FARMLAND) farmlandNeighbors++;
+            }
+            if (farmlandNeighbors >= 1) {
+                // Avoid tilling if this looks like part of a melon/pumpkin layout (fruit or stems nearby)
+                boolean nearMelonPumpkin = false;
+                for (Direction d : dirs) {
+                    BlockState ns = level.getBlockState(pos.relative(d));
+                    if (ns.is(Blocks.MELON) || ns.is(Blocks.PUMPKIN) || ns.is(Blocks.MELON_STEM) || ns.is(Blocks.PUMPKIN_STEM)) { nearMelonPumpkin = true; break; }
+                }
+                if (!nearMelonPumpkin) {
+                    // Till the dirt into farmland
+                    BlockState farmland = Blocks.FARMLAND.defaultBlockState();
+                    level.setBlock(belowPos, farmland, 3);
+                    // Apply hoe durability
+                    ItemStack before = anchor.hoe.copy();
+                    com.fastharvester.DurabilityLogic.applyDamage(level, anchor.hoe, level.getRandom());
+                    if (anchor.hoe.isEmpty()) {
+                        HarvestUtils.handleBrokenHoe(ctx, before);
+                    }
+                    // After tilling, attempt neighbor-dominant planting similar to above
+                    Map<Block, Integer> counts2 = new HashMap<>();
+                    for (Direction d : dirs) {
+                        BlockPos npos = pos.relative(d);
+                        BlockState ns = level.getBlockState(npos);
+                        Block b = ns.getBlock();
+                        if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) {
+                            counts2.merge(b, 1, Integer::sum);
+                        }
+                    }
+                    if (!counts2.isEmpty()) {
+                        Block chosen2 = counts2.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
+                        Item seed2 = seedForBlock(chosen2);
+                        if (seed2 != null && ChestUtils.removeOne(anchor.chest, seed2)) {
+                            BlockState plantState2 = chosen2.defaultBlockState();
+                            try { if (plantState2.getBlock() instanceof CropBlock) plantState2 = plantState2.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
+                            level.setBlock(pos, plantState2, 3);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -495,6 +514,8 @@ public class FrameScanner {
         final int totalPositions;
         int currentIndex = 0;
         final int positionsPerTick;
+        boolean anyHarvested = false;
+        int lastHarvestedRing = -1;
 
         FarmScanTask(Anchor anchor, Level level, String dimId) {
             this.anchor = anchor;
@@ -573,91 +594,112 @@ public class FrameScanner {
             }
 
             int endIndex = Math.min(totalPositions - 1, currentIndex + positionsPerTick - 1);
+
             int beforeHarvest = ctx.harvestedCount;
+            int baseRotation = getFrameRotation(level, center);
+            int computedMaxRingLocal = computedMaxRing;
+            int maxRing = computedMaxRingLocal;
+            // Map positions to rings for per-ring processing
+            Map<Integer, List<Integer>> ringToIndices = new HashMap<>();
             for (int idx = currentIndex; idx <= endIndex; idx++) {
                 BlockPos pos = spiralPositions.get(idx);
-                try {
-                    BlockState state = level.getBlockState(pos);
-                    ctx.incrementBlocksScanned();
+                int ring = Math.max(Math.abs(pos.getX() - center.getX()), Math.abs(pos.getZ() - center.getZ()));
+                ringToIndices.computeIfAbsent(ring, k -> new ArrayList<>()).add(idx);
+            }
 
-                    Block block = state.getBlock();
-                    if (state.is(Blocks.MELON) || state.is(Blocks.PUMPKIN)) {
-                        HarvestUtils.harvestCrop(ctx, pos, state, s -> true, s -> null);
-                        continue;
-                    }
+            // Process by ring, updating rotation after each ring if needed
+            for (int ring = 0; ring <= maxRing; ring++) {
+                List<Integer> indices = ringToIndices.get(ring);
+                if (indices == null) continue;
+                boolean ringHarvested = false;
+                for (int idx : indices) {
+                    BlockPos pos = spiralPositions.get(idx);
+                    try {
+                        BlockState state = level.getBlockState(pos);
+                        ctx.incrementBlocksScanned();
 
-                    if (state.is(Blocks.MELON_STEM) || state.is(Blocks.PUMPKIN_STEM)) {
-                        Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                        boolean harvestedFruit = false;
-                        for (Direction d : dirs) {
-                            BlockPos npos = pos.relative(d);
-                            BlockState ns = level.getBlockState(npos);
-                            if ((ns.is(Blocks.MELON) && state.is(Blocks.MELON_STEM)) || (ns.is(Blocks.PUMPKIN) && state.is(Blocks.PUMPKIN_STEM))) {
-                                HarvestUtils.harvestCrop(ctx, npos, ns, s -> true, s -> null);
-                                harvestedFruit = true;
-                                break;
+                        Block block = state.getBlock();
+                        boolean harvested = false;
+                        if (state.is(Blocks.MELON) || state.is(Blocks.PUMPKIN)) {
+                            HarvestUtils.harvestCrop(ctx, pos, state, s -> true, s -> null);
+                            harvested = ctx.harvestedCount > beforeHarvest;
+                        } else if (state.is(Blocks.MELON_STEM) || state.is(Blocks.PUMPKIN_STEM)) {
+                            Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+                            boolean harvestedFruit = false;
+                            for (Direction d : dirs) {
+                                BlockPos npos = pos.relative(d);
+                                BlockState ns = level.getBlockState(npos);
+                                if ((ns.is(Blocks.MELON) && state.is(Blocks.MELON_STEM)) || (ns.is(Blocks.PUMPKIN) && state.is(Blocks.PUMPKIN_STEM))) {
+                                    HarvestUtils.harvestCrop(ctx, npos, ns, s -> true, s -> null);
+                                    harvestedFruit = ctx.harvestedCount > beforeHarvest;
+                                    if (harvestedFruit) break;
+                                }
+                            }
+                            harvested = harvestedFruit;
+                        } else {
+                            boolean isCrop = block instanceof CropBlock || state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH);
+                            if (isCrop) {
+                                int threshold = (state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH)) ? 3 : 7;
+                                boolean mature = false;
+                                try { int age = state.getValue(CropBlock.AGE); mature = age >= threshold; } catch (Throwable ignored) { mature = false; }
+                                if (mature) {
+                                    HarvestUtils.harvestCrop(ctx, pos, state,
+                                            s -> {
+                                                try { int a = s.getValue(CropBlock.AGE); if (s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH)) return a >= 3; return a >= 7; } catch (Throwable tt) { return false; }
+                                            },
+                                            s -> {
+                                                try {
+                                                    if (s.is(Blocks.SWEET_BERRY_BUSH)) return s.setValue(CropBlock.AGE, 1);
+                                                    return s.setValue(CropBlock.AGE, 0);
+                                                } catch (Throwable tt) { return null; }
+                                            });
+                                    harvested = ctx.harvestedCount > beforeHarvest;
+                                }
                             }
                         }
-                        if (harvestedFruit) continue;
+                        if (harvested) ringHarvested = true;
+                        if (harvested) { anyHarvested = true; lastHarvestedRing = ring; }
+                    } catch (Throwable t) {
+                        Constants.LOG.debug("[FastHarvester][SCAN] Exception while scanning {}: {}", center, t.toString());
                     }
 
-                    boolean isCrop = block instanceof CropBlock || state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH);
-                    if (!isCrop) continue;
-
-                    int threshold = (state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH)) ? 3 : 7;
-                    boolean mature = false;
-                    try { int age = state.getValue(CropBlock.AGE); mature = age >= threshold; } catch (Throwable ignored) { mature = false; }
-                    if (!mature) continue;
-
-                    HarvestUtils.harvestCrop(ctx, pos, state,
-                            s -> {
-                                try { int a = s.getValue(CropBlock.AGE); if (s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH)) return a >= 3; return a >= 7; } catch (Throwable tt) { return false; }
-                            },
-                            s -> {
-                                try {
-                                    if (s.is(Blocks.SWEET_BERRY_BUSH)) return s.setValue(CropBlock.AGE, 1);
-                                    return s.setValue(CropBlock.AGE, 0);
-                                } catch (Throwable tt) { return null; }
-                            });
-                } catch (Throwable t) {
-                    Constants.LOG.debug("[FastHarvester][SCAN] Exception while scanning {}: {}", center, t.toString());
-                }
-
-                // If a harvest attempt flagged the chest as full, set cooldown and end the job
-                if (ctx.chestFull) {
-                    FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
-                    ctx.logSummary();
-                    return true;
-                }
-            }
-
-            boolean harvestedThisSlice = ctx.harvestedCount > beforeHarvest;
-            // If we harvested something during this slice, update rotation based on the last processed position's ring
-            if (harvestedThisSlice) {
-                BlockPos last = spiralPositions.get(Math.min(endIndex, totalPositions - 1));
-                int ring = Math.max(Math.abs(last.getX() - center.getX()), Math.abs(last.getZ() - center.getZ()));
-                int baseRotation = getFrameRotation(level, center);
-                int newRotation = baseRotation;
-                switch (Config.rotationMode) {
-                    case STEP_PER_HARVEST -> { /* handled at end-of-pass */ }
-                    case FULL_ROTATION_PER_HARVEST -> {
-                        int steps = computedMaxRing > 0 ? (int) Math.floor((double)(ring + 1) * 8.0 / (computedMaxRing + 1)) : 0;
-                        newRotation = (baseRotation + steps) & 7;
-                        setFrameRotation(level, center, newRotation);
+                    // If a harvest attempt flagged the chest as full, set cooldown and end the job
+                    if (ctx.chestFull) {
+                        FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
+                        ctx.logSummary();
+                        return true;
                     }
-                    case FOLLOW_HARVEST_SPIRAL -> {
-                        int steps = computedMaxRing > 0 ? (int) Math.floor((double)(ring + 1) * 8.0 * computedMaxRing / (computedMaxRing + 1)) : 0;
-                        newRotation = (baseRotation + steps) & 7;
-                        setFrameRotation(level, center, newRotation);
+                }
+                // After finishing this ring, advance frame rotation according to mode if we harvested anything
+                if (ringHarvested) {
+                    int newRotation = baseRotation;
+                    switch (Config.rotationMode) {
+                        case STEP_PER_HARVEST -> {
+                            // Will be applied once at end of pass (handled below)
+                        }
+                        case FULL_ROTATION_PER_HARVEST -> {
+                            int steps = (int) Math.floor((double)(ring + 1) * 8.0 / (maxRing + 1));
+                            newRotation = (baseRotation + steps) & 7;
+                            setFrameRotation(level, center, newRotation);
+                        }
+                        case FOLLOW_HARVEST_SPIRAL -> {
+                            int steps = (int) Math.floor((double)(ring + 1) * 8.0 * maxRing / (maxRing + 1));
+                            newRotation = (baseRotation + steps) & 7;
+                            setFrameRotation(level, center, newRotation);
+                        }
                     }
                 }
             }
+
+
+
 
             currentIndex = endIndex + 1;
 
             // If we've processed all positions, perform the neighbour-plant / auto-till pass synchronously now
             if (currentIndex >= totalPositions) {
                 int range = Math.max(1, Config.scanRange);
+
                 for (int dx = -range; dx <= range; dx++) {
                     for (int dz = -range; dz <= range; dz++) {
                         BlockPos pos = center.offset(dx, 0, dz);
@@ -749,21 +791,36 @@ public class FrameScanner {
                         }
                     }
                 }
-                    // If a chest-full occurred during the neighbour/plant pass, set cooldown and finish
-                    if (ctx.chestFull) {
-                        FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
-                        ctx.logSummary();
-                        return true;
-                    }
 
-                    // STEP_PER_HARVEST: advance by one step if we harvested anything this pass
-                    if (ctx.harvestedCount > beforeHarvest && Config.rotationMode == com.fastharvester.enums.RotationMode.STEP_PER_HARVEST) {
-                        int newRot = (getFrameRotation(level, center) + 1) & 7;
-                        setFrameRotation(level, center, newRot);
-                    }
-
+                // If a chest-full occurred during the neighbour/plant pass, set cooldown and finish
+                if (ctx.chestFull) {
+                    FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
                     ctx.logSummary();
-                    return true; // finished
+                    return true;
+                }
+
+
+                // --- Frame rotation: only update at end of spiral, and only if harvested ---
+                if (anyHarvested && lastHarvestedRing >= 0) {
+                    int newRotation = 0;
+                    switch (Config.rotationMode) {
+                        case STEP_PER_HARVEST -> {
+                            newRotation = (getFrameRotation(level, center) + 1) & 7;
+                        }
+                        case FULL_ROTATION_PER_HARVEST -> {
+                            int steps = computedMaxRing > 0 ? (int) Math.floor((double)(lastHarvestedRing + 1) * 8.0 / (computedMaxRing + 1)) : 0;
+                            newRotation = steps & 7;
+                        }
+                        case FOLLOW_HARVEST_SPIRAL -> {
+                            int steps = computedMaxRing > 0 ? (int) Math.floor((double)(lastHarvestedRing + 1) * 8.0 * computedMaxRing / (computedMaxRing + 1)) : 0;
+                            newRotation = steps & 7;
+                        }
+                    }
+                    setFrameRotation(level, center, newRotation);
+                }
+
+                ctx.logSummary();
+                return true; // finished
             }
 
             // not finished yet

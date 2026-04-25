@@ -1,120 +1,63 @@
 package com.fastharvester;
 
-// 🎁 LootLogic: decides what goodies fall out of plants. Generous when mood is good.
-// Emotional aside: sometimes it dreams of raining golden carrots.
-
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.CropBlock;
-import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraft.world.item.enchantment.Enchantment;
-import java.util.List;
-import java.util.Collections;
-import java.util.Map;
+
 import java.util.ArrayList;
-import java.util.Random;
+import java.util.List;
 
 /**
- * LootLogic: Simple, conservative loot helpers used by the common harvesting code.
+ * LootLogic: The loot goblin of the farm. Figures out what drops when you break a block, and makes sure fortune and silk touch are respected.
+ * If you ever wondered why you got 42 potatoes, it's this class (and a little bit of luck).
  */
 public class LootLogic {
-    public LootLogic() {}
+
+    // Cached fake hoes for fortune 0–3, initialised on first harvest.
+    private static ItemStack[] fortuneHoes;
 
     /**
-     * Legacy helper retained for tests.
+     * Returns a cached fake hoe with the given fortune level. Because real hoes need a break sometimes.
      */
-    public static int calculateLoot(Object cropType, int fortuneLevel) {
-        Constants.LOG.info("[FastHarvester][LOOT] Calculating loot for crop type '{}' with fortune level {}...", cropType, fortuneLevel);
-        int baseDrops = 1 + (int)(Math.random() * 2);
-        Constants.LOG.debug("[FastHarvester][LOOT] Base drops: {}", baseDrops);
-        int bonus = (int)(Math.random() * (fortuneLevel + 1));
-        Constants.LOG.debug("[FastHarvester][LOOT] Fortune bonus drops: {}", bonus);
-        int total = baseDrops + bonus;
-        Constants.LOG.info("[FastHarvester][LOOT] Total drops for crop '{}': {}", cropType, total);
-        return total;
+    private static ItemStack fortuneHoe(ServerLevel level, int fortune) {
+        if (fortuneHoes == null) {
+            fortuneHoes = new ItemStack[4];
+            fortuneHoes[0] = new ItemStack(Items.IRON_HOE);
+            var fortuneHolder = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.FORTUNE);
+            for (int i = 1; i <= 3; i++) {
+                ItemStack hoe = new ItemStack(Items.IRON_HOE);
+                hoe.enchant(fortuneHolder, i);
+                fortuneHoes[i] = hoe;
+            }
+        }
+        return fortuneHoes[Math.min(Math.max(fortune, 0), 3)];
     }
 
     /**
-     * Naive block drop resolver used by the common harvest logic. This is intentionally conservative —
-     * it returns reasonable defaults for common crop blocks and falls back to the block's item form.
+     * Gets the drops for a block, respecting fortune and silk touch. The heart of the loot party.
      */
-    public static List<ItemStack> getBlockDrops(Level level, BlockPos pos, BlockState state, ItemStack tool) {
-        if (state == null) return Collections.emptyList();
-        Block block = state.getBlock();
-
-        // Let the platform implementation provide accurate drops when possible
-        try {
-            java.util.List<ItemStack> platformDrops = com.fastharvester.platform.Services.PLATFORM.getBlockDrops(level, pos, state, tool);
-            if (platformDrops != null && !platformDrops.isEmpty()) return platformDrops;
-        } catch (Throwable t) {
-            Constants.LOG.debug("[FastHarvester][LOOT] Platform getBlockDrops failed: {}", t.toString());
+    public static List<ItemStack> getBlockDrops(ServerLevel level, BlockPos pos, BlockState state, ItemStack hoe) {
+        if (state.getBlock() == Blocks.MELON && HoeUtils.hasSilkTouch(level, hoe)) {
+            List<ItemStack> drops = new ArrayList<>();
+            drops.add(new ItemStack(Blocks.MELON.asItem()));
+            return drops;
         }
 
-        int fortune = 0;
-        boolean silk = false;
-        try {
-            java.util.Map<String, Integer> ench = com.fastharvester.platform.Services.PLATFORM.getEnchantments(tool);
-            if (ench != null) {
-                for (java.util.Map.Entry<String, Integer> e : ench.entrySet()) {
-                    String id = e.getKey();
-                    int lvl = (e.getValue() == null) ? 0 : e.getValue();
-                    String idl = (id == null) ? "" : id.toLowerCase();
-                    if (idl.contains("fortune")) {
-                        fortune = Math.max(fortune, lvl);
-                    }
-                    if (idl.contains("silk")) {
-                        silk = true;
-                    }
-                }
-            }
-        } catch (Throwable t) {
-            Constants.LOG.debug("[FastHarvester][LOOT] Could not read platform enchantments: {}", t.toString());
-        }
+        int fortune = HoeUtils.getFortuneLevel(level, hoe);
 
-        // Fallback conservative behavior
-        if (block instanceof CropBlock) {
-            if (block == Blocks.WHEAT) {
-                int wheatCount = 1 + ((level != null) ? level.getRandom().nextInt(fortune + 1) : new java.util.Random().nextInt(fortune + 1));
-                int seedsCount = 1 + ((level != null) ? level.getRandom().nextInt(fortune + 1) : new java.util.Random().nextInt(fortune + 1));
-                java.util.List<ItemStack> out = new ArrayList<>();
-                out.add(new ItemStack(Items.WHEAT, wheatCount));
-                out.add(new ItemStack(Items.WHEAT_SEEDS, seedsCount));
-                return out;
-            }
-            if (block == Blocks.BEETROOTS) {
-                int beets = 1 + ((level != null) ? level.getRandom().nextInt(fortune + 1) : new java.util.Random().nextInt(fortune + 1));
-                java.util.List<ItemStack> out = new ArrayList<>();
-                out.add(new ItemStack(Items.BEETROOT, Math.max(1, beets)));
-                out.add(new ItemStack(Items.BEETROOT_SEEDS, 1 + ((level != null) ? level.getRandom().nextInt(fortune + 1) : new java.util.Random().nextInt(fortune + 1))));
-                return out;
-            }
-            if (block == Blocks.CARROTS) {
-                int carrots = 1 + ((level != null) ? level.getRandom().nextInt(fortune + 1) : new java.util.Random().nextInt(fortune + 1));
-                return List.of(new ItemStack(Items.CARROT, carrots));
-            }
-            if (block == Blocks.POTATOES) {
-                int potatoes = 1 + ((level != null) ? level.getRandom().nextInt(fortune + 1) : new java.util.Random().nextInt(fortune + 1));
-                return List.of(new ItemStack(Items.POTATO, potatoes));
-            }
-        }
+        LootParams.Builder params = new LootParams.Builder(level)
+                .withParameter(LootContextParams.TOOL, fortuneHoe(level, fortune))
+                .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
+                .withParameter(LootContextParams.BLOCK_STATE, state);
 
-        if (block == Blocks.NETHER_WART) {
-            int count = 1 + ((level != null) ? level.getRandom().nextInt(fortune + 1) : new java.util.Random().nextInt(fortune + 1));
-            return List.of(new ItemStack(Items.NETHER_WART, count));
-        }
-
-        // Fall back to the block's item (if any)
-        ItemStack asItem = new ItemStack(block.asItem());
-        if (!asItem.isEmpty()) return List.of(asItem);
-        return Collections.emptyList();
+        return state.getDrops(params);
     }
 }
