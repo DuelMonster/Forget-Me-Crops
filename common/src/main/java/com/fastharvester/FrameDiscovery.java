@@ -16,6 +16,9 @@ import net.minecraft.world.Container;
  */
 public class FrameDiscovery {
 
+    /** Utility class: prevent instantiation. */
+    private FrameDiscovery() {}
+
     /**
      * Inspect a vanilla `ItemFrame` and register it as an anchor if it meets our criteria.
      *
@@ -23,7 +26,10 @@ public class FrameDiscovery {
      * (or have a chest one block below). We also respect the "waterlogged chest" rule
      * for crops that require farmland — because crops can be dramatic if thirsty.
      *
-     * @return true if the frame was successfully registered as an anchor, false otherwise.
+    * @param dimId The dimension id the frame was found in.
+    * @param level The server level containing the frame.
+    * @param f The vanilla ItemFrame to inspect.
+    * @return true if the frame was successfully registered as an anchor, false otherwise.
      */
     public static boolean registerVanillaFrameIfValid(String dimId, ServerLevel level, ItemFrame f) {
         try {
@@ -69,7 +75,11 @@ public class FrameDiscovery {
      * try to read the held item, and register the anchor if everything looks sane.
      * This is intentionally forgiving because FIF implementations change over time.
      *
-     * @return true if registered, false otherwise.
+    * @param dimId The dimension id the frame was found in.
+    * @param level The server level containing the block-entity.
+    * @param be The block-entity to inspect.
+    * @param pos The block position of the block-entity.
+    * @return true if registered, false otherwise.
      */
     public static boolean registerFIFIfValid(String dimId, ServerLevel level, BlockEntity be, BlockPos pos) {
         try {
@@ -97,8 +107,12 @@ public class FrameDiscovery {
     }
 
     /**
-     * Heuristic: scan a square of radius `r` around `chestPos` (same Y) for known farmland crops.
-     * Returns true if any crop that prefers farmland is present nearby.
+    * Heuristic: scan a square of radius `r` around `chestPos` (same Y) for known farmland crops.
+    * Returns true if any crop that prefers farmland is present nearby.
+    * @param level The server level to scan.
+    * @param chestPos The center position to scan around (same Y).
+    * @param r Radius in blocks to scan.
+    * @return true when a farmland-preferred crop is present.
      */
     public static boolean isNearbyFarmlandCrop(ServerLevel level, BlockPos chestPos, int r) {
         for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {

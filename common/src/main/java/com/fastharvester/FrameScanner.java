@@ -1,18 +1,5 @@
 package com.fastharvester;
 
-/**
- * FrameScanner: The intrepid explorer of your blocky world!
- * <p>
- * This class is responsible for scanning farms, finding frames, and making sure your crops get the attention they deserve. It's loader-agnostic, so it works everywhere—like a universal translator, but for farming.
- * </p>
- * <p>
- * Why does this matter? Because without it, your crops would be lost, alone, and unharvested. And nobody wants that.
- * </p>
- * <p>
- * For the full adventure, see TECHNICAL.md (bring snacks).
- * </p>
- */
-// 🔎 Emotional aside: the scanner sometimes daydreams about perfect rows of wheat. It powers through anyway.
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Container;
@@ -42,6 +29,18 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Iterator;
 
+/**
+ * FrameScanner: The intrepid explorer of your blocky world!
+ * <p>
+ * This class is responsible for scanning farms, finding frames, and making sure your crops get the attention they deserve. It's loader-agnostic, so it works everywhere—like a universal translator, but for farming.
+ * </p>
+ * <p>
+ * Why does this matter? Because without it, your crops would be lost, alone, and unharvested. And nobody wants that.
+ * </p>
+ * <p>
+ * For the full adventure, see TECHNICAL.md (bring snacks).
+ * </p>
+ */
 public class FrameScanner {
     /**
      * The maximum number of frames we dare scan in a single run. Any more and the crops unionize.
@@ -63,10 +62,19 @@ public class FrameScanner {
      * </p>
      */
     public static class Anchor {
+        /** Linked chest container for storing drops and replacements. */
         public final Container chest;
+        /** Position of the item frame anchoring this farm. */
         public final BlockPos framePos;
+        /** Hoe ItemStack stored/used by this anchor. */
         public final ItemStack hoe;
 
+        /**
+         * Create a new Anchor binding a chest, frame position and hoe.
+         * @param chest linked chest container
+         * @param framePos position of the item frame
+         * @param hoe the stored hoe ItemStack
+         */
         public Anchor(Container chest, BlockPos framePos, ItemStack hoe) {
             this.chest = chest;
             this.framePos = framePos;
@@ -485,6 +493,13 @@ public class FrameScanner {
      * Schedule an asynchronous, tick-sliced scan for the provided anchor.
      * This avoids performing a full harvest in a single server tick.
      */
+    /**
+     * Schedule an asynchronous, tick-sliced scan for the provided anchor.
+     * This avoids performing a full harvest in a single server tick.
+     * @param dimId The dimension id for the scan.
+     * @param anchor The anchor to scan.
+     * @param level The level instance to operate in.
+     */
     public static void submitScan(String dimId, Anchor anchor, Level level) {
         try {
             List<FarmScanTask> list = activeScans.computeIfAbsent(dimId, k -> new ArrayList<>());
@@ -505,6 +520,11 @@ public class FrameScanner {
 
     /**
      * Tick active scan jobs for a dimension. Call once per server tick.
+     */
+    /**
+     * Tick active scan jobs for a dimension. Call once per server tick.
+     * @param dimId The dimension id to tick scans for.
+     * @param level The level instance for the scans.
      */
     public static void tickScans(String dimId, Level level) {
         List<FarmScanTask> list = activeScans.get(dimId);
