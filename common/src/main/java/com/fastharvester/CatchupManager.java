@@ -18,11 +18,16 @@ public class CatchupManager {
     private static final Map<String, Deque<BlockPos>> queues = new HashMap<>();
     private static final Map<String, Integer> initialCounts = new HashMap<>();
 
+    /** Utility class: prevent instantiation. */
+    private CatchupManager() {}
+
     /**
      * One-time sweep: find all currently-loaded vanilla item frames and enqueue
      * their positions for gradual processing across multiple ticks. This avoids
      * doing a massive registration pass in a single tick and causing lag spikes.
      * Emotional aside: we gently collect frames so the server doesn't throw a tantrum.
+     * @param level The server level to inspect.
+     * @param dimId The dimension id to associate queued frames with.
      */
     public static void queueLoadedFrames(ServerLevel level, String dimId) {
         try {
@@ -44,6 +49,9 @@ public class CatchupManager {
      * The batch size is computed from the initial queue size and
      * the target `catchupTicks` so work is spread evenly across ticks.
      * Humanized note: think of this as a nightly to-do list processed bit by bit.
+     * @param level The server level to operate on.
+     * @param dimId The dimension id whose queue should be processed.
+     * @param catchupTicks Number of ticks across which to spread processing.
      */
     public static void processBatch(ServerLevel level, String dimId, int catchupTicks) {
         Deque<BlockPos> dq = queues.get(dimId);

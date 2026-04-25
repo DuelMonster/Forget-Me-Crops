@@ -33,21 +33,20 @@ import java.util.function.Function;
  * </p>
  */
 public class HarvestUtils {
+    /** Utility class: do not instantiate. */
+    private HarvestUtils() {}
     /**
-     * Harvests a crop at the given position. Emits extremely verbose debug logs for every step.
-     * @param cropPos The position of the crop (platform-specific, passed as Object for loader-agnostic code).
-     * @param world The world object (platform-specific, passed as Object).
-     * @param player The player or automation entity (platform-specific, passed as Object).
-     * @return true if the crop was harvested, false otherwise.
-     */
-    /**
-     * Harvests a crop at the given position, puts all drops into the chest, and replants if possible.
-     * This is the real, chest-based, server-side automation logic per the original design.
-     * @param ctx The harvest context (must contain level, hoe, chest, etc.)
-     * @param pos The block position
-     * @param state The block state
-     * @param isMature Function to check if the crop is ready for harvest
-     * @param getReplantState Function to get the state for replanting
+     * Harvests a crop at the given position, places drops into the linked chest, and replants when possible.
+     * <p>
+     * This server-side routine collects block drops (respecting tool enchantments), applies a seed-clutter
+     * policy, inserts remaining drops into the configured chest, attempts to consume a seed for replanting
+     * (preferring seeds from the drops first, then from the chest), and applies durability damage to the hoe.
+     * </p>
+     * @param ctx the harvest context (must contain `level`, `hoe`, `chest`, etc.)
+     * @param pos the block position to harvest
+     * @param state the block state at `pos`
+     * @param isMature a predicate returning true when the provided `state` is considered harvest-ready
+     * @param getReplantState a function that produces the BlockState to place when replanting
      */
     public static void harvestCrop(HarvestContext ctx, BlockPos pos, BlockState state, Function<BlockState, Boolean> isMature, Function<BlockState, BlockState> getReplantState) {
         if (ctx == null || ctx.level == null || ctx.hoe == null || ctx.hoe.isEmpty() || ctx.chest == null) return;
@@ -175,7 +174,7 @@ public class HarvestUtils {
 
     /**
      * Determine the item cost required to replant the given block type.
-     * @return the ItemStack representing one unit of the replant cost, or ItemStack.EMPTY if unknown.
+        * @return the ItemStack representing one unit of the replant cost, or ItemStack.EMPTY if unknown.
      */
     private static ItemStack replantCostItemFor(Block block) {
         if (block == Blocks.BEETROOTS) return new ItemStack(Items.BEETROOT_SEEDS);
@@ -203,8 +202,16 @@ public class HarvestUtils {
     }
 
     /**
-     * Apply the configured seed clutter policy to the list of drops before insertion into chest.
-     * Emotional aside: this prevents your chests from becoming overrun by tiny seed armies.
+        * Apply the configured seed clutter policy to the list of drops before insertion into chest.
+        * <p>
+        * This method mutates the provided `drops` list according to `Config.seedClutterMode`:
+        * - `NONE`: remove supported seed drops entirely
+        * - `REDUCED`: leave drops intact (reserve enforcement happens later)
+        * - `NORMAL`: keep all seed drops
+        * </p>
+        * @param drops mutable list of drops to be inserted into chest
+        * @param seedItem the seed item to consider for clutter policies (may be null)
+        * @param chest the chest container used for reserve/enforcement checks
      */
     private static void applySeedClutterPolicy(List<ItemStack> drops, Item seedItem, Container chest) {
         if (seedItem == null) return;
@@ -225,6 +232,8 @@ public class HarvestUtils {
     /**
      * Attempt to replace a broken hoe from the chest inventory if possible.
      * Humanized note: replace the fallen warrior so harvesting can continue.
+     * @param ctx The harvest context for this scan.
+     * @param oldHoe The hoe ItemStack that broke.
      */
     public static void handleBrokenHoe(HarvestContext ctx, ItemStack oldHoe) {
         Constants.LOG.info("[FastHarvester][HOE] Hoe broke during harvest. Previous: {}", oldHoe);
@@ -358,6 +367,14 @@ public class HarvestUtils {
     /**
      * Sync the frame-held hoe back to the world if loader-specific code requires it.
      * Currently a no-op in common; present for platform implementations to hook.
+     */
+    /**
+     * Sync the frame-held hoe back to the world if loader-specific code requires it.
+     * <p>
+     * Platform implementations may update an ItemFrame entity or FastItemFrames block-entity so
+     * the visual representation matches the `HarvestContext.hoe` value.
+     * </p>
+     * @param ctx the harvest context containing the anchor and current hoe
      */
     private static void syncFrameHoe(HarvestContext ctx) {
         // Loader-specific: update the frame/block-held item if possible.

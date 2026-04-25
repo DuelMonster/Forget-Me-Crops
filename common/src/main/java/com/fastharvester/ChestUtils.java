@@ -15,11 +15,14 @@ import java.util.List;
  * ChestUtils: Simple, loader-agnostic helpers for container operations used by FastHarvester.
  */
 public class ChestUtils {
-    public ChestUtils() {}
+    /** Utility class: no instances. */
+    private ChestUtils() {}
 
     /**
      * Check whether the given chest has any available slot or stack room.
      * Humanized aside: returns true if there's somewhere to tuck the seeds away.
+     * @param chest The container to inspect.
+     * @return true when the chest has space for at least one item.
      */
     public static boolean hasSpace(Container chest) {
         if (chest == null) return false;
@@ -34,6 +37,8 @@ public class ChestUtils {
     /**
      * Insert all provided item stacks into the chest, merging stacks where possible.
      * Emotional aside: this is the gentle tidying routine for loot.
+     * @param chest The container to insert into.
+     * @param drops The list of item stacks to insert.
      */
     public static void insertAll(Container chest, List<ItemStack> drops) {
         if (chest == null || drops == null || drops.isEmpty()) return;
@@ -79,6 +84,9 @@ public class ChestUtils {
 
     /**
      * Remove a single item matching {@code item} from the chest, returning true if removed.
+     * @param chest The container to remove from.
+     * @param item The item to remove one instance of.
+     * @return true if an item was removed, false otherwise.
      */
     public static boolean removeOne(Container chest, Item item) {
         if (chest == null || item == null) return false;
@@ -115,6 +123,8 @@ public class ChestUtils {
     /**
      * Take the first hoe found in the chest and return a single-item copy of it.
      * This will decrement the source slot and mark the block entity changed.
+     * @param chest The container to search for a hoe.
+     * @return a single-item copy of the first hoe found, or ItemStack.EMPTY.
      */
     public static net.minecraft.world.item.ItemStack takeFirstHoe(Container chest) {
         if (chest == null) return net.minecraft.world.item.ItemStack.EMPTY;
@@ -145,6 +155,12 @@ public class ChestUtils {
                 || item == Items.MELON_SEEDS || item == Items.PUMPKIN_SEEDS || item == Items.NETHER_WART;
     }
 
+    /**
+     * Count total instances of the specified item in the container.
+     * @param chest The container to inspect.
+     * @param item The item to count.
+     * @return the total count of matching items.
+     */
     public static int countItem(Container chest, Item item) {
         if (chest == null || item == null) return 0;
         int cnt = 0;
