@@ -10,6 +10,7 @@ import com.fastharvester.Config;
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.level.ChunkEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import net.minecraft.server.level.ServerLevel;
@@ -54,11 +55,24 @@ public class NeoForgeFarmTicker {
         bus.addListener(NeoForgeFarmTicker::onChunkLoad);
         bus.addListener(NeoForgeFarmTicker::onChunkUnload);
         bus.addListener(NeoForgeFarmTicker::onServerTick);
+        bus.addListener(NeoForgeFarmTicker::onLevelUnload);
+    }
+
+    private static void onLevelUnload(LevelEvent.Unload event) {
+        try {
+            Constants.LOG.info("[FastHarvester][TICK] world unload — clearing entire FrameRegistry.");
+            FrameRegistry.clearAll();
+        } catch (Throwable t) {
+            Constants.LOG.warn("[FastHarvester][TICK] Failed to handle level unload: {}", t.toString());
+        }
     }
 
     /**
      * Handle chunk unload events: unregister any anchors in the unloading chunk.
-     * Humanized note: we politely forget anchors when their chunks leave — no hoarding allowed.
+     * <p>
+     * We clear out recorded anchors for the chunk so the registry doesn't hold stale references.
+     * </p>
+     * @param event Chunk unload event
      */
     private static void onChunkUnload(ChunkEvent.Unload event) {
         try {
@@ -97,7 +111,10 @@ public class NeoForgeFarmTicker {
 
     /**
      * Handle chunk load events: discover vanilla frames and FastItemFrames in the loaded chunk.
-     * Emotional aside: this is where shy anchors get discovered and invited to the registry.
+     * <p>
+     * Newly discovered frames are validated and registered so they can be scheduled for harvesting.
+     * </p>
+     * @param event Chunk load event
      */
     private static void onChunkLoad(ChunkEvent.Load event) {
         try {
@@ -141,7 +158,10 @@ public class NeoForgeFarmTicker {
 
     /**
      * Server tick handler: process catch-up batches, decrement frame timers, and run scans.
-     * Friendly reminder: work is spread across ticks to keep the server calm and responsive.
+     * <p>
+     * This spreads discovery and scanning across ticks to avoid single-tick spikes.
+     * </p>
+     * @param event Server tick event
      */
     private static void onServerTick(ServerTickEvent.Post event) {
         try {

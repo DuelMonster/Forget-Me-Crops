@@ -3,6 +3,9 @@ package com.fastharvester.platform;
 // 🤝 NeoForgePlatformHelper: bridge-builder and polite translator between mod logic and NeoForge quirks.
 // It smiles, mediates, and sometimes uses reflection when feeling brave.
 
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.phys.AABB;
 import com.fastharvester.platform.services.IPlatformHelper;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLLoader;
@@ -232,6 +235,67 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
             // ignore
         }
         return java.util.Collections.emptyList();
+    }
+    
+    /**
+     * Persist a frame-held item at the given position. Handles vanilla ItemFrame entities
+     * and attempts reflective setters for FastItemFrames block-entities. Marks block-entity
+     * changed and requests a block update on the server when possible.
+     */
+    @Override
+    public void updateFrameItem(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, ItemStack stack) {
+        if (level == null || pos == null) return;
+        try {
+            // Try vanilla ItemFrame entity first
+            try {
+                java.util.List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class,
+                        new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1), e -> true);
+                if (!frames.isEmpty()) {
+                    ItemFrame frame = frames.get(0);
+                    frame.setItem(stack == null ? ItemStack.EMPTY : stack.copy());
+                    return;
+                }
+            } catch (Throwable ignored) {}
+
+            // Try FastItemFrames block-entity or other custom frames via reflection
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be == null) return;
+            // Try setter methods first
+            try {
+                for (java.lang.reflect.Method m : be.getClass().getMethods()) {
+                    String name = m.getName().toLowerCase();
+                    if (!(name.contains("set") || name.contains("display") || name.contains("held") || name.contains("item"))) continue;
+                    if (m.getParameterCount() != 1) continue;
+                    Class<?> p = m.getParameterTypes()[0];
+                    try {
+                        if (p.isAssignableFrom(stack.getClass()) || p.getName().contains("ItemStack") || p == Object.class) {
+                            m.setAccessible(true);
+                            m.invoke(be, stack == null ? ItemStack.EMPTY : stack.copy());
+                            try { be.setChanged(); } catch (Throwable ignored) {}
+                            try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
+                            return;
+                        }
+                    } catch (Throwable ignored) { continue; }
+                }
+            } catch (Throwable ignored) {}
+
+            // Try setting common field names
+            try {
+                String[] fields = new String[] {"item", "displayedItem", "heldItem", "stack"};
+                for (String fn : fields) {
+                    try {
+                        java.lang.reflect.Field fld = be.getClass().getDeclaredField(fn);
+                        fld.setAccessible(true);
+                        fld.set(be, stack == null ? ItemStack.EMPTY : stack.copy());
+                        try { be.setChanged(); } catch (Throwable ignored) {}
+                        try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
+                        return;
+                    } catch (Throwable ignored) {}
+                }
+            } catch (Throwable ignored) {}
+        } catch (Throwable t) {
+            Constants.LOG.debug("[FastHarvester][PLATFORM] updateFrameItem failed at {}: {}", pos, t.toString());
+        }
     }
 }
 

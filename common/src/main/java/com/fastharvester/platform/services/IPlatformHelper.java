@@ -58,4 +58,12 @@ public interface IPlatformHelper {
     default java.util.List<net.minecraft.world.item.ItemStack> getBlockDrops(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.item.ItemStack tool) {
         return java.util.Collections.emptyList();
     }
+
+    /**
+     * Optional platform hook: update the held item on an item-frame/block-frame in the world.
+     * Default implementation is a no-op; platform implementations may override to persist changes.
+     */
+    default void updateFrameItem(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, net.minecraft.world.item.ItemStack stack) {
+        // no-op in common
+    }
 }

@@ -10,6 +10,7 @@ import com.fastharvester.FrameScanner;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.decoration.ItemFrame;
@@ -119,6 +120,16 @@ public class FabricFarmTicker {
                 } catch (Throwable ignored) {}
             } catch (Throwable t) {
                 Constants.LOG.warn("[FastHarvester][TICK] Chunk-unload cleanup error: {}", t.toString());
+            }
+        });
+
+        // Server stopping: clear registry to free memory when the server/world is left
+        ServerLifecycleEvents.SERVER_STOPPING.register((MinecraftServer server) -> {
+            try {
+                Constants.LOG.info("[FastHarvester][TICK] Server stopping — clearing FrameRegistry.");
+                FrameRegistry.clearAll();
+            } catch (Throwable t) {
+                Constants.LOG.warn("[FastHarvester][TICK] Failed to clear FrameRegistry on server stop: {}", t.toString());
             }
         });
 

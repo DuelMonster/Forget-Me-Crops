@@ -56,7 +56,12 @@ public class FastHarvesterNeoForgeConfig {
         BUILDER.pop();
         SPEC = BUILDER.build();
     }
-
+    /**
+     * Synchronize values from the NeoForge config spec into the shared {@code Config} class.
+     * <p>
+     * Called when the mod configuration changes so runtime values reflect the spec.
+     * </p>
+     */
     public static void update() {
         Config.tickInterval = TICK_INTERVAL.get();
         Config.frameRediscoveryInterval = FRAME_REDISCOVERY_INTERVAL.get();
@@ -70,8 +75,4 @@ public class FastHarvesterNeoForgeConfig {
         Config.seedClutterMode = SEED_CLUTTER_MODE.get();
         Config.seedReservePerType = SEED_RESERVE_PER_TYPE.get();
     }
-
-    /**
-     * Synchronize values from NeoForge config spec into the common Config class.
-     */
 }
