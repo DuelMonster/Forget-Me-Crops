@@ -1,5 +1,6 @@
-package com.fastharvester;
+package com.fastharvester.util.loot;
 
+import com.fastharvester.util.hoe.HoeUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
@@ -17,7 +18,6 @@ import java.util.List;
 
 /**
  * LootLogic: The loot goblin of the farm. Figures out what drops when you break a block, and makes sure fortune and silk touch are respected.
- * If you ever wondered why you got 42 potatoes, it's this class (and a little bit of luck).
  */
 public class LootLogic {
 
@@ -27,9 +27,6 @@ public class LootLogic {
     // Cached fake hoes for fortune 0–3, initialised on first harvest.
     private static ItemStack[] fortuneHoes;
 
-    /**
-     * Returns a cached fake hoe with the given fortune level. Because real hoes need a break sometimes.
-     */
     private static ItemStack fortuneHoe(ServerLevel level, int fortune) {
         if (fortuneHoes == null) {
             fortuneHoes = new ItemStack[4];
@@ -45,12 +42,7 @@ public class LootLogic {
     }
 
     /**
-     * Gets the drops for a block, respecting fortune and silk touch. The heart of the loot party.
-     * @param level the server-level context used for loot table resolution
-     * @param pos the block position being queried
-     * @param state the block state at the position
-     * @param hoe the tool used to query drops (may affect fortune / silk-touch)
-     * @return a list of ItemStacks representing the block's drops
+     * Gets the drops for a block, respecting fortune and silk touch.
      */
     public static List<ItemStack> getBlockDrops(ServerLevel level, BlockPos pos, BlockState state, ItemStack hoe) {
         if (state.getBlock() == Blocks.MELON && HoeUtils.hasSilkTouch(level, hoe)) {
