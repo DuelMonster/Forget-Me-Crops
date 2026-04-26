@@ -37,6 +37,8 @@ import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
  * Emotional aside: this exists because the server deserves a gentle wake-up, not a heart attack.
  */
 public class FabricFarmTicker {
+    /** Non-instantiable utility class; all members are static. */
+    private FabricFarmTicker() {}
     private static boolean tickSnapshotLogged = false;
     private static final int CATCHUP_TICKS = 40;
     private static final java.util.Map<String, Integer> rediscoveryCountdown = new java.util.HashMap<>();

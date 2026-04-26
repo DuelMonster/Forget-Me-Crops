@@ -37,12 +37,16 @@ import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
  * It queues pre-existing frames for gradual processing to avoid large single-tick work.
  */
 public class NeoForgeFarmTicker {
+    /** Non-instantiable utility class; all members are static. */
+    private NeoForgeFarmTicker() {}
     private static boolean tickSnapshotLogged = false;
     private static final int CATCHUP_TICKS = 40;
     private static final java.util.Map<String, Integer> rediscoveryCountdown = new java.util.HashMap<>();
     /**
      * Initialize NeoForge listeners for chunk load/unload and server tick processing.
      * Emotional aside: behaves like Fabric's ticker but speaks NeoForge's dialect.
+     *
+     * @param bus event bus to register ticker listeners on
      */
     public static void init(IEventBus bus) {
         bus.addListener(NeoForgeFarmTicker::onChunkLoad);

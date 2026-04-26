@@ -12,6 +12,8 @@ import com.terraformersmc.modmenu.api.ModMenuApi;
  * Opens the improved vanilla config screen.
  */
 public class FastHarvesterFabricModMenu implements ModMenuApi {
+	/** Public no-arg constructor. */
+	public FastHarvesterFabricModMenu() {}
 	/**
 	 * Provide the config screen factory for ModMenu integration.
 	 * Humanized aside: this lets players tweak settings without opening the config file and crying.

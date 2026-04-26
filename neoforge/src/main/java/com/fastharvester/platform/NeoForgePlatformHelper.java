@@ -26,6 +26,8 @@ import net.minecraft.world.phys.Vec3;
  * </p>
  */
 public class NeoForgePlatformHelper implements IPlatformHelper {
+    /** Public no-arg constructor. */
+    public NeoForgePlatformHelper() {}
     /**
      * Returns the name of the platform. (Spoiler: It's "NeoForge"!)
      */

@@ -21,6 +21,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(TitleScreen.class)
 public class MixinTitleScreen {
+    /** Prevent instantiation of this mixin helper class. */
+    private MixinTitleScreen() {}
     /**
      * Injects a log message at the start of the title screen's init method. Because subtlety is overrated.
      */

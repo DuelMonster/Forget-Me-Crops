@@ -24,12 +24,19 @@ import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import net.minecraft.world.InteractionResult;
 
+/**
+ * NeoForge mod initializer: bootstraps FastHarvester on the NeoForge loader,
+ * registers config handlers, and wires the NeoForge farm ticker.
+ */
 @Mod(ModCommon.MOD_ID)
 public final class NeoForgeModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger(ModCommon.MOD_NAME);
 
     /**
      * NeoForge mod initializer: register config listeners and initialize the farm ticker.
+        *
+        * @param modEventBus the mod event bus to register lifecycle listeners on
+        * @param container the mod container instance provided by the loader
      */
     @SuppressWarnings("null")
     public NeoForgeModInitializer(IEventBus modEventBus, ModContainer container) {

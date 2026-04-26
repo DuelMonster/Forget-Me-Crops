@@ -26,6 +26,8 @@ import net.minecraft.world.phys.AABB;
  * </p>
  */
 public class FabricPlatformHelper implements IPlatformHelper {
+    /** Public no-arg constructor. */
+    public FabricPlatformHelper() {}
     /**
      * Returns the name of the platform. Spoiler: It's always "Fabric" here.
      */

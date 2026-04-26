@@ -9,6 +9,12 @@ import net.minecraft.client.gui.screens.Screen;
 public final class NeoForgeClothConfig {
     private NeoForgeClothConfig() {}
 
+    /**
+     * Create the NeoForge ClothConfig screen by delegating to the shared helper.
+     *
+     * @param parent parent screen
+     * @return created config screen
+     */
     public static Screen create(Screen parent) {
         return com.fastharvester.ConfigScreens.create(parent);
     }

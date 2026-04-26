@@ -16,9 +16,15 @@ import net.minecraft.network.chat.Component;
  * dependency on the ClothConfig API.
  */
 public final class ConfigScreens {
-    private ConfigScreens() {}
+        private ConfigScreens() {}
 
-    public static Screen create(Screen parent) {
+        /**
+         * Create the NeoForge config screen using the shared builder.
+         *
+         * @param parent parent screen passed to the ClothConfig builder
+         * @return constructed config screen
+         */
+        public static Screen create(Screen parent) {
         ConfigBuilder builder = ConfigBuilder.create()
                 .setParentScreen(parent)
                 .setTitle(Component.literal("FastHarvester"));

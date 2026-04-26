@@ -1,16 +1,3 @@
-/**
- * FastHarvesterNeoForgeConfig: The config wizard for NeoForge!
- * <p>
- * This class bridges the gap between NeoForge's config system and FastHarvester's loader-agnostic logic.
- * It defines all the magical numbers and toggles that make your farm run smoother than a slime block on ice.
- * </p>
- * <p>
- * Why does this matter? Because every great farm needs a great config—and every config needs a little love (and maybe a few jokes).
- * </p>
- * <p>
- * Loader: NeoForge. Mood: Efficient. Attitude: "Let me handle the details, you handle the crops!"
- * </p>
- */
 package com.fastharvester.neoforge;
 
 // 🛠️ NeoForge config: holds settings and quietly judges your choices.
@@ -22,20 +9,41 @@ import com.fastharvester.enums.RotationMode;
 import com.fastharvester.enums.SeedClutterMode;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
+/**
+ * FastHarvesterNeoForgeConfig: The config wizard for NeoForge!
+ *
+ * This class bridges the gap between NeoForge's config system and FastHarvester's loader-agnostic logic.
+ * It defines all the magical numbers and toggles that make your farm run smoother than a slime block on ice.
+ */
 public class FastHarvesterNeoForgeConfig {
+    /** Prevent instantiation; static-only config helper. */
+    private FastHarvesterNeoForgeConfig() {}
+    /** Builder used to assemble the NeoForge config spec. */
     public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    /** Built NeoForge config spec instance. */
     public static final ModConfigSpec SPEC;
 
+    /** Config spec value for tick interval. */
     public static ModConfigSpec.IntValue TICK_INTERVAL;
+    /** Config spec value for frame rediscovery interval. */
     public static ModConfigSpec.IntValue FRAME_REDISCOVERY_INTERVAL;
+    /** Config spec value for scan range. */
     public static ModConfigSpec.IntValue SCAN_RANGE;
+    /** Config spec value for durability mode. */
     public static ModConfigSpec.EnumValue<DurabilityMode> DURABILITY_MODE;
+    /** Config spec flag for mending negation. */
     public static ModConfigSpec.BooleanValue MENDING_NEGATION;
+    /** Config spec flag for debug logging. */
     public static ModConfigSpec.BooleanValue DEBUG_LOGGING;
+    /** Config spec value for chest full cooldown ticks. */
     public static ModConfigSpec.IntValue CHEST_FULL_COOLDOWN_TICKS;
+    /** Config spec value for maximum spiral duration ticks. */
     public static ModConfigSpec.IntValue MAX_SPIRAL_DURATION_TICKS;
+    /** Config spec value for rotation mode. */
     public static ModConfigSpec.EnumValue<RotationMode> ROTATION_MODE;
+    /** Config spec value for seed clutter mode. */
     public static ModConfigSpec.EnumValue<SeedClutterMode> SEED_CLUTTER_MODE;
+    /** Config spec value for seed reserve per type. */
     public static ModConfigSpec.IntValue SEED_RESERVE_PER_TYPE;
 
     static {
