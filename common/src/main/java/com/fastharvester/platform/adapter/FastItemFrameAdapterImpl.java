@@ -24,6 +24,64 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
     /** Utility: prevent external instantiation (use INSTANCE) */
     private FastItemFrameAdapterImpl() {}
 
+    // --- API-first reflective bindings (preferred if available) ---
+    private static volatile boolean apiAvailable = false;
+    private static Class<?> apiClass = null;
+    private static java.lang.reflect.Method apiGetDisplayedItem = null;
+    private static java.lang.reflect.Method apiGetRotation = null;
+    private static java.lang.reflect.Method apiSetRotation = null;
+
+    static {
+        // Candidate FastItemFrames implementation class names to probe for an API-first path.
+        String[] candidates = new String[] {
+                "com.fuzs.fastitemframes.block.entity.FastItemFrameBlockEntity",
+                "com.fuzs.fastitemframes.block.FastItemFrameBlockEntity",
+                "com.fuzs.fastitemframes.FastItemFrameBlockEntity",
+                "fastitemframes.block.entity.FastItemFrameBlockEntity",
+                "fastitemframes.FastItemFrameBlockEntity",
+                "com.fuzs.fastitemframes.blockentity.FastItemFrameBlockEntity"
+        };
+        for (String cn : candidates) {
+            try {
+                Class<?> cls = Class.forName(cn, false, FastItemFrameAdapterImpl.class.getClassLoader());
+                if (cls != null) {
+                    apiClass = cls;
+                    // find a getter for the displayed/held ItemStack
+                    for (java.lang.reflect.Method m : cls.getMethods()) {
+                        String name = m.getName().toLowerCase();
+                        if (m.getParameterCount() == 0 && net.minecraft.world.item.ItemStack.class.isAssignableFrom(m.getReturnType())) {
+                            if (name.contains("display") || name.contains("held") || name.contains("getitem") || name.contains("getstack")) {
+                                apiGetDisplayedItem = m;
+                                break;
+                            }
+                        }
+                    }
+                    // find rotation getter
+                    for (java.lang.reflect.Method m : cls.getMethods()) {
+                        String name = m.getName().toLowerCase();
+                        if (m.getParameterCount() == 0 && (name.contains("rotation") || name.contains("rot"))) {
+                            if (Number.class.isAssignableFrom(m.getReturnType()) || m.getReturnType().isPrimitive()) {
+                                apiGetRotation = m;
+                                break;
+                            }
+                        }
+                    }
+                    // find rotation setter
+                    for (java.lang.reflect.Method m : cls.getMethods()) {
+                        String name = m.getName().toLowerCase();
+                        if (m.getParameterCount() == 1 && name.contains("set") && name.contains("rotation")) {
+                            apiSetRotation = m;
+                            break;
+                        }
+                    }
+                    apiAvailable = true;
+                    break;
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
     /**
      * Check whether the given `frame` (vanilla `ItemFrame` or a FIF block-entity)
      * appears to be holding a hoe and is associated with a container `chest`.
@@ -38,13 +96,22 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
         try {
             if (frame == null || chest == null) return false;
             ItemStack held = null;
+            // API-first: if the runtime FastItemFrames class was found and this BE is an instance, prefer API methods
+            if (apiAvailable && apiClass != null && apiClass.isInstance(frame)) {
+                try {
+                    if (apiGetDisplayedItem != null) {
+                        Object res = apiGetDisplayedItem.invoke(frame);
+                        if (res instanceof ItemStack) held = (ItemStack) res;
+                    }
+                } catch (Throwable ignored) {}
+            }
             if (frame instanceof ItemFrame) {
                 held = ((ItemFrame) frame).getItem();
                 try {
                     if (((ItemFrame) frame).getDirection() != net.minecraft.core.Direction.UP) return false;
                 } catch (Throwable ignored) {}
             } else if (frame instanceof BlockEntity) {
-                held = extractHeldItem((BlockEntity) frame);
+                if (held == null) held = extractHeldItem((BlockEntity) frame);
             } else {
                 for (Method m : frame.getClass().getMethods()) {
                     String name = m.getName().toLowerCase();
@@ -72,6 +139,9 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
     public static boolean isFastItemFrameBlockEntity(BlockEntity be) {
         if (be == null) return false;
         try {
+            if (apiAvailable && apiClass != null) {
+                if (apiClass.isInstance(be)) return true;
+            }
             String cls = be.getClass().getName().toLowerCase();
             if (cls.contains("fastitemframes")) return true;
         } catch (Throwable ignored) {}
@@ -89,6 +159,13 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
     public static ItemStack extractHeldItem(BlockEntity be) {
         if (be == null) return null;
         try {
+            // API-first extraction
+            if (apiAvailable && apiClass != null && apiClass.isInstance(be) && apiGetDisplayedItem != null) {
+                try {
+                    Object res = apiGetDisplayedItem.invoke(be);
+                    if (res instanceof ItemStack) return (ItemStack) res;
+                } catch (Throwable ignored) {}
+            }
             for (Method m : be.getClass().getMethods()) {
                 String name = m.getName().toLowerCase();
                 if ((name.contains("getdisplayed") || name.contains("getheld") || name.contains("getitem")) && m.getParameterCount() == 0) {
@@ -118,6 +195,13 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
     public static int getRotation(BlockEntity be) {
         if (be == null) return 0;
         try {
+            // API-first getter
+            if (apiAvailable && apiClass != null && apiClass.isInstance(be) && apiGetRotation != null) {
+                try {
+                    Object r = apiGetRotation.invoke(be);
+                    if (r instanceof Number) return ((Number) r).intValue() & 7;
+                } catch (Throwable ignored) {}
+            }
             for (Method m : be.getClass().getMethods()) {
                 String name = m.getName().toLowerCase();
                 if ((name.contains("get") || name.contains("getitem")) && name.contains("rotation") && m.getParameterCount() == 0) {
@@ -144,6 +228,14 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
     public static void setRotation(BlockEntity be, int newRotation) {
         if (be == null) return;
         try {
+            // API-first setter
+            if (apiAvailable && apiClass != null && apiClass.isInstance(be) && apiSetRotation != null) {
+                try {
+                    Class<?> p = apiSetRotation.getParameterTypes()[0];
+                    if (p == int.class || p == Integer.class) { apiSetRotation.invoke(be, newRotation); try { be.setChanged(); } catch (Throwable ignored) {} return; }
+                    if (p == byte.class || p == Byte.class) { apiSetRotation.invoke(be, (byte) newRotation); try { be.setChanged(); } catch (Throwable ignored) {} return; }
+                } catch (Throwable ignored) {}
+            }
             for (Method m : be.getClass().getMethods()) {
                 String name = m.getName().toLowerCase();
                 if (name.contains("set") && name.contains("rotation") && m.getParameterCount() == 1) {
