@@ -128,7 +128,7 @@ public class NeoForgeFarmTicker {
 
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box);
             String dimId = level.dimension().identifier().toString();
-            if (Config.debugLogging) Constants.logInfo("[TICK] NeoForge found {} item frames in chunk {}.", frames.size(), lc.getPos());
+            Constants.logDebug("[TICK] NeoForge found {} item frames in chunk {}.", frames.size(), lc.getPos());
                 for (ItemFrame f : frames) {
                 try {
                     FrameDiscovery.registerVanillaFrameIfValid(dimId, level, f);
@@ -170,7 +170,7 @@ public class NeoForgeFarmTicker {
                     int rem = rediscoveryCountdown.getOrDefault(dimId, Config.frameRediscoveryInterval);
                     rem--;
                     if (rem <= 0) {
-                        Constants.logInfo("[TICK] NeoForge rediscovery pass for {}", dimId);
+                        Constants.logDebug("[TICK] NeoForge rediscovery pass for {}", dimId);
                         CatchupManager.queueLoadedFrames(level, dimId);
                         rem = Config.frameRediscoveryInterval;
                     }
@@ -184,7 +184,7 @@ public class NeoForgeFarmTicker {
 
                 var ready = FrameRegistry.tickAndCollectReady(dimId, level);
                 if (!ready.isEmpty()) {
-                    Constants.logInfo("[TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
+                    Constants.logDebug("[TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
                     FrameScanner scanner = new FrameScanner();
                     for (var anchor : ready) {
                         try {

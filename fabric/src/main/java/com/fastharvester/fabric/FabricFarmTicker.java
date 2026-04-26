@@ -52,7 +52,7 @@ public class FabricFarmTicker {
         ServerChunkEvents.CHUNK_LOAD.register((ServerLevel level, LevelChunk chunk) -> {
             try {
                 // Diagnostic: log that chunk-load handler ran for this chunk
-                if (Config.debugLogging) Constants.logInfo("[TICK] Chunk-load event for chunk {} in {}", chunk.getPos(), level.dimension().identifier().toString());
+                Constants.logDebug("[TICK] Chunk-load event for chunk {} in {}", chunk.getPos(), level.dimension().identifier().toString());
                 String dimId = level.dimension().identifier().toString();
                 int minX = chunk.getPos().getMinBlockX();
                 int minZ = chunk.getPos().getMinBlockZ();
@@ -62,7 +62,7 @@ public class FabricFarmTicker {
 
                 // Vanilla item frames
                 List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box);
-                if (Config.debugLogging) Constants.logInfo("[TICK] Found {} item frames in chunk {} (filtering for UP and hoes afterwards).", frames.size(), chunk.getPos());
+                Constants.logDebug("[TICK] Found {} item frames in chunk {} (filtering for UP and hoes afterwards).", frames.size(), chunk.getPos());
                 for (ItemFrame f : frames) {
                     try {
                         FrameDiscovery.registerVanillaFrameIfValid(dimId, level, f);
@@ -138,7 +138,7 @@ public class FabricFarmTicker {
                     int rem = rediscoveryCountdown.getOrDefault(dimId, Config.frameRediscoveryInterval);
                     rem--;
                     if (rem <= 0) {
-                        Constants.logInfo("[TICK] Running rediscovery pass for {}", dimId);
+                        Constants.logDebug("[TICK] Running rediscovery pass for {}", dimId);
                         CatchupManager.queueLoadedFrames(level, dimId);
                         rem = Config.frameRediscoveryInterval;
                     }
@@ -152,7 +152,7 @@ public class FabricFarmTicker {
                     CatchupManager.processBatch(level, dimId, CATCHUP_TICKS);
                         var ready = FrameRegistry.tickAndCollectReady(dimId, level);
                         if (!ready.isEmpty()) {
-                            Constants.logInfo("[TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
+                            Constants.logDebug("[TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
                             // Decide between synchronous scan (fast path) and tick-sliced scheduling
                             FrameScanner scanner = new FrameScanner();
                             for (var anchor : ready) {

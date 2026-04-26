@@ -73,7 +73,7 @@ public class HarvestUtils {
                 if (s == null || s.isEmpty()) continue;
                 sbBefore.append(s.getCount()).append('x').append(s.getItem()).append(',');
             }
-            Constants.logInfo("[HARVEST] Drops before clutterPolicy: {}", sbBefore.length() > 0 ? sbBefore.toString() : "(none)");
+            Constants.logDebug("[HARVEST] Drops before clutterPolicy: {}", sbBefore.length() > 0 ? sbBefore.toString() : "(none)");
         } catch (Throwable ignored) {}
 
         // Don't let seeds take over your chest like rabbits.
@@ -84,7 +84,7 @@ public class HarvestUtils {
                 if (s == null || s.isEmpty()) continue;
                 sbAfter.append(s.getCount()).append('x').append(s.getItem()).append(',');
             }
-            Constants.logInfo("[HARVEST] Drops after clutterPolicy: {}", sbAfter.length() > 0 ? sbAfter.toString() : "(none)");
+            Constants.logDebug("[HARVEST] Drops after clutterPolicy: {}", sbAfter.length() > 0 ? sbAfter.toString() : "(none)");
         } catch (Throwable ignored) {}
 
         // Prefer to consume a seed from the freshly-harvested drops for replanting so we don't drain the chest reserve.
@@ -101,7 +101,7 @@ public class HarvestUtils {
                         it.remove();
                     }
                     tookFromDropsForReplant = true;
-                    try { Constants.logInfo("[HARVEST] Took seed from drops for replant: {} at {}", seedItem, pos); } catch (Throwable ignored) {}
+                    try { Constants.logDebug("[HARVEST] Took seed from drops for replant: {} at {}", seedItem, pos); } catch (Throwable ignored) {}
                     break;
                 }
             }
@@ -112,7 +112,7 @@ public class HarvestUtils {
             if (cost != null && !cost.isEmpty()) {
                 Item sItem = cost.getItem();
                 int before = ChestUtils.countItem(ctx.chest, sItem);
-                try { Constants.logInfo("[HARVEST] Chest before insertAll has {} of {}", before, sItem); } catch (Throwable ignored) {}
+                try { Constants.logDebug("[HARVEST] Chest before insertAll has {} of {}", before, sItem); } catch (Throwable ignored) {}
             }
         } catch (Throwable ignored) {}
 
@@ -122,7 +122,7 @@ public class HarvestUtils {
             if (cost != null && !cost.isEmpty()) {
                 Item sItem = cost.getItem();
                 int after = ChestUtils.countItem(ctx.chest, sItem);
-                try { Constants.logInfo("[HARVEST] After insertAll: chest has {} of {}", after, sItem); } catch (Throwable ignored) {}
+                try { Constants.logDebug("[HARVEST] After insertAll: chest has {} of {}", after, sItem); } catch (Throwable ignored) {}
             }
         } catch (Throwable ignored) {}
 
