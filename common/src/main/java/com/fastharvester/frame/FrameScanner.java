@@ -23,13 +23,10 @@ import java.lang.reflect.Method;
 import java.util.Map;
 
 import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
-import com.fastharvester.Constants;
-import com.fastharvester.Config;
 import com.fastharvester.util.chest.ChestUtils;
 import com.fastharvester.HarvestUtils;
 import com.fastharvester.HarvestContext;
 import com.fastharvester.util.durability.DurabilityLogic;
-import com.fastharvester.util.loot.LootLogic;
 import java.util.HashMap;
 import java.util.Comparator;
 import java.util.List;
@@ -44,24 +41,47 @@ import java.util.Iterator;
  * FrameScanner: The intrepid explorer of your blocky world!
  */
 public class FrameScanner {
+    /** Maximum frames processed per run. */
     public static final int MAX_FRAMES_PER_RUN = 24;
 
+    /** Default constructor. */
     public FrameScanner() {}
 
+    /**
+     * Anchor: represents a registered frame anchor with its chest and stored hoe.
+     */
     public static class Anchor {
+        /** The associated chest/container (may be null). */
         public final Container chest;
+        /** The position of the item frame anchor. */
         public final BlockPos framePos;
+        /** The stored hoe ItemStack for this anchor. */
         public final ItemStack hoe;
 
+        /**
+         * Create a new Anchor.
+         *
+         * @param chest associated container (may be null)
+         * @param framePos position of the item frame
+         * @param hoe stored hoe ItemStack
+         */
         public Anchor(Container chest, BlockPos framePos, ItemStack hoe) {
             this.chest = chest;
             this.framePos = framePos;
             this.hoe = hoe;
         }
+
         @Override
         public String toString() { return "Anchor[pos="+framePos+",hoe="+hoe+"]"; }
     }
 
+    /**
+     * Perform a full farm scan from the given anchor.
+     *
+     * @param anchor anchor to scan from
+     * @param level level in which to run the scan
+     * @return true if any crops were harvested
+     */
     public boolean scanFarm(Anchor anchor, Level level) {
         Constants.LOG.info("[FastHarvester][SCAN] Starting farm scan from anchor: {}", anchor);
         if (anchor == null || anchor.chest == null || level == null) {
@@ -415,6 +435,14 @@ public class FrameScanner {
 
     private static final Map<String, List<FarmScanTask>> activeScans = new HashMap<>();
 
+    /**
+     * Schedule a farm scan task for the given anchor in the specified dimension.
+     * Duplicate scans for the same anchor are ignored.
+     *
+     * @param dimId dimension identifier
+     * @param anchor anchor to scan
+     * @param level level where the anchor resides
+     */
     public static void submitScan(String dimId, Anchor anchor, Level level) {
         try {
             List<FarmScanTask> list = activeScans.computeIfAbsent(dimId, k -> new ArrayList<>());
@@ -432,6 +460,12 @@ public class FrameScanner {
         }
     }
 
+    /**
+     * Advance all scheduled scan tasks for a dimension; removes finished tasks.
+     *
+     * @param dimId dimension identifier
+     * @param level level context for scans
+     */
     public static void tickScans(String dimId, Level level) {
         List<FarmScanTask> list = activeScans.get(dimId);
         if (list == null || list.isEmpty()) return;

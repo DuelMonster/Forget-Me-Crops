@@ -13,6 +13,14 @@ import java.util.Map;
 public class DurabilityLogic {
     private DurabilityLogic() {}
 
+    /**
+     * Determine whether the hoe should be damaged based on mode and enchantments.
+     *
+     * @param mode configured durability mode
+     * @param hasUnbreaking whether the tool has Unbreaking
+     * @param hasMending whether the tool has Mending
+     * @return true if the hoe should take durability damage
+     */
     public static boolean shouldDamageHoe(DurabilityMode mode, boolean hasUnbreaking, boolean hasMending) {
         if (mode == DurabilityMode.NONE) return false;
         if (mode == DurabilityMode.IGNORE_UNBREAKING) return true;
@@ -23,6 +31,13 @@ public class DurabilityLogic {
         return true;
     }
 
+    /**
+     * Apply one point of damage to the hoe according to configuration and enchantments.
+     *
+     * @param level the level used for randomness and logging (may be null)
+     * @param hoe the hoe ItemStack to damage
+     * @param random optional random provider (kept for compatibility)
+     */
     public static void applyDamage(Level level, ItemStack hoe, Object random) {
         if (hoe == null || hoe.isEmpty()) return;
         if (Config.durabilityMode == DurabilityMode.NONE) return;

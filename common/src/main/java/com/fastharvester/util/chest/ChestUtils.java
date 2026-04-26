@@ -15,7 +15,12 @@ import java.util.List;
  */
 public class ChestUtils {
     private ChestUtils() {}
-
+    /**
+     * Check whether the given container has any free space.
+     *
+     * @param chest container to inspect
+     * @return true if there is at least one empty or partially-filled slot
+     */
     public static boolean hasSpace(Container chest) {
         if (chest == null) return false;
         for (int i = 0; i < chest.getContainerSize(); i++) {
@@ -26,6 +31,12 @@ public class ChestUtils {
         return false;
     }
 
+    /**
+     * Insert all drops into the chest, merging stacks when possible.
+     *
+     * @param chest target container
+     * @param drops list of ItemStack drops to insert
+     */
     public static void insertAll(Container chest, List<ItemStack> drops) {
         if (chest == null || drops == null || drops.isEmpty()) return;
         boolean changed = false;
@@ -66,6 +77,13 @@ public class ChestUtils {
         }
     }
 
+    /**
+     * Remove a single item of the given type from the chest, respecting reserves.
+     *
+     * @param chest target container
+     * @param item item type to remove
+     * @return true if an item was removed
+     */
     public static boolean removeOne(Container chest, Item item) {
         if (chest == null || item == null) return false;
         if (isSeedItem(item)) {
@@ -97,6 +115,12 @@ public class ChestUtils {
         return false;
     }
 
+    /**
+     * Remove and return the first hoe found in the container.
+     *
+     * @param chest container to search
+     * @return a single ItemStack representing the removed hoe, or ItemStack.EMPTY
+     */
     public static net.minecraft.world.item.ItemStack takeFirstHoe(Container chest) {
         if (chest == null) return net.minecraft.world.item.ItemStack.EMPTY;
         for (int i = 0; i < chest.getContainerSize(); i++) {
@@ -126,6 +150,13 @@ public class ChestUtils {
                 || item == Items.MELON_SEEDS || item == Items.PUMPKIN_SEEDS || item == Items.NETHER_WART;
     }
 
+    /**
+     * Count total number of the given item in the container.
+     *
+     * @param chest container to inspect
+     * @param item item type to count
+     * @return total count of the item in the chest
+     */
     public static int countItem(Container chest, Item item) {
         if (chest == null || item == null) return 0;
         int cnt = 0;

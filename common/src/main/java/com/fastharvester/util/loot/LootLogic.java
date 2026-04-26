@@ -43,6 +43,12 @@ public class LootLogic {
 
     /**
      * Gets the drops for a block, respecting fortune and silk touch.
+     *
+     * @param level server level used for loot context and registry lookups
+     * @param pos block position being harvested
+     * @param state block state of the harvested block
+     * @param hoe the tool used (checked for fortune/silk-touch)
+     * @return list of ItemStack drops produced by breaking the block
      */
     public static List<ItemStack> getBlockDrops(ServerLevel level, BlockPos pos, BlockState state, ItemStack hoe) {
         if (state.getBlock() == Blocks.MELON && HoeUtils.hasSilkTouch(level, hoe)) {

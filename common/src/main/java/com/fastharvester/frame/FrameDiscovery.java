@@ -22,6 +22,14 @@ public class FrameDiscovery {
 
     private FrameDiscovery() {}
 
+    /**
+     * Inspect a vanilla `ItemFrame` and register it as an anchor if valid.
+     *
+     * @param dimId dimension identifier
+     * @param level server level containing the frame
+     * @param f the ItemFrame entity to inspect
+     * @return true if the frame was registered
+     */
     public static boolean registerVanillaFrameIfValid(String dimId, ServerLevel level, ItemFrame f) {
         try {
             try { Constants.LOG.debug("[FastHarvester][TICK] Frame at {} direction={}", f.blockPosition(), f.getDirection()); } catch (Throwable ignored) {}
@@ -59,6 +67,15 @@ public class FrameDiscovery {
         }
     }
 
+    /**
+     * Inspect a FastItemFrame block-entity and register it as an anchor if valid.
+     *
+     * @param dimId dimension identifier
+     * @param level server level containing the frame
+     * @param be the block-entity backing the FIF
+     * @param pos position of the frame
+     * @return true if the FIF anchor was registered
+     */
     public static boolean registerFIFIfValid(String dimId, ServerLevel level, BlockEntity be, BlockPos pos) {
         try {
             net.minecraft.world.item.ItemStack held = FastItemFrameAdapterImpl.extractHeldItem(be);
@@ -84,6 +101,14 @@ public class FrameDiscovery {
         }
     }
 
+    /**
+     * Return whether there are farmland crops near the given chest position.
+     *
+     * @param level server level for lookup
+     * @param chestPos position to inspect around
+     * @param r search radius
+     * @return true if a farmland crop is nearby
+     */
     public static boolean isNearbyFarmlandCrop(ServerLevel level, BlockPos chestPos, int r) {
         for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
             BlockState ns = level.getBlockState(chestPos.offset(dx, 0, dz));

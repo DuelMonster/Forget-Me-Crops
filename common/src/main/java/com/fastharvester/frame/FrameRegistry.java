@@ -18,11 +18,19 @@ public class FrameRegistry {
     private static final Map<String, Set<BlockPos>> CHUNK_INDEX = new HashMap<>();
     private static final Map<String, Map<BlockPos, Integer>> PENDING_ROTATIONS = new HashMap<>();
 
+    /**
+     * Internal registry entry representing a discovered frame anchor.
+     */
     public static class FrameEntry {
+        /** Anchor metadata for this registered frame. */
         public final FrameScanner.Anchor anchor;
+        /** Whether this anchor is currently active. */
         public boolean active;
+        /** Ticks until the next scheduled run for this anchor. */
         public int ticksUntilNextRun;
+        /** Last time this anchor was seen (ms since epoch). */
         public long lastSeenMs;
+        /** Last game time at which a rotation was recorded (-1 if none). */
         public long lastRotationGameTime = -1L;
 
         FrameEntry(FrameScanner.Anchor anchor) {
@@ -34,6 +42,14 @@ public class FrameRegistry {
         }
     }
 
+    /**
+     * Register or refresh a frame anchor in the registry.
+     *
+     * @param dimensionId dimension identifier
+     * @param framePos position of the frame anchor
+     * @param chest associated container (may be null)
+     * @param hoe stored hoe ItemStack (may be ItemStack.EMPTY)
+     */
     public static synchronized void registerFrame(String dimensionId, BlockPos framePos, Container chest, ItemStack hoe) {
         Map<BlockPos, FrameEntry> map = framesByDimension.computeIfAbsent(dimensionId, k -> new HashMap<>());
         FrameScanner.Anchor anchor = new FrameScanner.Anchor(chest, framePos, hoe);
@@ -53,6 +69,12 @@ public class FrameRegistry {
         } catch (Throwable ignored) {}
     }
 
+    /**
+     * Unregister a frame anchor from the registry.
+     *
+     * @param dimensionId dimension identifier
+     * @param framePos position of the frame anchor to remove
+     */
     public static synchronized void unregisterFrame(String dimensionId, BlockPos framePos) {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
         if (map == null) return;
@@ -61,12 +83,27 @@ public class FrameRegistry {
         }
     }
 
+    /**
+     * Activate frames discovered in a chunk scan.
+     *
+     * @param dimensionId dimension identifier
+     * @param chunkKey chunk key computed from a BlockPos
+     * @param discoveredFrames list of frame positions discovered in the chunk
+     */
     public static synchronized void activateChunkFrames(String dimensionId, long chunkKey, List<BlockPos> discoveredFrames) {
         String chunkRegistryKey = chunkRegistryKey(dimensionId, chunkKey);
         Set<BlockPos> known = CHUNK_INDEX.computeIfAbsent(chunkRegistryKey, ignored -> new HashSet<>());
         for (BlockPos p : discoveredFrames) known.add(p);
     }
 
+    /**
+     * Reconcile chunk-indexed frames with a fresh discovery list.
+     *
+     * @param dimensionId dimension identifier
+     * @param chunkKey chunk key
+     * @param discoveredFrames list of discovered frame positions
+     * @return list of positions that were deactivated
+     */
     public static synchronized List<BlockPos> reconcileChunkFrames(String dimensionId, long chunkKey, List<BlockPos> discoveredFrames) {
         String chunkRegistryKey = chunkRegistryKey(dimensionId, chunkKey);
         Set<BlockPos> knownKeys = CHUNK_INDEX.computeIfAbsent(chunkRegistryKey, ignored -> new HashSet<>());
@@ -90,6 +127,13 @@ public class FrameRegistry {
         return deactivated;
     }
 
+    /**
+     * Mark all frames from a chunk as inactive and return the list of deactivated positions.
+     *
+     * @param dimensionId dimension identifier
+     * @param chunkKey chunk key
+     * @return list of positions that were deactivated
+     */
     public static synchronized List<BlockPos> markChunkInactive(String dimensionId, long chunkKey) {
         String chunkRegistryKey = chunkRegistryKey(dimensionId, chunkKey);
         Set<BlockPos> frameKeys = CHUNK_INDEX.get(chunkRegistryKey);
@@ -110,6 +154,13 @@ public class FrameRegistry {
         return deactivated;
     }
 
+    /**
+     * Set a cooldown (ticks until next run) for a registered frame.
+     *
+     * @param dimensionId dimension identifier
+     * @param framePos frame position
+     * @param ticks cooldown in ticks
+     */
     public static synchronized void setCooldown(String dimensionId, BlockPos framePos, int ticks) {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
         if (map == null) return;
@@ -120,6 +171,13 @@ public class FrameRegistry {
         Constants.LOG.debug("[FastHarvester][REG] Set cooldown for {} in {}: {} ticks", framePos, dimensionId, ticks);
     }
 
+    /**
+     * Update the stored hoe for a registered frame anchor.
+     *
+     * @param dimensionId dimension identifier
+     * @param framePos frame position
+     * @param hoe replacement hoe ItemStack
+     */
     public static synchronized void updateHoe(String dimensionId, BlockPos framePos, ItemStack hoe) {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
         if (map == null) return;
@@ -140,6 +198,14 @@ public class FrameRegistry {
         Constants.LOG.info("[FastHarvester][REG] Updated hoe for {} in {}.", framePos, dimensionId);
     }
 
+    /**
+     * Record a rotation attempt time for a registered frame.
+     *
+     * @param dimensionId dimension identifier
+     * @param framePos frame position
+     * @param gameTime game time of the attempt
+     * @return true if the frame exists and the time was recorded
+     */
     public static synchronized boolean tryRotation(String dimensionId, BlockPos framePos, long gameTime) {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
         if (map == null) return true;
@@ -149,6 +215,14 @@ public class FrameRegistry {
         return true;
     }
 
+    /**
+     * Schedule a rotation to be applied (batched per-tick).
+     *
+     * @param dimensionId dimension identifier
+     * @param framePos frame position
+     * @param rotation rotation value (0-7)
+     * @param requestGameTime game time of the request
+     */
     public static synchronized void scheduleRotation(String dimensionId, BlockPos framePos, int rotation, long requestGameTime) {
         Map<BlockPos, Integer> map = PENDING_ROTATIONS.computeIfAbsent(dimensionId, k -> new HashMap<>());
         map.put(framePos, rotation & 7);
@@ -159,12 +233,18 @@ public class FrameRegistry {
         }
     }
 
+    /** Clear all registry data across all dimensions. */
     public static synchronized void clearAll() {
         framesByDimension.clear();
         CHUNK_INDEX.clear();
         Constants.LOG.info("[FastHarvester][REG] Cleared all frame registry data.");
     }
 
+    /**
+     * Clear registry entries for a single dimension.
+     *
+     * @param dimensionId dimension identifier
+     */
     public static synchronized void clearDimension(String dimensionId) {
         if (dimensionId == null) return;
         Map<BlockPos, FrameEntry> removed = framesByDimension.remove(dimensionId);
@@ -182,6 +262,14 @@ public class FrameRegistry {
         Constants.LOG.info("[FastHarvester][REG] Cleared {} anchors and {} chunk entries for dimension {}.", removedAnchors, removedKeys.size(), dimensionId);
     }
 
+    /**
+     * Advance internal timers and collect anchors that are ready to run this tick.
+     * Applies pending auto-replacements and flushes scheduled rotations.
+     *
+     * @param dimensionId dimension identifier
+     * @param level server level context
+     * @return list of anchors ready to run this tick
+     */
     public static synchronized List<FrameScanner.Anchor> tickAndCollectReady(String dimensionId, net.minecraft.server.level.ServerLevel level) {
         List<FrameScanner.Anchor> ready = new ArrayList<>();
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
@@ -254,6 +342,12 @@ public class FrameRegistry {
         return ready;
     }
 
+    /**
+     * Count active anchors in the given dimension.
+     *
+     * @param dimensionId dimension identifier
+     * @return number of active anchors
+     */
     public static synchronized int countActiveFrames(String dimensionId) {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
         if (map == null) return 0;
@@ -262,6 +356,12 @@ public class FrameRegistry {
         return cnt;
     }
 
+    /**
+     * Count recorded anchors (active or inactive) in the given dimension.
+     *
+     * @param dimensionId dimension identifier
+     * @return number of recorded anchors
+     */
     public static synchronized int countRecordedFrames(String dimensionId) {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
         return map == null ? 0 : map.size();
