@@ -285,7 +285,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                     Object res = apiGetDisplayedItem.invoke(be);
                     if (res instanceof ItemStack) {
                         try { Constants.logDebug("[FIF] extractHeldItem: apiGetDisplayedItem returned item via {}", apiGetDisplayedItem.getName()); } catch (Throwable ignored) {}
-                        return (ItemStack) res;
+                        return ((ItemStack) res).copy();
                     }
                 } catch (Throwable ignored) {}
             }
@@ -294,14 +294,14 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                 try {
                     Object items = apiGetItems.invoke(be);
                     if (items instanceof java.util.List<?> list && !list.isEmpty()) {
-                        Object first = list.get(0);
-                        if (first instanceof ItemStack) {
-                            try { Constants.logDebug("[FIF] extractHeldItem: apiGetItems returned list size {}", list.size()); } catch (Throwable ignored) {}
-                            return (ItemStack) first;
+                            Object first = list.get(0);
+                            if (first instanceof ItemStack) {
+                                try { Constants.logDebug("[FIF] extractHeldItem: apiGetItems returned list size {}", list.size()); } catch (Throwable ignored) {}
+                                return ((ItemStack) first).copy();
+                            }
+                        } else {
+                            try { Constants.logDebug("[FIF] extractHeldItem: apiGetItems returned null/empty"); } catch (Throwable ignored) {}
                         }
-                    } else {
-                        try { Constants.logDebug("[FIF] extractHeldItem: apiGetItems returned null/empty"); } catch (Throwable ignored) {}
-                    }
                 } catch (Throwable ignored) {}
             }
 
@@ -313,7 +313,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                         Object first = lst.get(0);
                         if (first instanceof ItemStack) {
                             try { Constants.logDebug("[FIF] extractHeldItem: apiItemsField returned list size {}", lst.size()); } catch (Throwable ignored) {}
-                            return (ItemStack) first;
+                            return ((ItemStack) first).copy();
                         }
                     } else {
                         try { Constants.logDebug("[FIF] extractHeldItem: apiItemsField returned null/empty"); } catch (Throwable ignored) {}
@@ -327,7 +327,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                         Object res = m.invoke(be);
                         if (res instanceof ItemStack) {
                             try { Constants.logDebug("[FIF] extractHeldItem: method {} returned ItemStack", m.getName()); } catch (Throwable ignored) {}
-                            return (ItemStack) res;
+                            return ((ItemStack) res).copy();
                         }
                     } catch (Throwable ignored) {}
                 }
@@ -340,13 +340,13 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                     Object v = fld.get(be);
                     if (v instanceof ItemStack) {
                         try { Constants.logDebug("[FIF] extractHeldItem: field {} returned ItemStack", fn); } catch (Throwable ignored) {}
-                        return (ItemStack) v;
+                        return ((ItemStack) v).copy();
                     }
                     if (v instanceof java.util.List<?> list && !list.isEmpty()) {
                         Object first = list.get(0);
                         if (first instanceof ItemStack) {
                             try { Constants.logDebug("[FIF] extractHeldItem: field {} returned list size {}", fn, list.size()); } catch (Throwable ignored) {}
-                            return (ItemStack) first;
+                            return ((ItemStack) first).copy();
                         }
                     }
                 } catch (Throwable ignored) {}
