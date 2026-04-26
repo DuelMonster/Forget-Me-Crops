@@ -68,7 +68,8 @@ Here are the main settings you can change:
 |-------------------------|-------------|-------------------------------------------------------------------------------------------------------------|
 | `tickInterval`          | `300`       | How often each anchor runs. `300` ticks is 15 seconds.                                                     |
 | `frameRediscoveryInterval` | `100`    | How often loaded chunks are rescanned to refresh the recorded frame list.                                  |
-| `scanRange`             | `4`         | How far the farm can reach from the anchor. A value of `4` covers a 9×9 area.                              |
+| `scanRangeX`            | `4`         | How far the farm scans along the X axis from the anchor. A value of `4` covers 4 blocks in each X direction. |
+| `scanRangeZ`            | `4`         | How far the farm scans along the Z axis from the anchor. A value of `4` covers 4 blocks in each Z direction. |
 | `durabilityMode`        | `normal`    | Controls how much wear the hoe takes while harvesting and repairing the farm.                               |
 | `mendingNegation`       | `true`      | If enabled, a hoe with Mending will not lose durability from this mod's actions.                            |
 | `chestFullCooldownTicks`| `100`       | How long the anchor waits before trying again when the chest is full.                                       |

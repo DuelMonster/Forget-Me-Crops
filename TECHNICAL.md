@@ -178,7 +178,8 @@ NeoForge integration:
 |--------------------------|-----------|-----------------------------------------------------|
 | `tickInterval`           | `300`     | Time between anchor runs in ticks                   |
 | `frameRediscoveryInterval` | `100`   | Time between loaded-chunk rediscovery passes for the recorded frame registry |
-| `scanRange`              | `4`       | Max scan radius from the frame; range 4 covers a 9x9 area |
+| `scanRangeX`             | `4`       | Max scan radius along the X axis from the frame; value 4 covers 4 blocks in each X direction |
+| `scanRangeZ`             | `4`       | Max scan radius along the Z axis from the frame; value 4 covers 4 blocks in each Z direction |
 | `durabilityMode`         | `normal`  | Hoe durability behavior                             |
 | `mendingNegation`        | `true`    | If true, Mending prevents durability loss entirely  |
 | `debugLogging`           | `false`   | Enables verbose server log output                   |
