@@ -260,6 +260,7 @@ public class FabricPlatformHelper implements IPlatformHelper {
     public void updateFrameItem(Level level, BlockPos pos, ItemStack stack) {
         if (level == null || pos == null) return;
         try {
+            try { Constants.logDebug("[PLATFORM] updateFrameItem called: pos={} incomingItem={} damage={}", pos, stack == null ? "<null>" : stack.getItem(), stack == null ? -1 : stack.getDamageValue()); } catch (Throwable ignored) {}
             // Try vanilla ItemFrame entity first
             try {
                 java.util.List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class,
@@ -267,16 +268,29 @@ public class FabricPlatformHelper implements IPlatformHelper {
                 if (!frames.isEmpty()) {
                     ItemFrame frame = frames.get(0);
                     frame.setItem(stack == null ? ItemStack.EMPTY : stack.copy());
+                    try { Constants.logDebug("[PLATFORM] updateFrameItem: wrote to vanilla ItemFrame: item={} damage={}", stack == null ? "<null>" : stack.getItem(), stack == null ? -1 : stack.getDamageValue()); } catch (Throwable ignored) {}
                     return;
                 }
             } catch (Throwable ignored) {}
 
-            // Try FastItemFrames block-entity or other custom frames via reflection
+            // Try FastItemFrames block-entity or other custom frames via the adapter (preferred)
             BlockEntity be = level.getBlockEntity(pos);
             if (be == null) return;
-            // Prefer known FastItemFrames heuristic
             try {
-                // Try setter methods first
+                boolean wrote = com.fastharvester.platform.adapter.FastItemFrameAdapterImpl.writeItemToBE(be, stack == null ? ItemStack.EMPTY : stack);
+                if (wrote) {
+                    try { Constants.logDebug("[PLATFORM] updateFrameItem: adapter wrote item to BE {} at {}", be.getClass().getName(), pos); } catch (Throwable ignored) {}
+                    try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
+                    return;
+                } else {
+                    try { Constants.logDebug("[PLATFORM] updateFrameItem: adapter did not find a write path for BE {} at {}", be.getClass().getName(), pos); } catch (Throwable ignored) {}
+                }
+            } catch (Throwable t) {
+                try { Constants.logDebug("[PLATFORM] updateFrameItem: adapter writeItemToBE failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+            }
+
+            // Fallback: Try setter methods first (reflective fallback)
+            try {
                 for (java.lang.reflect.Method m : be.getClass().getMethods()) {
                     String name = m.getName().toLowerCase();
                     if (!(name.contains("set") || name.contains("display") || name.contains("held") || name.contains("item"))) continue;
@@ -288,13 +302,14 @@ public class FabricPlatformHelper implements IPlatformHelper {
                             m.invoke(be, stack == null ? ItemStack.EMPTY : stack.copy());
                             try { be.setChanged(); } catch (Throwable ignored) {}
                             try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
+                            try { Constants.logDebug("[PLATFORM] updateFrameItem: fallback wrote via method {} on {}", m.getName(), be.getClass().getName()); } catch (Throwable ignored) {}
                             return;
                         }
                     } catch (Throwable ignored) { continue; }
                 }
             } catch (Throwable ignored) {}
 
-            // Try setting common field names
+            // Fallback: Try setting common field names
             try {
                 String[] fields = new String[] {"item", "displayedItem", "heldItem", "stack"};
                 for (String fn : fields) {
@@ -304,6 +319,7 @@ public class FabricPlatformHelper implements IPlatformHelper {
                         fld.set(be, stack == null ? ItemStack.EMPTY : stack.copy());
                         try { be.setChanged(); } catch (Throwable ignored) {}
                         try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
+                        try { Constants.logDebug("[PLATFORM] updateFrameItem: fallback wrote via field {} on {}", fn, be.getClass().getName()); } catch (Throwable ignored) {}
                         return;
                     } catch (Throwable ignored) {}
                 }

@@ -1,11 +1,18 @@
 package com.fastharvester.platform.adapter;
 
 import com.fastharvester.FastItemFrameAdapter;
+import com.fastharvester.Constants;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.Container;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
+import java.util.Collection;
+import java.util.List;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -26,63 +33,21 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
 
     // --- API-first reflective bindings (preferred if available) ---
     private static volatile boolean apiAvailable = false;
+    /** Whether a probe attempt has already been performed (successful or not). */
+    private static volatile boolean probeAttempted = false;
     private static Class<?> apiClass = null;
     private static java.lang.reflect.Method apiGetDisplayedItem = null;
+    private static java.lang.reflect.Method apiGetItems = null;
     private static java.lang.reflect.Method apiGetRotation = null;
     private static java.lang.reflect.Method apiSetRotation = null;
+    private static java.lang.reflect.Method apiSetItem = null;
+    private static java.lang.reflect.Method apiSetStack = null;
+    private static java.lang.reflect.Method apiMarkUpdated = null;
+    private static java.lang.reflect.Field apiItemsField = null;
 
-    static {
-        // Candidate FastItemFrames implementation class names to probe for an API-first path.
-        String[] candidates = new String[] {
-            "fuzs.fastitemframes.world.level.block.entity.ItemFrameBlockEntity",
-            "com.fuzs.fastitemframes.block.entity.FastItemFrameBlockEntity",
-            "com.fuzs.fastitemframes.block.FastItemFrameBlockEntity",
-            "com.fuzs.fastitemframes.FastItemFrameBlockEntity",
-            "fastitemframes.block.entity.FastItemFrameBlockEntity",
-            "fastitemframes.FastItemFrameBlockEntity",
-            "com.fuzs.fastitemframes.blockentity.FastItemFrameBlockEntity"
-        };
-        for (String cn : candidates) {
-            try {
-                Class<?> cls = Class.forName(cn, false, FastItemFrameAdapterImpl.class.getClassLoader());
-                if (cls != null) {
-                    apiClass = cls;
-                    // find a getter for the displayed/held ItemStack
-                    for (java.lang.reflect.Method m : cls.getMethods()) {
-                        String name = m.getName().toLowerCase();
-                        if (m.getParameterCount() == 0 && net.minecraft.world.item.ItemStack.class.isAssignableFrom(m.getReturnType())) {
-                            if (name.contains("display") || name.contains("held") || name.contains("getitem") || name.contains("getstack")) {
-                                apiGetDisplayedItem = m;
-                                break;
-                            }
-                        }
-                    }
-                    // find rotation getter
-                    for (java.lang.reflect.Method m : cls.getMethods()) {
-                        String name = m.getName().toLowerCase();
-                        if (m.getParameterCount() == 0 && (name.contains("rotation") || name.contains("rot"))) {
-                            if (Number.class.isAssignableFrom(m.getReturnType()) || m.getReturnType().isPrimitive()) {
-                                apiGetRotation = m;
-                                break;
-                            }
-                        }
-                    }
-                    // find rotation setter
-                    for (java.lang.reflect.Method m : cls.getMethods()) {
-                        String name = m.getName().toLowerCase();
-                        if (m.getParameterCount() == 1 && name.contains("set") && name.contains("rotation")) {
-                            apiSetRotation = m;
-                            break;
-                        }
-                    }
-                    apiAvailable = true;
-                    try { com.fastharvester.Constants.logInfo("[FIF] Detected FastItemFrames API class: {}", cn); } catch (Throwable ignored) {}
-                    break;
-                }
-            } catch (Throwable ignored) {
-            }
-        }
-    }
+    // API probe removed from static init to avoid heavy classloading during
+    // chunk-load handlers. The adapter will fall back to heuristics and
+    // perform any API-specific probing lazily when/if needed at runtime.
 
     /**
      * Check whether the given `frame` (vanilla `ItemFrame` or a FIF block-entity)
@@ -122,6 +87,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                         if (res instanceof ItemStack) { held = (ItemStack) res; break; }
                     }
                 }
+
             }
             if (held == null || held.isEmpty()) return false;
             if (!(held.getItem() instanceof HoeItem)) return false;
@@ -139,6 +105,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
      * @return true when the block entity appears to be a FastItemFrames BE.
      */
     public static boolean isFastItemFrameBlockEntity(BlockEntity be) {
+        ensureApiProbed();
         if (be == null) return false;
         try {
             if (apiAvailable && apiClass != null) {
@@ -151,6 +118,155 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
     }
 
     /**
+     * Ensure we've attempted to discover and bind the FastItemFrames API reflectively.
+     * This is a one-shot, lazy probe executed on first need to avoid heavy
+     * classloading during init or chunk-load handlers. It caches discovered
+     * classes and methods on success and logs an info-level message once.
+     */
+    private static void ensureApiProbed() {
+        if (probeAttempted) return;
+        synchronized (FastItemFrameAdapterImpl.class) {
+            if (probeAttempted) return;
+            probeAttempted = true;
+            try {
+                String[] candidates = new String[]{
+                        "fuzs.fastitemframes.common.blockentity.FastItemFrameBlockEntity",
+                        "fuzs.fastitemframes.common.blockentity.FastItemFrame",
+                        "fuzs.fastitemframes.common.blockentity.FastItemFrameBlockEntityImpl",
+                        "fuzs.fastitemframes.common.blockentity.ItemFrameBlockEntity"
+                };
+                ClassLoader loader = FastItemFrameAdapterImpl.class.getClassLoader();
+                // Try explicit candidate FQCNs first.
+                for (String cn : candidates) {
+                    try {
+                        Class<?> c = Class.forName(cn, false, loader);
+                        if (c == null) continue;
+                        apiClass = c;
+                        // bind methods
+                        bindApiMethods();
+                        apiAvailable = true;
+                        Constants.logInfo("[FIF] Detected FastItemFrames API class: {}", apiClass.getName());
+                        return;
+                    } catch (ClassNotFoundException ignored) {
+                        // try next candidate
+                    }
+                }
+
+                // If the explicit candidates didn't match, attempt a package-prefixed probe.
+                String[] prefixes = new String[]{
+                        "fuzs.fastitemframes",
+                        "fuzs.fastitemframes.world.level.block.entity",
+                        "fuzs.fastitemframes.world.level.blockentity",
+                        "fuzs.fastitemframes.world.level",
+                        "fuzs.fastitemframes.world",
+                };
+                String[] suffixes = new String[]{
+                        "ItemFrameBlockEntity",
+                        "FastItemFrameBlockEntity",
+                        "FastItemFrame",
+                        "ItemFrameBlockEntityImpl",
+                        "FastItemFrameBlockEntityImpl",
+                        "ItemFrameBE",
+                        "FastItemFrameBE",
+                        "ItemFrameBlockEntity"
+                };
+                for (String pre : prefixes) {
+                    for (String suf : suffixes) {
+                        String fq = pre + "." + suf;
+                        try {
+                            Class<?> c = Class.forName(fq, false, loader);
+                            if (c == null) continue;
+                            apiClass = c;
+                            bindApiMethods();
+                            apiAvailable = true;
+                            Constants.logInfo("[FIF] Detected FastItemFrames API class via package probe: {}", apiClass.getName());
+                            return;
+                        } catch (ClassNotFoundException ignored) {
+                            // try next
+                        }
+                    }
+                }
+
+                // nothing matched; keep probeAttempted=true to avoid repeated work
+                Constants.logDebug("[FIF] FastItemFrames API not found during lazy probe.");
+            } catch (Throwable t) {
+                Constants.logDebug("[FIF] API probe failure", t);
+            }
+        }
+    }
+
+    /**
+     * Bind commonly-named API methods on the discovered `apiClass`.
+     * Best-effort: silences NoSuchMethod exceptions and proceeds gracefully.
+     */
+    private static void bindApiMethods() {
+        if (apiClass == null) return;
+        try {
+            String[] getItemNames = new String[]{"getDisplayedItem", "getDisplayed", "getHeldItem", "getHeld", "getItem", "getItemStack"};
+            for (String mname : getItemNames) {
+                try { apiGetDisplayedItem = apiClass.getMethod(mname); break; } catch (NoSuchMethodException ignored) {}
+            }
+            // Try to locate a method that returns a List of items (getItems)
+            for (Method m : apiClass.getMethods()) {
+                try {
+                    if (m.getParameterCount() == 0 && java.util.List.class.isAssignableFrom(m.getReturnType())) {
+                        apiGetItems = m;
+                        break;
+                    }
+                } catch (Throwable ignored) {}
+            }
+            String[] getRotNames = new String[]{"getRotation", "getRotationValue", "rotation", "getRot"};
+            for (String mname : getRotNames) {
+                try { apiGetRotation = apiClass.getMethod(mname); break; } catch (NoSuchMethodException ignored) {}
+            }
+            String[] setRotNames = new String[]{"setRotation", "setRotationValue", "setRot"};
+            for (String mname : setRotNames) {
+                for (Class<?> p : new Class<?>[]{int.class, Integer.class, byte.class, Byte.class}) {
+                    try { apiSetRotation = apiClass.getMethod(mname, p); break; } catch (NoSuchMethodException ignored) {}
+                }
+                if (apiSetRotation != null) break;
+            }
+
+            // Search for setters and helpers similar to the original adapter
+            for (Method method : apiClass.getMethods()) {
+                try {
+                    Class<?>[] params = method.getParameterTypes();
+                    if (apiSetItem == null && ((params.length == 1 && net.minecraft.world.item.ItemStack.class.isAssignableFrom(params[0]))
+                            || (params.length == 2 && net.minecraft.world.item.ItemStack.class.isAssignableFrom(params[0])
+                            && (params[1] == boolean.class || params[1] == Boolean.class)))) {
+                        String name = method.getName().toLowerCase();
+                        if (name.contains("set") && name.contains("item")) {
+                            apiSetItem = method;
+                        }
+                    }
+
+                    if (apiSetStack == null && params.length == 2 && method.getReturnType() == void.class
+                            && (params[0] == int.class || params[0] == Integer.class)
+                            && net.minecraft.world.item.ItemStack.class.isAssignableFrom(params[1])) {
+                        apiSetStack = method;
+                    }
+
+                    if (apiMarkUpdated == null && params.length == 1 && method.getReturnType() == void.class) {
+                        String p0 = params[0].getName();
+                        if (p0.endsWith("ServerLevel") || p0.equals("net.minecraft.server.level.ServerLevel")) {
+                            apiMarkUpdated = method;
+                        }
+                    }
+                } catch (Throwable ignored) {}
+            }
+
+            // Try to find an 'items' field which may hold a List<ItemStack>
+            try {
+                java.lang.reflect.Field f = apiClass.getDeclaredField("items");
+                if (f != null) {
+                    f.setAccessible(true);
+                    apiItemsField = f;
+                }
+            } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {}
+    }
+
+    /**
      * Extract the held `ItemStack` from a FastItemFrames block-entity using
      * a combination of reflective getter checks and common field names.
      *
@@ -159,32 +275,84 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
      * @return the extracted ItemStack when present, or null if none.
      */
     public static ItemStack extractHeldItem(BlockEntity be) {
+        ensureApiProbed();
         if (be == null) return null;
         try {
+            try { Constants.logDebug("[FIF] extractHeldItem: probing BE {} apiAvailable={}", be.getClass().getName(), apiAvailable); } catch (Throwable ignored) {}
             // API-first extraction
             if (apiAvailable && apiClass != null && apiClass.isInstance(be) && apiGetDisplayedItem != null) {
                 try {
                     Object res = apiGetDisplayedItem.invoke(be);
-                    if (res instanceof ItemStack) return (ItemStack) res;
+                    if (res instanceof ItemStack) {
+                        try { Constants.logDebug("[FIF] extractHeldItem: apiGetDisplayedItem returned item via {}", apiGetDisplayedItem.getName()); } catch (Throwable ignored) {}
+                        return (ItemStack) res;
+                    }
+                } catch (Throwable ignored) {}
+            }
+            // If API exposes a list accessor, return the first slot if present
+            if (apiAvailable && apiGetItems != null) {
+                try {
+                    Object items = apiGetItems.invoke(be);
+                    if (items instanceof java.util.List<?> list && !list.isEmpty()) {
+                        Object first = list.get(0);
+                        if (first instanceof ItemStack) {
+                            try { Constants.logDebug("[FIF] extractHeldItem: apiGetItems returned list size {}", list.size()); } catch (Throwable ignored) {}
+                            return (ItemStack) first;
+                        }
+                    } else {
+                        try { Constants.logDebug("[FIF] extractHeldItem: apiGetItems returned null/empty"); } catch (Throwable ignored) {}
+                    }
+                } catch (Throwable ignored) {}
+            }
+
+            // If the API class defines an 'items' field holding a list, try that
+            if (apiItemsField != null) {
+                try {
+                    Object v = apiItemsField.get(be);
+                    if (v instanceof java.util.List<?> lst && !lst.isEmpty()) {
+                        Object first = lst.get(0);
+                        if (first instanceof ItemStack) {
+                            try { Constants.logDebug("[FIF] extractHeldItem: apiItemsField returned list size {}", lst.size()); } catch (Throwable ignored) {}
+                            return (ItemStack) first;
+                        }
+                    } else {
+                        try { Constants.logDebug("[FIF] extractHeldItem: apiItemsField returned null/empty"); } catch (Throwable ignored) {}
+                    }
                 } catch (Throwable ignored) {}
             }
             for (Method m : be.getClass().getMethods()) {
                 String name = m.getName().toLowerCase();
                 if ((name.contains("getdisplayed") || name.contains("getheld") || name.contains("getitem")) && m.getParameterCount() == 0) {
-                    Object res = m.invoke(be);
-                    if (res instanceof ItemStack) return (ItemStack) res;
+                    try {
+                        Object res = m.invoke(be);
+                        if (res instanceof ItemStack) {
+                            try { Constants.logDebug("[FIF] extractHeldItem: method {} returned ItemStack", m.getName()); } catch (Throwable ignored) {}
+                            return (ItemStack) res;
+                        }
+                    } catch (Throwable ignored) {}
                 }
             }
-            String[] fields = new String[]{"item", "displayedItem", "heldItem", "stack"};
+            String[] fields = new String[]{"item", "displayedItem", "heldItem", "stack", "items"};
             for (String fn : fields) {
                 try {
                     Field fld = be.getClass().getDeclaredField(fn);
                     fld.setAccessible(true);
                     Object v = fld.get(be);
-                    if (v instanceof ItemStack) return (ItemStack) v;
+                    if (v instanceof ItemStack) {
+                        try { Constants.logDebug("[FIF] extractHeldItem: field {} returned ItemStack", fn); } catch (Throwable ignored) {}
+                        return (ItemStack) v;
+                    }
+                    if (v instanceof java.util.List<?> list && !list.isEmpty()) {
+                        Object first = list.get(0);
+                        if (first instanceof ItemStack) {
+                            try { Constants.logDebug("[FIF] extractHeldItem: field {} returned list size {}", fn, list.size()); } catch (Throwable ignored) {}
+                            return (ItemStack) first;
+                        }
+                    }
                 } catch (Throwable ignored) {}
             }
         } catch (Throwable ignored) {}
+        try { Constants.logDebug("[FIF] extractHeldItem: no held item found for BE {}", be == null ? "null" : be.getClass().getName()); } catch (Throwable ignored) {}
         return null;
     }
 
@@ -195,6 +363,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
      * @return rotation value (0-7), or 0 on error.
      */
     public static int getRotation(BlockEntity be) {
+        ensureApiProbed();
         if (be == null) return 0;
         try {
             // API-first getter
@@ -228,31 +397,272 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
      * @param newRotation Rotation value to set (0-7).
      */
     public static void setRotation(BlockEntity be, int newRotation) {
+        ensureApiProbed();
         if (be == null) return;
         try {
+            try { Constants.logDebug("[FIF] setRotation: entry be={} requestedRot={} apiAvailable={} apiSetRotation={}", be == null ? "null" : be.getClass().getName(), newRotation & 7, apiAvailable, apiSetRotation == null ? "<none>" : apiSetRotation.getName()); } catch (Throwable ignored) {}
             // API-first setter
             if (apiAvailable && apiClass != null && apiClass.isInstance(be) && apiSetRotation != null) {
                 try {
                     Class<?> p = apiSetRotation.getParameterTypes()[0];
-                    if (p == int.class || p == Integer.class) { apiSetRotation.invoke(be, newRotation); try { be.setChanged(); } catch (Throwable ignored) {} return; }
-                    if (p == byte.class || p == Byte.class) { apiSetRotation.invoke(be, (byte) newRotation); try { be.setChanged(); } catch (Throwable ignored) {} return; }
+                    if (p == int.class || p == Integer.class) {
+                        apiSetRotation.invoke(be, newRotation);
+                        try { be.setChanged(); } catch (Throwable ignored) {}
+                        try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
+                        try { int rb = getRotation(be); Constants.logDebug("[FIF] setRotation: apiSetRotation(int) applied on {} -> requested={} readBack={}", be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
+                        return;
+                    }
+                    if (p == byte.class || p == Byte.class) {
+                        apiSetRotation.invoke(be, (byte) newRotation);
+                        try { be.setChanged(); } catch (Throwable ignored) {}
+                        try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
+                        try { int rb = getRotation(be); Constants.logDebug("[FIF] setRotation: apiSetRotation(byte) applied on {} -> requested={} readBack={}", be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
+                        return;
+                    }
                 } catch (Throwable ignored) {}
             }
+
             for (Method m : be.getClass().getMethods()) {
                 String name = m.getName().toLowerCase();
                 if (name.contains("set") && name.contains("rotation") && m.getParameterCount() == 1) {
                     Class<?> p = m.getParameterTypes()[0];
-                    if (p == int.class || p == Integer.class) { m.invoke(be, newRotation); try { be.setChanged(); } catch (Throwable ignored) {} return; }
-                    if (p == byte.class || p == Byte.class) { m.invoke(be, (byte) newRotation); try { be.setChanged(); } catch (Throwable ignored) {} return; }
+                    try {
+                        if (p == int.class || p == Integer.class) {
+                            m.invoke(be, newRotation);
+                            try { be.setChanged(); } catch (Throwable ignored) {}
+                            try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
+                            try { int rb = getRotation(be); Constants.logDebug("[FIF] setRotation: reflected method {}(int) applied on {} -> requested={} readBack={}", m.getName(), be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
+                            return;
+                        }
+                        if (p == byte.class || p == Byte.class) {
+                            m.invoke(be, (byte) newRotation);
+                            try { be.setChanged(); } catch (Throwable ignored) {}
+                            try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
+                            try { int rb = getRotation(be); Constants.logDebug("[FIF] setRotation: reflected method {}(byte) applied on {} -> requested={} readBack={}", m.getName(), be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
+                            return;
+                        }
+                    } catch (Throwable ignored) {}
                 }
             }
+
             try {
                 Field fld = be.getClass().getDeclaredField("rotation");
                 fld.setAccessible(true);
                 fld.setInt(be, newRotation & 7);
                 try { be.setChanged(); } catch (Throwable ignored) {}
+                try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
+                try { int rb = getRotation(be); Constants.logDebug("[FIF] setRotation: wrote 'rotation' field on {} -> requested={} readBack={}", be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
                 return;
             } catch (Throwable ignored) {}
+
+            // Block-state fallback: update block-state rotation property when BE setters/fields are not available.
+            try {
+                Object levelObj = null;
+                try {
+                    Method gm = be.getClass().getMethod("getLevel");
+                    if (gm != null) levelObj = gm.invoke(be);
+                } catch (Throwable ignored) {}
+                if (levelObj == null) {
+                    try {
+                        Field lf = be.getClass().getDeclaredField("level");
+                        lf.setAccessible(true);
+                        levelObj = lf.get(be);
+                    } catch (Throwable ignored) {}
+                }
+                if (levelObj instanceof Level level) {
+                    try {
+                        BlockPos pos = null;
+                        try {
+                            Method gp = be.getClass().getMethod("getBlockPos");
+                            if (gp != null) pos = (BlockPos) gp.invoke(be);
+                        } catch (Throwable ignored) {}
+                        if (pos == null) {
+                            try {
+                                Field pf = be.getClass().getDeclaredField("pos");
+                                pf.setAccessible(true);
+                                Object pval = pf.get(be);
+                                if (pval instanceof BlockPos) pos = (BlockPos)pval;
+                            } catch (Throwable ignored) {}
+                        }
+                        if (pos != null) {
+                            BlockState state = level.getBlockState(pos);
+                            try {
+                                for (Property<?> prop : state.getProperties()) {
+                                    String name = prop.getName().toLowerCase();
+                                    if (!(name.contains("rotation") || name.contains("rot"))) continue;
+                                    Collection<?> values = prop.getPossibleValues();
+                                    Object chosen = null;
+                                    for (Object v : values) {
+                                        if (v instanceof Number && ((Number)v).intValue() == (newRotation & 7)) { chosen = v; break; }
+                                        if (v.toString().equalsIgnoreCase(String.valueOf(newRotation & 7))) { chosen = v; break; }
+                                    }
+                                    if (chosen != null) {
+                                        BlockState ns = state.setValue((Property) prop, (Comparable) chosen);
+                                        level.setBlock(pos, ns, 3);
+                                        try { be.setChanged(); } catch (Throwable ignored) {}
+                                        try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
+                                        try { Constants.logDebug("[FIF] setRotation via block-state property {} -> {} on {}", prop.getName(), chosen, be.getClass().getName()); } catch (Throwable ignored) {}
+                                        return;
+                                    } else {
+                                        List<?> list = new java.util.ArrayList<>(values);
+                                        if (!list.isEmpty() && list.get(0) instanceof Number) {
+                                            int idx = (newRotation & 7) % list.size();
+                                            Object pick = list.get(idx);
+                                            BlockState ns = state.setValue((Property) prop, (Comparable) pick);
+                                            level.setBlock(pos, ns, 3);
+                                            try { be.setChanged(); } catch (Throwable ignored) {}
+                                            try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
+                                            try { Constants.logDebug("[FIF] setRotation via block-state property {} -> {} (index {}) on {}", prop.getName(), pick, idx, be.getClass().getName()); } catch (Throwable ignored) {}
+                                            return;
+                                        }
+                                    }
+                                }
+                            } catch (Throwable ignored) {}
+                        }
+                    } catch (Throwable ignored) {}
+                }
+            } catch (Throwable t) {
+                try { Constants.logDebug("[FIF] setRotation block-state fallback failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+            }
         } catch (Throwable ignored) {}
     }
+
+    private static void invokeApiMarkUpdatedIfPresent(BlockEntity be) {
+        if (apiMarkUpdated == null || be == null) {
+            try { Constants.logDebug("[FIF] invokeApiMarkUpdatedIfPresent: no apiMarkUpdated or be=null (apiMarkUpdated={} be={})", apiMarkUpdated, be == null ? "null" : be.getClass().getName()); } catch (Throwable ignored) {}
+            return;
+        }
+        try {
+            Object levelObj = null;
+            try {
+                Method gm = be.getClass().getMethod("getLevel");
+                if (gm != null) levelObj = gm.invoke(be);
+            } catch (Throwable ignored) {}
+
+            if (levelObj == null) {
+                try {
+                    Field lf = be.getClass().getDeclaredField("level");
+                    lf.setAccessible(true);
+                    levelObj = lf.get(be);
+                } catch (Throwable ignored) {}
+            }
+
+            if (levelObj != null) {
+                try {
+                    try { Constants.logDebug("[FIF] invokeApiMarkUpdatedIfPresent: invoking apiMarkUpdated on {} with level {}", be.getClass().getName(), levelObj == null ? "null" : levelObj.getClass().getName()); } catch (Throwable ignored) {}
+                    apiMarkUpdated.invoke(be, levelObj);
+                    try { Constants.logDebug("[FIF] invokeApiMarkUpdatedIfPresent: apiMarkUpdated invoked successfully for {}", be.getClass().getName()); } catch (Throwable ignored) {}
+                } catch (Throwable t) {
+                    try { Constants.logDebug("[FIF] invokeApiMarkUpdatedIfPresent invocation failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+                }
+            } else {
+                try { Constants.logDebug("[FIF] invokeApiMarkUpdatedIfPresent: could not resolve level object for BE {}", be.getClass().getName()); } catch (Throwable ignored) {}
+            }
+        } catch (Throwable t) {
+            try { Constants.logDebug("[FIF] invokeApiMarkUpdatedIfPresent failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+        }
+    }
+
+    /**
+     * Attempt to write an ItemStack into a FastItemFrames block-entity using API-first
+     * methods and reflective fallbacks. Returns true on success.
+     */
+    public static boolean writeItemToBE(BlockEntity be, ItemStack stack) {
+        ensureApiProbed();
+        if (be == null) return false;
+        try {
+            try { Constants.logDebug("[FIF] writeItemToBE: attempting write to BE {} with item={} damage={}", be.getClass().getName(), stack == null ? "<null>" : stack.getItem(), stack == null ? -1 : stack.getDamageValue()); } catch (Throwable ignored) {}
+
+            // API-first
+            if (apiAvailable && apiClass != null && apiClass.isInstance(be)) {
+                if (apiSetItem != null) {
+                    try {
+                        apiSetItem.setAccessible(true);
+                        apiSetItem.invoke(be, stack == null ? ItemStack.EMPTY : stack.copy());
+                        try { be.setChanged(); } catch (Throwable ignored) {}
+                        try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
+                        try { Constants.logDebug("[FIF] writeItemToBE: wrote via apiSetItem on {}", be.getClass().getName()); } catch (Throwable ignored) {}
+                        return true;
+                    } catch (Throwable t) {
+                        try { Constants.logDebug("[FIF] writeItemToBE: apiSetItem invocation failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+                    }
+                }
+                if (apiSetStack != null) {
+                    try {
+                        Class<?>[] pts = apiSetStack.getParameterTypes();
+                        if (pts.length == 2 && (pts[0] == int.class || pts[0] == Integer.class)) {
+                            apiSetStack.setAccessible(true);
+                            apiSetStack.invoke(be, Integer.valueOf(0), stack == null ? ItemStack.EMPTY : stack.copy());
+                            try { be.setChanged(); } catch (Throwable ignored) {}
+                            try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
+                            try { Constants.logDebug("[FIF] writeItemToBE: wrote via apiSetStack(index,stack) on {}", be.getClass().getName()); } catch (Throwable ignored) {}
+                            return true;
+                        }
+                    } catch (Throwable t) {
+                        try { Constants.logDebug("[FIF] writeItemToBE: apiSetStack invocation failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+                    }
+                }
+            }
+
+            // Method-based heuristics
+            for (Method m : be.getClass().getMethods()) {
+                String name = m.getName().toLowerCase();
+                if (!(name.contains("set") || name.contains("display") || name.contains("held") || name.contains("item"))) continue;
+                if (m.getParameterCount() != 1) continue;
+                Class<?> p = m.getParameterTypes()[0];
+                try {
+                    if (p.isAssignableFrom(stack.getClass()) || p.getName().toLowerCase().contains("itemstack") || p == Object.class) {
+                        m.setAccessible(true);
+                        m.invoke(be, stack == null ? ItemStack.EMPTY : stack.copy());
+                        try { be.setChanged(); } catch (Throwable ignored) {}
+                        try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
+                        try { Constants.logDebug("[FIF] writeItemToBE: wrote via method {} on {}", m.getName(), be.getClass().getName()); } catch (Throwable ignored) {}
+                        return true;
+                    }
+                } catch (Throwable t) {
+                    try { Constants.logDebug("[FIF] writeItemToBE: method {} failed: {}", m.getName(), t.getMessage()); } catch (Throwable ignored) {}
+                }
+            }
+
+            // Field-based heuristics
+            String[] fields = new String[] {"item", "displayedItem", "heldItem", "stack", "items"};
+            for (String fn : fields) {
+                try {
+                    Field fld = be.getClass().getDeclaredField(fn);
+                    fld.setAccessible(true);
+                    Class<?> ft = fld.getType();
+                    if (ItemStack.class.isAssignableFrom(ft)) {
+                        fld.set(be, stack == null ? ItemStack.EMPTY : stack.copy());
+                        try { be.setChanged(); } catch (Throwable ignored) {}
+                        try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
+                        try { Constants.logDebug("[FIF] writeItemToBE: wrote via field {} on {}", fn, be.getClass().getName()); } catch (Throwable ignored) {}
+                        return true;
+                    }
+                    Object v = fld.get(be);
+                    if (v instanceof java.util.List<?> lst) {
+                        try {
+                            java.util.List<Object> mutable = new java.util.ArrayList<>(lst.size());
+                            mutable.addAll((java.util.Collection<?>) lst);
+                            if (mutable.isEmpty()) mutable.add(stack == null ? ItemStack.EMPTY : stack.copy());
+                            else mutable.set(0, stack == null ? ItemStack.EMPTY : stack.copy());
+                            fld.set(be, mutable);
+                            try { be.setChanged(); } catch (Throwable ignored) {}
+                            try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
+                            try { Constants.logDebug("[FIF] writeItemToBE: wrote into list field {} on {}", fn, be.getClass().getName()); } catch (Throwable ignored) {}
+                            return true;
+                        } catch (Throwable t) {
+                            try { Constants.logDebug("[FIF] writeItemToBE: failed to write list field {}: {}", fn, t.getMessage()); } catch (Throwable ignored) {}
+                        }
+                    }
+                } catch (Throwable ignored) {}
+            }
+            try { Constants.logDebug("[FIF] writeItemToBE: no suitable setter/field found on {}", be.getClass().getName()); } catch (Throwable ignored) {}
+        } catch (Throwable t) {
+            try { Constants.logDebug("[FIF] writeItemToBE: unexpected failure: {}", t.getMessage()); } catch (Throwable ignored) {}
+        }
+        return false;
+    }
+
+
+
 }
