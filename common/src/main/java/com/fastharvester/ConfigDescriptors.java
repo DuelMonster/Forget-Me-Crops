@@ -28,6 +28,16 @@ public final class ConfigDescriptors {
     public static final int SCAN_RANGE_MIN = 1;
     public static final String SCAN_RANGE_TOOLTIP = "Radius (blocks) to search for crops around each frame";
 
+    public static final String SCAN_RANGE_X_LABEL = "Scan Range (X)";
+    public static final int SCAN_RANGE_X_DEFAULT = 4;
+    public static final int SCAN_RANGE_X_MIN = 1;
+    public static final String SCAN_RANGE_X_TOOLTIP = "Horizontal X radius (blocks) to search for crops around each frame";
+
+    public static final String SCAN_RANGE_Z_LABEL = "Scan Range (Z)";
+    public static final int SCAN_RANGE_Z_DEFAULT = 4;
+    public static final int SCAN_RANGE_Z_MIN = 1;
+    public static final String SCAN_RANGE_Z_TOOLTIP = "Horizontal Z radius (blocks) to search for crops around each frame";
+
     public static final String DURABILITY_MODE_LABEL = "Durability Mode";
     public static final DurabilityMode DURABILITY_MODE_DEFAULT = DurabilityMode.NORMAL;
     public static final String DURABILITY_MODE_TOOLTIP = "How item durability is handled when harvesting";

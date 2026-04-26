@@ -38,7 +38,11 @@ public class Config {
     /** Ticks between rediscovery passes for frames. */
     public static int frameRediscoveryInterval = 600;
     /** Scanning radius around each frame (in blocks). */
-    public static int scanRange = 4; // 9x9 area
+    public static int scanRange = 4; // legacy: largest of X/Z
+    /** Scanning radius along the X axis (in blocks). */
+    public static int scanRangeX = 4; // 9x9 area by default
+    /** Scanning radius along the Z axis (in blocks). */
+    public static int scanRangeZ = 4;
     /** How durability and damage are applied to tools. */
     public static DurabilityMode durabilityMode = DurabilityMode.NORMAL;
     /** Whether to negate mending behavior for replacement logic. */
@@ -93,7 +97,8 @@ public class Config {
      * Humanized note: this lets tests and loader-specific code push config values.
      * @param tickInterval ticks between automatic harvest attempts.
      * @param frameRediscoveryInterval ticks between rediscovery passes.
-     * @param scanRange scanning radius around frames.
+    * @param scanRangeX scanning radius along the X axis around frames.
+    * @param scanRangeZ scanning radius along the Z axis around frames.
      * @param durabilityMode how durability is handled.
      * @param mendingNegation whether mending negation is applied.
      * @param debugLogging whether debug logging is enabled.
@@ -103,14 +108,16 @@ public class Config {
      * @param seedClutterMode seed clutter handling mode.
      * @param seedReservePerType minimum seeds to reserve per type.
      */
-    public static void applyServerSettings(int tickInterval, int frameRediscoveryInterval, int scanRange, DurabilityMode durabilityMode,
+    public static void applyServerSettings(int tickInterval, int frameRediscoveryInterval, int scanRangeX, int scanRangeZ, DurabilityMode durabilityMode,
                                            boolean mendingNegation, boolean debugLogging,
                                            int chestFullCooldownTicks, int maxSpiralDurationTicks,
                                            RotationMode rotationMode, SeedClutterMode seedClutterMode,
                                            int seedReservePerType) {
         Config.tickInterval = tickInterval;
         Config.frameRediscoveryInterval = frameRediscoveryInterval;
-        Config.scanRange = scanRange;
+        Config.scanRangeX = scanRangeX;
+        Config.scanRangeZ = scanRangeZ;
+        Config.scanRange = Math.max(scanRangeX, scanRangeZ);
         Config.durabilityMode = durabilityMode;
         Config.mendingNegation = mendingNegation;
         Config.debugLogging = debugLogging;
@@ -137,8 +144,8 @@ public class Config {
      */
     public static void logEffectiveConfig() {
         if (debugLogging) {
-            Constants.logInfo("Debug config enabled: tickInterval={}, scanRange={}, rotationMode={}, seedClutterMode={}, seedReservePerType={}, harvestParticles={}",
-                    tickInterval, scanRange, rotationMode, seedClutterMode, seedReservePerType, harvestParticles);
+            Constants.logInfo("Debug config enabled: tickInterval={}, scanRangeX={}, scanRangeZ={}, rotationMode={}, seedClutterMode={}, seedReservePerType={}, harvestParticles={}",
+                    tickInterval, scanRangeX, scanRangeZ, rotationMode, seedClutterMode, seedReservePerType, harvestParticles);
         }
     }
 
@@ -154,7 +161,12 @@ public class Config {
         Map<String, String> values = readToml(SERVER_CONFIG_PATH);
         tickInterval = positiveInt(values, "tickInterval", tickInterval);
         frameRediscoveryInterval = positiveInt(values, "frameRediscoveryInterval", frameRediscoveryInterval);
+        // Read legacy single-axis value first so it can act as a fallback for older configs.
         scanRange = positiveInt(values, "scanRange", scanRange);
+        scanRangeX = positiveInt(values, "scanRangeX", scanRange);
+        scanRangeZ = positiveInt(values, "scanRangeZ", scanRange);
+        // Keep legacy scanRange in sync for any code still referencing it.
+        scanRange = Math.max(scanRangeX, scanRangeZ);
         durabilityMode = DurabilityMode.fromConfigValue(stringValue(values, "durabilityMode", durabilityMode.configValue()));
         mendingNegation = booleanValue(values, "mendingNegation", mendingNegation);
         debugLogging = booleanValue(values, "debugLogging", debugLogging);
@@ -185,7 +197,8 @@ public class Config {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("tickInterval", tickInterval);
         values.put("frameRediscoveryInterval", frameRediscoveryInterval);
-        values.put("scanRange", scanRange);
+        values.put("scanRangeX", scanRangeX);
+        values.put("scanRangeZ", scanRangeZ);
         values.put("durabilityMode", durabilityMode.configValue());
         values.put("mendingNegation", mendingNegation);
         values.put("debugLogging", debugLogging);

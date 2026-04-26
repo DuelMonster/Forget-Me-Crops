@@ -47,7 +47,9 @@ public class FrameDiscovery {
             if (be instanceof Container chest) {
                 boolean chestWaterlogged = false;
                 try { BlockState cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
-                boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, Math.min(5, Math.max(1, Config.scanRange)));
+                int rX = Math.min(5, Math.max(1, Config.scanRangeX));
+                int rZ = Math.min(5, Math.max(1, Config.scanRangeZ));
+                boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
                 if (nearbyFarmlandCrop && !chestWaterlogged) {
                     Constants.logDebug("[TICK] Skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                     return false;
@@ -105,7 +107,9 @@ public class FrameDiscovery {
             BlockState cs = null;
             try { cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
             try { Constants.logDebug("[FIF] Chest waterlogged at {}: {}, blockState={}", chestPos, chestWaterlogged, cs == null ? "null" : cs.getBlock().getClass().getName()); } catch (Throwable ignored) {}
-            boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, Math.min(5, Math.max(1, Config.scanRange)));
+            int rX = Math.min(5, Math.max(1, Config.scanRangeX));
+            int rZ = Math.min(5, Math.max(1, Config.scanRangeZ));
+            boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
             try { Constants.logDebug("[FIF] nearbyFarmlandCrop={}, chestWaterlogged={}", nearbyFarmlandCrop, chestWaterlogged); } catch (Throwable ignored) {}
             if (nearbyFarmlandCrop && !chestWaterlogged) {
                 Constants.logDebug("[TICK] FIF anchor at {} in {} skipped: chest not waterlogged but nearby farmland crops present.", pos, dimId);
@@ -133,8 +137,8 @@ public class FrameDiscovery {
      * @param r search radius
      * @return true if a farmland crop is nearby
      */
-    public static boolean isNearbyFarmlandCrop(ServerLevel level, BlockPos chestPos, int r) {
-        for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
+    public static boolean isNearbyFarmlandCrop(ServerLevel level, BlockPos chestPos, int rX, int rZ) {
+        for (int dx = -rX; dx <= rX; dx++) for (int dz = -rZ; dz <= rZ; dz++) {
             BlockState ns = level.getBlockState(chestPos.offset(dx, 0, dz));
             net.minecraft.world.level.block.Block b = ns.getBlock();
             if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) return true;

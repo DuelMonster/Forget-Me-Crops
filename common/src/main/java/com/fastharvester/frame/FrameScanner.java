@@ -91,7 +91,8 @@ public class FrameScanner {
 
         int blocksScanned = 0;
         int cropsFound = 0;
-        int range = Math.max(1, Config.scanRange);
+        int rangeX = Math.max(1, Config.scanRangeX);
+        int rangeZ = Math.max(1, Config.scanRangeZ);
         BlockPos center = anchor.framePos;
         String dimId = level.dimension().identifier().toString();
 
@@ -133,7 +134,7 @@ public class FrameScanner {
 
         HarvestContext ctx = new HarvestContext(anchor, level, currentHoe, anchor.chest, null);
 
-        List<SpiralStep> spiral = generateSpiral(center, range);
+        List<SpiralStep> spiral = generateSpiral(center, rangeX, rangeZ);
         int spiralSteps = spiral.size();
         boolean anyHarvested = false;
 
@@ -267,24 +268,35 @@ public class FrameScanner {
     }
 
     private static List<SpiralStep> generateSpiral(BlockPos center, int range) {
+        return generateSpiral(center, range, range);
+    }
+
+    private static List<SpiralStep> generateSpiral(BlockPos center, int rangeX, int rangeZ) {
         List<SpiralStep> spiral = new ArrayList<>();
-        int x = 0, z = 0, dx = 0, dz = -1;
-        int max = (range * 2 + 1) * (range * 2 + 1);
-        for (int i = 0; i < max; i++) {
-            int px = center.getX() + x;
-            int pz = center.getZ() + z;
-            int dist = Math.max(Math.abs(x), Math.abs(z));
-            if (dist <= range) {
-                Direction dir = getSpiralDirection(dx, dz);
-                spiral.add(new SpiralStep(new BlockPos(px, center.getY(), pz), dir));
+        int x = 0, z = 0;
+        spiral.add(new SpiralStep(center, Direction.NORTH));
+        int stepSize = 1;
+        int[] dxs = new int[]{1, 0, -1, 0};
+        int[] dzs = new int[]{0, 1, 0, -1};
+        int dir = 0;
+        int maxCells = (2 * rangeX + 1) * (2 * rangeZ + 1);
+        int visitedCells = 1; // center already added
+        outer:
+        while (visitedCells < maxCells) {
+            for (int rep = 0; rep < 2; rep++) {
+                for (int i = 0; i < stepSize; i++) {
+                    x += dxs[dir];
+                    z += dzs[dir];
+                    if (Math.abs(x) <= rangeX && Math.abs(z) <= rangeZ) {
+                        Direction d = getSpiralDirection(dxs[dir], dzs[dir]);
+                        spiral.add(new SpiralStep(new BlockPos(center.getX() + x, center.getY(), center.getZ() + z), d));
+                        visitedCells++;
+                        if (visitedCells >= maxCells) break outer;
+                    }
+                }
+                dir = (dir + 1) & 3;
             }
-            if (x == z || (x < 0 && x == -z) || (x > 0 && x == 1 - z)) {
-                int temp = dx;
-                dx = -dz;
-                dz = temp;
-            }
-            x += dx;
-            z += dz;
+            stepSize++;
         }
         return spiral;
     }
@@ -419,13 +431,13 @@ public class FrameScanner {
         return null;
     }
 
-    private static List<BlockPos> bfsDiscoverFarm(BlockPos center, Level level, int range) {
+    private static List<BlockPos> bfsDiscoverFarm(BlockPos center, Level level, int rangeX, int rangeZ) {
         List<BlockPos> result = new ArrayList<>();
         Set<BlockPos> visited = new HashSet<>();
         Deque<BlockPos> q = new ArrayDeque<>();
 
-        for (int dx = -range; dx <= range; dx++) {
-            for (int dz = -range; dz <= range; dz++) {
+        for (int dx = -rangeX; dx <= rangeX; dx++) {
+            for (int dz = -rangeZ; dz <= rangeZ; dz++) {
                 BlockPos p = center.offset(dx, 0, dz);
                 BlockState s = level.getBlockState(p);
                 Block b = s.getBlock();
@@ -438,7 +450,7 @@ public class FrameScanner {
             }
         }
 
-        Constants.logDebug("[SCAN] BFS seeded {} nodes around {} (range {}).", visited.size(), center, range);
+        Constants.logDebug("[SCAN] BFS seeded {} nodes around {} (rangeX={},rangeZ={}).", visited.size(), center, rangeX, rangeZ);
 
         while (!q.isEmpty()) {
             BlockPos cur = q.poll();
@@ -448,7 +460,7 @@ public class FrameScanner {
                 BlockPos np = cur.relative(d);
                 if (visited.contains(np)) continue;
                 int ring = Math.max(Math.abs(np.getX() - center.getX()), Math.abs(np.getZ() - center.getZ()));
-                if (ring > range) continue;
+                if (ring > Math.max(rangeX, rangeZ)) continue;
                 BlockState ns = level.getBlockState(np);
                 Block nb = ns.getBlock();
                 boolean traverse = nb instanceof CropBlock || ns.is(Blocks.FARMLAND) || ns.is(Blocks.DIRT) || ns.is(Blocks.GRASS_BLOCK)
@@ -570,30 +582,32 @@ public class FrameScanner {
             } catch (Throwable ignored) {}
             this.dimId = dimId;
 
-            List<BlockPos> candidates = bfsDiscoverFarm(center, level, Math.max(1, Config.scanRange));
+            int rX = Math.max(1, Config.scanRangeX);
+            int rZ = Math.max(1, Config.scanRangeZ);
+            List<BlockPos> candidates = bfsDiscoverFarm(center, level, rX, rZ);
             if (candidates.isEmpty()) {
-                for (int dx = -Config.scanRange; dx <= Config.scanRange; dx++) for (int dz = -Config.scanRange; dz <= Config.scanRange; dz++) candidates.add(center.offset(dx, 0, dz));
+                for (int dx = -rX; dx <= rX; dx++) for (int dz = -rZ; dz <= rZ; dz++) candidates.add(center.offset(dx, 0, dz));
             }
 
             int maxRing = 0;
             Set<BlockPos> candidateSet = new HashSet<>();
             for (BlockPos p : candidates) {
                 int ring = Math.max(Math.abs(p.getX() - center.getX()), Math.abs(p.getZ() - center.getZ()));
-                if (ring > Config.scanRange) continue;
+                if (ring > Math.max(rX, rZ)) continue;
                 ringMap.computeIfAbsent(ring, k -> new ArrayList<>()).add(p);
                 maxRing = Math.max(maxRing, ring);
                 candidateSet.add(p);
             }
             this.computedMaxRing = maxRing;
 
-            int range = Math.max(1, Config.scanRange);
+            int range = Math.max(rX, rZ);
             spiralPositions.add(new SpiralStep(center, Direction.NORTH));
             int x = 0, z = 0;
             int stepSize = 1;
             int[] dxs = new int[]{1, 0, -1, 0};
             int[] dzs = new int[]{0, 1, 0, -1};
             int dir = 0;
-            int maxCells = (2 * range + 1) * (2 * range + 1);
+            int maxCells = (2 * rX + 1) * (2 * rZ + 1);
             int visitedCells = 1;
             outer:
             while (visitedCells < maxCells) {
@@ -601,7 +615,7 @@ public class FrameScanner {
                     for (int i = 0; i < stepSize; i++) {
                         x += dxs[dir];
                         z += dzs[dir];
-                        if (Math.abs(x) <= range && Math.abs(z) <= range) {
+                        if (Math.abs(x) <= rX && Math.abs(z) <= rZ) {
                             visitedCells++;
                             BlockPos p = center.offset(x, 0, z);
                             if (candidateSet.contains(p)) spiralPositions.add(new SpiralStep(p, getSpiralDirection(dxs[dir], dzs[dir])));
@@ -795,11 +809,12 @@ public class FrameScanner {
             currentIndex = endIndex + 1;
 
             if (currentIndex >= totalPositions) {
-                int range = Math.max(1, Config.scanRange);
+                int rX = Math.max(1, Config.scanRangeX);
+                int rZ = Math.max(1, Config.scanRangeZ);
 
                 if (!neighborPassDone) {
-                    for (int dx = -range; dx <= range; dx++) {
-                        for (int dz = -range; dz <= range; dz++) {
+                    for (int dx = -rX; dx <= rX; dx++) {
+                        for (int dz = -rZ; dz <= rZ; dz++) {
                             BlockPos pos = center.offset(dx, 0, dz);
                             BlockState cur = level.getBlockState(pos);
                             if (!cur.isAir()) continue;
