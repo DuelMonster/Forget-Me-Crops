@@ -27,81 +27,81 @@ public final class ConfigScreens {
         public static Screen create(Screen parent) {
         ConfigBuilder builder = ConfigBuilder.create()
                 .setParentScreen(parent)
-                .setTitle(Component.literal("FastHarvester"));
+                .setTitle(Component.literal(com.fastharvester.ConfigDescriptors.TITLE));
 
         ConfigEntryBuilder entryBuilder = builder.entryBuilder();
 
         // Server settings category
-        ConfigCategory server = builder.getOrCreateCategory(Component.literal("Server Settings"));
+        ConfigCategory server = builder.getOrCreateCategory(Component.literal(com.fastharvester.ConfigDescriptors.CATEGORY_SERVER));
 
-        server.addEntry(entryBuilder.startIntField(Component.literal("Tick Interval"), Config.tickInterval)
-                .setDefaultValue(300)
-                .setMin(1)
+        server.addEntry(entryBuilder.startIntField(Component.literal(com.fastharvester.ConfigDescriptors.TICK_INTERVAL_LABEL), Config.tickInterval)
+                .setDefaultValue(com.fastharvester.ConfigDescriptors.TICK_INTERVAL_DEFAULT)
+                .setMin(com.fastharvester.ConfigDescriptors.TICK_INTERVAL_MIN)
                 .setSaveConsumer(v -> Config.tickInterval = v)
-                .setTooltip(Component.literal("Ticks between automatic harvest attempts"))
+                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.TICK_INTERVAL_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startIntField(Component.literal("Scan Range"), Config.scanRange)
-                .setDefaultValue(4)
-                .setMin(1)
+        server.addEntry(entryBuilder.startIntField(Component.literal(com.fastharvester.ConfigDescriptors.SCAN_RANGE_LABEL), Config.scanRange)
+                .setDefaultValue(com.fastharvester.ConfigDescriptors.SCAN_RANGE_DEFAULT)
+                .setMin(com.fastharvester.ConfigDescriptors.SCAN_RANGE_MIN)
                 .setSaveConsumer(v -> Config.scanRange = v)
-                .setTooltip(Component.literal("Radius (blocks) to search for crops around each frame"))
+                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.SCAN_RANGE_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startEnumSelector(Component.literal("Durability Mode"), DurabilityMode.class, Config.durabilityMode)
-                .setDefaultValue(DurabilityMode.NORMAL)
+        server.addEntry(entryBuilder.startEnumSelector(Component.literal(com.fastharvester.ConfigDescriptors.DURABILITY_MODE_LABEL), DurabilityMode.class, Config.durabilityMode)
+                .setDefaultValue(com.fastharvester.ConfigDescriptors.DURABILITY_MODE_DEFAULT)
                 .setSaveConsumer(v -> Config.durabilityMode = v)
-                .setTooltip(Component.literal("How item durability is handled when harvesting"))
+                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.DURABILITY_MODE_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startBooleanToggle(Component.literal("Mending Negation"), Config.mendingNegation)
+        server.addEntry(entryBuilder.startBooleanToggle(Component.literal(com.fastharvester.ConfigDescriptors.MENDING_NEGATION_LABEL), Config.mendingNegation)
                 .setSaveConsumer(v -> Config.mendingNegation = v)
-                .setTooltip(Component.literal("Prevent mending from stopping the harvester's tool use"))
+                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.MENDING_NEGATION_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startBooleanToggle(Component.literal("Debug Logging"), Config.debugLogging)
+        server.addEntry(entryBuilder.startBooleanToggle(Component.literal(com.fastharvester.ConfigDescriptors.DEBUG_LOGGING_LABEL), Config.debugLogging)
                 .setSaveConsumer(v -> Config.debugLogging = v)
-                .setTooltip(Component.literal("Enable verbose debug logging for troubleshooting"))
+                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.DEBUG_LOGGING_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startIntField(Component.literal("Chest Full Cooldown"), Config.chestFullCooldownTicks)
-                .setDefaultValue(100)
-                .setMin(0)
+        server.addEntry(entryBuilder.startIntField(Component.literal(com.fastharvester.ConfigDescriptors.CHEST_FULL_COOLDOWN_LABEL), Config.chestFullCooldownTicks)
+                .setDefaultValue(com.fastharvester.ConfigDescriptors.CHEST_FULL_COOLDOWN_DEFAULT)
+                .setMin(com.fastharvester.ConfigDescriptors.CHEST_FULL_COOLDOWN_MIN)
                 .setSaveConsumer(v -> Config.chestFullCooldownTicks = v)
-                .setTooltip(Component.literal("Ticks to wait before retrying a full chest"))
+                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.CHEST_FULL_COOLDOWN_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startIntField(Component.literal("Max Spiral Duration"), Config.maxSpiralDurationTicks)
-                .setDefaultValue(100)
-                .setMin(1)
+        server.addEntry(entryBuilder.startIntField(Component.literal(com.fastharvester.ConfigDescriptors.MAX_SPIRAL_DURATION_LABEL), Config.maxSpiralDurationTicks)
+                .setDefaultValue(com.fastharvester.ConfigDescriptors.MAX_SPIRAL_DEFAULT)
+                .setMin(com.fastharvester.ConfigDescriptors.MAX_SPIRAL_MIN)
                 .setSaveConsumer(v -> Config.maxSpiralDurationTicks = v)
-                .setTooltip(Component.literal("Maximum ticks allowed for a harvesting spiral search"))
+                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.MAX_SPIRAL_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startEnumSelector(Component.literal("Rotation Mode"), RotationMode.class, Config.rotationMode)
-                .setDefaultValue(RotationMode.FOLLOW_HARVEST_SPIRAL)
+        server.addEntry(entryBuilder.startEnumSelector(Component.literal(com.fastharvester.ConfigDescriptors.ROTATION_MODE_LABEL), RotationMode.class, Config.rotationMode)
+                .setDefaultValue(com.fastharvester.ConfigDescriptors.ROTATION_MODE_DEFAULT)
                 .setSaveConsumer(v -> Config.rotationMode = v)
-                .setTooltip(Component.literal("How frames rotate when harvesting"))
+                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.ROTATION_MODE_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startEnumSelector(Component.literal("Seed Clutter Mode"), SeedClutterMode.class, Config.seedClutterMode)
-                .setDefaultValue(SeedClutterMode.REDUCED)
+        server.addEntry(entryBuilder.startEnumSelector(Component.literal(com.fastharvester.ConfigDescriptors.SEED_CLUTTER_LABEL), SeedClutterMode.class, Config.seedClutterMode)
+                .setDefaultValue(com.fastharvester.ConfigDescriptors.SEED_CLUTTER_DEFAULT)
                 .setSaveConsumer(v -> Config.seedClutterMode = v)
-                .setTooltip(Component.literal("Behaviour for leaving extra seeds after planting"))
+                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.SEED_CLUTTER_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startIntField(Component.literal("Seed Reserve Per Type"), Config.seedReservePerType)
-                .setDefaultValue(80)
-                .setMin(0)
+        server.addEntry(entryBuilder.startIntField(Component.literal(com.fastharvester.ConfigDescriptors.SEED_RESERVE_LABEL), Config.seedReservePerType)
+                .setDefaultValue(com.fastharvester.ConfigDescriptors.SEED_RESERVE_DEFAULT)
+                .setMin(com.fastharvester.ConfigDescriptors.SEED_RESERVE_MIN)
                 .setSaveConsumer(v -> Config.seedReservePerType = v)
-                .setTooltip(Component.literal("Number of seeds to keep in reserve per crop type"))
+                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.SEED_RESERVE_TOOLTIP))
                 .build());
 
         // Client settings category
-        ConfigCategory client = builder.getOrCreateCategory(Component.literal("Client Settings"));
-        client.addEntry(entryBuilder.startBooleanToggle(Component.literal("Harvest Particles"), Config.harvestParticles)
+        ConfigCategory client = builder.getOrCreateCategory(Component.literal(com.fastharvester.ConfigDescriptors.CATEGORY_CLIENT));
+        client.addEntry(entryBuilder.startBooleanToggle(Component.literal(com.fastharvester.ConfigDescriptors.HARVEST_PARTICLES_LABEL), Config.harvestParticles)
                 .setSaveConsumer(v -> Config.harvestParticles = v)
-                .setTooltip(Component.literal("Show particle effects when harvesting"))
+                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.HARVEST_PARTICLES_TOOLTIP))
                 .build());
 
         // Persist config when the ClothConfig screen is saved
