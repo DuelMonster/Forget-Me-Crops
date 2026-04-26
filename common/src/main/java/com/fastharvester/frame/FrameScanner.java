@@ -553,7 +553,7 @@ public class FrameScanner {
             this.anchor = anchor;
             this.level = level;
             this.center = anchor.framePos;
-            this.ctx = new HarvestContext(anchor, level, anchor.hoe, anchor.chest, null);
+            this.ctx = new HarvestContext(anchor, level, (anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy()), anchor.chest, null);
             try {
                 ItemStack frameHoe = readHoeFromFrame(level, center);
                 if (frameHoe != null && !frameHoe.isEmpty() && frameHoe.getItem() instanceof HoeItem) {
