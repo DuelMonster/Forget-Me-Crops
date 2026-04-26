@@ -71,6 +71,7 @@ public class DurabilityLogic {
             int max = hoe.getMaxDamage();
             if (max <= 0) return;
 
+            int current = hoe.getDamageValue();
             boolean applyDamage = true;
             if (Config.durabilityMode == DurabilityMode.NORMAL && unbreakingLevel > 0) {
                 if (level != null) {
@@ -84,14 +85,17 @@ public class DurabilityLogic {
                 }
             }
 
+            try { Constants.logDebug("[DURABILITY] applyDamage pre: item={} currentDamage={} max={} unbreaking={} mending={} willApply={}", hoe.getItem(), current, max, unbreakingLevel, mendingLevel, applyDamage); } catch (Throwable ignored) {}
+
             if (!applyDamage) return;
 
-            int current = hoe.getDamageValue();
             int next = current + 1;
             if (next >= max) {
+                try { Constants.logDebug("[DURABILITY] applyDamage: next >= max -> destroying stack"); } catch (Throwable ignored) {}
                 hoe.setCount(0);
             } else {
                 hoe.setDamageValue(next);
+                try { Constants.logDebug("[DURABILITY] applyDamage post: newDamage={} (was={})", next, current); } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
             Constants.logWarn("[DURABILITY] Failed to apply damage to hoe", t);

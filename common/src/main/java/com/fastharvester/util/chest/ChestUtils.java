@@ -128,6 +128,7 @@ public class ChestUtils {
             if (slot != null && !slot.isEmpty() && slot.getItem() instanceof HoeItem) {
                 ItemStack taken = slot.copy();
                 taken.setCount(1);
+                try { Constants.logDebug("[CHEST] takeFirstHoe: found hoe in slot {} -> item={} damage={} countInSlot={}", i, taken.getItem(), taken.getDamageValue(), slot.getCount()); } catch (Throwable ignored) {}
                 if (slot.getCount() > 1) {
                     ItemStack remaining = slot.copy();
                     remaining.setCount(slot.getCount() - 1);

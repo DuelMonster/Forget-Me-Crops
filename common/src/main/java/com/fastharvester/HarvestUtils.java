@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.Container;
@@ -127,12 +128,39 @@ public class HarvestUtils {
         } catch (Throwable ignored) {}
 
         ItemStack hoeBeforeDamage = ctx.hoe.copy();
-        DurabilityLogic.applyDamage(ctx.level, ctx.hoe, ctx.level.getRandom());
+        try {
+            if (ctx != null && ctx.skipNextDamage) {
+                try { Constants.logDebug("[DURABILITY] Skipping damage for newly-inserted replacement hoe: {} damage={}", ctx.hoe.getItem(), ctx.hoe.getDamageValue()); } catch (Throwable ignored) {}
+                ctx.skipNextDamage = false;
+            } else {
+                DurabilityLogic.applyDamage(ctx.level, ctx.hoe, ctx.level.getRandom());
+            }
+        } catch (Throwable ignored) {}
         if (ctx.hoe.isEmpty()) {
             // RIP, brave hoe. You served us well.
             handleBrokenHoe(ctx, hoeBeforeDamage);
         } else {
-            syncFrameHoe(ctx);
+            // Respect manual removals: if the player removed the hoe from the frame
+            // while this scan is running, do not overwrite their action by writing
+            // the current `ctx.hoe` back to the frame. Instead, attempt the broken-
+            // hoe replacement flow so the chest can supply a replacement if available.
+            FrameScanner.Anchor anchorObj = null;
+            try { anchorObj = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {}
+            if (anchorObj != null && ctx.level != null) {
+                try {
+                    ItemStack liveNow = FrameScanner.readHoeFromFrame(ctx.level, anchorObj.framePos);
+                    if (liveNow == null || liveNow.isEmpty()) {
+                        try { Constants.logDebug("[HOE] Detected manual removal from frame at {}; invoking replacement flow", anchorObj.framePos); } catch (Throwable ignored) {}
+                        try { handleBrokenHoe(ctx, hoeBeforeDamage); } catch (Throwable ignored) {}
+                    } else {
+                        syncFrameHoe(ctx);
+                    }
+                } catch (Throwable ignored) {
+                    syncFrameHoe(ctx);
+                }
+            } else {
+                syncFrameHoe(ctx);
+            }
         }
 
         // If we already reserved a seed from the drops, use that for replant; otherwise attempt to remove from chest (respecting reserve).
@@ -257,6 +285,9 @@ public class HarvestUtils {
                     ItemStack newHoe = replacement.copy();
                     newHoe.setCount(1);
                     ctx.hoe = newHoe;
+                    // Give the replacement a one-step immunity to avoid being damaged immediately
+                    try { ctx.skipNextDamage = true; } catch (Throwable ignored) {}
+                    try { Constants.logDebug("[HOE] Replacement assigned to ctx.hoe: item={} damage={} (skipNextDamage={})", ctx.hoe.getItem(), ctx.hoe.getDamageValue(), ctx.skipNextDamage); } catch (Throwable ignored) {}
                 } catch (Throwable ignored) {}
 
                 // Update registry entry so future scans see the replacement
@@ -269,6 +300,25 @@ public class HarvestUtils {
 
                 // Ask platform to persist the frame-held item if possible
                 try { syncFrameHoe(ctx); } catch (Throwable ignored) {}
+
+                // Verify the replacement actually appeared on the frame; if not, return it to the chest and abort
+                try {
+                    ItemStack verified = FrameScanner.readHoeFromFrame(ctx.level, anchor == null ? null : anchor.framePos);
+                    if (verified == null || verified.isEmpty() || !(verified.getItem() instanceof HoeItem)) {
+                        try { ChestUtils.insertAll(ctx.chest, java.util.List.of(replacement)); } catch (Throwable ignored) {}
+                        try {
+                            if (anchor != null) {
+                                String dimId = ctx.level.dimension().identifier().toString();
+                                FrameRegistry.updateHoe(dimId, anchor.framePos, net.minecraft.world.item.ItemStack.EMPTY);
+                                FrameRegistry.setCooldown(dimId, anchor.framePos, Config.chestFullCooldownTicks);
+                            }
+                        } catch (Throwable ignored) {}
+                        try { syncFrameHoe(ctx); } catch (Throwable ignored) {}
+                        ctx.chestFull = true;
+                        Constants.logDebug("[HOE] Replacement did not persist to frame; returned to chest and aborting for {}", anchor == null ? "unknown" : anchor.framePos);
+                        return;
+                    }
+                } catch (Throwable ignored) {}
 
                 Constants.logDebug("[HOE] Pulled replacement hoe from chest: {}", replacement);
                 return;

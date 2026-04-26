@@ -97,16 +97,31 @@ public class FrameScanner {
 
         ItemStack currentHoe = anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy();
         try {
+            // Prefer the physical frame-held hoe at scan start; fall back to replacement from chest only when frame is empty.
             ItemStack frameHoe = readHoeFromFrame(level, center);
             if (frameHoe != null && !frameHoe.isEmpty() && frameHoe.getItem() instanceof HoeItem) {
                 currentHoe = frameHoe.copy();
                 try { FrameRegistry.updateHoe(dimId, center, currentHoe.copy()); } catch (Throwable ignored) {}
-            } else if (currentHoe == null || currentHoe.isEmpty()) {
-                ItemStack replacement = ChestUtils.takeFirstHoe(anchor.chest);
-                if (replacement != null && !replacement.isEmpty()) {
-                    try { com.fastharvester.platform.Services.PLATFORM.updateFrameItem(level, center, replacement.copy()); } catch (Throwable ignored) {}
-                    currentHoe = replacement.copy();
-                    try { FrameRegistry.updateHoe(dimId, center, currentHoe.copy()); } catch (Throwable ignored) {}
+            } else {
+                // Frame is empty; attempt to pull replacement from chest only if we don't already have a stored hoe
+                if (currentHoe == null || currentHoe.isEmpty()) {
+                    ItemStack replacement = ChestUtils.takeFirstHoe(anchor.chest);
+                    if (replacement != null && !replacement.isEmpty()) {
+                        try {
+                            com.fastharvester.platform.Services.PLATFORM.updateFrameItem(level, center, replacement.copy());
+                        } catch (Throwable t) {
+                            try { Constants.logDebug("[HOE] Failed to apply replacement to frame at {}: {}", center, t.getMessage()); } catch (Throwable ignored) {}
+                        }
+                        // Verify the replacement actually persisted on the frame before updating state
+                        ItemStack verified = readHoeFromFrame(level, center);
+                        if (verified != null && !verified.isEmpty() && verified.getItem() instanceof HoeItem) {
+                            currentHoe = verified.copy();
+                            try { FrameRegistry.updateHoe(dimId, center, currentHoe.copy()); } catch (Throwable ignored) {}
+                        } else {
+                            // Replacement didn't apply; try to put the removed hoe back into the chest
+                            try { ChestUtils.insertAll(anchor.chest, java.util.List.of(replacement)); } catch (Throwable ignored) {}
+                        }
+                    }
                 }
             }
         } catch (Throwable ignored) {}
@@ -148,6 +163,18 @@ public class FrameScanner {
                 case STEP_PER_HARVEST -> {
                 }
             }
+
+            // Before attempting to harvest, ensure a hoe is physically present on the frame.
+            try {
+                ItemStack liveHoe = readHoeFromFrame(level, center);
+                if (liveHoe == null || liveHoe.isEmpty()) {
+                    try { Constants.logDebug("[SCAN] Hoe removed from frame at {} during scan; aborting.", center); } catch (Throwable ignored) {}
+                    ctx.logSummary();
+                    return cropsFound > 0;
+                }
+                // make sure the HarvestContext.hoe matches the live frame hoe
+                try { ctx.hoe = liveHoe.copy(); } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {}
 
             boolean harvested = false;
             try {
@@ -338,14 +365,20 @@ public class FrameScanner {
                 boolean nearMelonPumpkin = false;
                 for (Direction d : dirs) {
                     BlockState ns = level.getBlockState(pos.relative(d));
-                    if (ns.is(Blocks.MELON) || ns.is(Blocks.PUMPKIN) || ns.is(Blocks.MELON_STEM) || ns.is(Blocks.PUMPKIN_STEM)) { nearMelonPumpkin = true; break; }
+                        if (ns.is(Blocks.MELON) || ns.is(Blocks.PUMPKIN) || ns.is(Blocks.MELON_STEM) || ns.is(Blocks.PUMPKIN_STEM)) { nearMelonPumpkin = true; break; }
                 }
                 if (!nearMelonPumpkin) {
                     BlockState farmland = Blocks.FARMLAND.defaultBlockState();
                     level.setBlock(belowPos, farmland, 3);
-                    ItemStack before = anchor.hoe.copy();
-                    com.fastharvester.util.durability.DurabilityLogic.applyDamage(level, anchor.hoe, level.getRandom());
-                    if (anchor.hoe.isEmpty()) {
+                    ItemStack before = (ctx.hoe == null || ctx.hoe.isEmpty()) ? (anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy()) : ctx.hoe.copy();
+                    try {
+                        if (ctx != null && ctx.skipNextDamage) {
+                            ctx.skipNextDamage = false;
+                        } else {
+                            com.fastharvester.util.durability.DurabilityLogic.applyDamage(level, ctx.hoe, level.getRandom());
+                        }
+                    } catch (Throwable ignored) {}
+                    if (ctx.hoe == null || ctx.hoe.isEmpty()) {
                         HarvestUtils.handleBrokenHoe(ctx, before);
                     }
                     Map<Block, Integer> counts2 = new HashMap<>();
@@ -831,9 +864,15 @@ public class FrameScanner {
                                 if (nearMelonPumpkin) continue;
                                 BlockState farmland = Blocks.FARMLAND.defaultBlockState();
                                 level.setBlock(belowPos, farmland, 3);
-                                ItemStack before = anchor.hoe.copy();
-                                DurabilityLogic.applyDamage(level, anchor.hoe, level.getRandom());
-                                if (anchor.hoe.isEmpty()) HarvestUtils.handleBrokenHoe(ctx, before);
+                                ItemStack before = (ctx.hoe == null || ctx.hoe.isEmpty()) ? (anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy()) : ctx.hoe.copy();
+                                try {
+                                    if (ctx != null && ctx.skipNextDamage) {
+                                        ctx.skipNextDamage = false;
+                                    } else {
+                                        DurabilityLogic.applyDamage(level, ctx.hoe, level.getRandom());
+                                    }
+                                } catch (Throwable ignored) {}
+                                if (ctx.hoe == null || ctx.hoe.isEmpty()) HarvestUtils.handleBrokenHoe(ctx, before);
 
                                 Map<Block, Integer> counts2 = new HashMap<>();
                                 for (Direction d : dirs) {
@@ -935,7 +974,7 @@ public class FrameScanner {
         return 0;
     }
 
-    private static ItemStack readHoeFromFrame(Level level, BlockPos pos) {
+    public static ItemStack readHoeFromFrame(Level level, BlockPos pos) {
         try {
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class,
                     new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1), e -> true);
@@ -1020,11 +1059,45 @@ public class FrameScanner {
                                 if (p == int.class || p == Integer.class) {
                                     m.invoke(f, newRotation);
                                     if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
+                                    int got = -999;
+                                    try {
+                                        got = f.getRotation();
+                                    } catch (Throwable ex) {
+                                        try {
+                                            for (Method gm : f.getClass().getMethods()) {
+                                                String nm = gm.getName().toLowerCase();
+                                                if ((nm.contains("get") || nm.contains("getitem")) && nm.contains("rotation") && gm.getParameterCount() == 0) {
+                                                    Object r = gm.invoke(f);
+                                                    if (r instanceof Number) { got = ((Number) r).intValue() & 7; break; }
+                                                }
+                                            }
+                                        } catch (Throwable ex2) {}
+                                    }
+                                    if (Config.debugLogging) {
+                                        try { Constants.logDebug("[ROT] ItemFrame readback at {} => {}", pos, got); } catch (Throwable ex3) {}
+                                    }
                                     return;
                                 }
                                 if (p == byte.class || p == Byte.class) {
                                     m.invoke(f, (byte) newRotation);
                                     if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
+                                    int got = -999;
+                                    try {
+                                        got = f.getRotation();
+                                    } catch (Throwable ex) {
+                                        try {
+                                            for (Method gm : f.getClass().getMethods()) {
+                                                String nm = gm.getName().toLowerCase();
+                                                if ((nm.contains("get") || nm.contains("getitem")) && nm.contains("rotation") && gm.getParameterCount() == 0) {
+                                                    Object r = gm.invoke(f);
+                                                    if (r instanceof Number) { got = ((Number) r).intValue() & 7; break; }
+                                                }
+                                            }
+                                        } catch (Throwable ex2) {}
+                                    }
+                                    if (Config.debugLogging) {
+                                        try { Constants.logDebug("[ROT] ItemFrame readback at {} => {}", pos, got); } catch (Throwable ex3) {}
+                                    }
                                     return;
                                 }
                             } catch (Throwable t) {
@@ -1037,8 +1110,25 @@ public class FrameScanner {
                         fld.setAccessible(true);
                         fld.setInt(f, newRotation & 7);
                         if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation via field on ItemFrame at {} => {}", pos, newRotation & 7); } catch (Throwable ignored) {}
+                        int got = -999;
+                        try {
+                            got = f.getRotation();
+                        } catch (Throwable ex) {
+                            try {
+                                for (Method gm : f.getClass().getMethods()) {
+                                    String nm = gm.getName().toLowerCase();
+                                    if ((nm.contains("get") || nm.contains("getitem")) && nm.contains("rotation") && gm.getParameterCount() == 0) {
+                                        Object r = gm.invoke(f);
+                                        if (r instanceof Number) { got = ((Number) r).intValue() & 7; break; }
+                                    }
+                                }
+                            } catch (Throwable ex2) {}
+                        }
+                        if (Config.debugLogging) {
+                            try { Constants.logDebug("[ROT] ItemFrame readback at {} => {}", pos, got); } catch (Throwable ex3) {}
+                        }
                         return;
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable ignoredField) {}
                 }
             }
 
@@ -1047,7 +1137,12 @@ public class FrameScanner {
                 try {
                     FastItemFrameAdapterImpl.setRotation(be, newRotation);
                     try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
-                    if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {}", pos, newRotation); } catch (Throwable ignored) {}
+                    try {
+                        int rb = FastItemFrameAdapterImpl.getRotation(be);
+                        if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack={})", pos, newRotation & 7, rb); } catch (Throwable logEx1) {}
+                    } catch (Throwable exGet) {
+                        if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack=?)", pos, newRotation & 7); } catch (Throwable logEx2) {}
+                    }
                     return;
                 } catch (Throwable t) {
                     if (Config.debugLogging) try { Constants.logDebug("[ROT] Failed to apply rotation on FIF block-entity at " + pos, t); } catch (Throwable ignored) {}

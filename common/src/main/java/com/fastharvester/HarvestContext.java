@@ -20,6 +20,8 @@ public class HarvestContext {
     public final Level level;
     /** The hoe ItemStack currently in use for this harvest pass. */
     public ItemStack hoe;
+    /** If true, the next durability application on `hoe` should be skipped (replacement grace). */
+    public boolean skipNextDamage = false;
     /** Linked chest container used for drops and replacements. */
     public final Container chest;
     /** Loader-specific configuration object (if any). */
