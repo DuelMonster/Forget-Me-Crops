@@ -1,5 +1,7 @@
 package com.fastharvester;
 
+import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
+
 // 🚀 FastHarvester: the mod's heart. It waves a tiny flag when the mod starts and quietly hopes players enjoy the harvest.
 // Why it matters: startup rituals are emotional anchoring for mods.
 
@@ -34,6 +36,8 @@ public class FastHarvester {
 
         // --- Guaranteed debug log for mod initialization ---
         Constants.logInfo("Mod initialization started! If you see this, the core logic is alive and kicking.");
+        // Force-load the FastItemFrames adapter so its API probe runs during init
+        try { FastItemFrameAdapterImpl.INSTANCE.getClass(); } catch (Throwable ignored) {}
         if (CONFIG != null && Config.debugLogging) {
             Constants.logDebug("Debug logging is ENABLED! Prepare for a flood of farming facts.");
         } else {
