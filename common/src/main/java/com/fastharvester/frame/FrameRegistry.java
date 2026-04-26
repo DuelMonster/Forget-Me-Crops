@@ -231,8 +231,12 @@ public class FrameRegistry {
             FrameEntry fe = frames.get(framePos);
             if (fe != null) {
                 // If a full rotation animation is active for this frame, skip scheduling
-                if (fe.animating) return;
+                if (fe.animating) {
+                    try { Constants.logDebug("[ROT] scheduleRotation SKIP (animating) for {} in {} -> {} (gametime={})", framePos, dimensionId, rotation & 7, requestGameTime); } catch (Throwable ignored) {}
+                    return;
+                }
                 fe.lastRotationGameTime = requestGameTime;
+                try { Constants.logDebug("[ROT] scheduleRotation queued for {} in {} -> {} (gametime={})", framePos, dimensionId, rotation & 7, requestGameTime); } catch (Throwable ignored) {}
             }
         }
         Map<BlockPos, Integer> map = PENDING_ROTATIONS.computeIfAbsent(dimensionId, k -> new HashMap<>());
@@ -248,10 +252,16 @@ public class FrameRegistry {
         FrameEntry fe = map.get(framePos);
         if (fe == null) return;
         fe.animating = animating;
+        try { Constants.logDebug("[ROT] setAnimating {} for {} in {}", animating, framePos, dimensionId); } catch (Throwable ignored) {}
         if (animating) {
             // remove any pending scheduled rotation for this frame to avoid conflicts
             Map<BlockPos, Integer> pending = PENDING_ROTATIONS.get(dimensionId);
-            if (pending != null) pending.remove(framePos);
+            if (pending != null) {
+                Integer prev = pending.remove(framePos);
+                try { Constants.logDebug("[ROT] Removed pending rotation for {} in {} -> {}", framePos, dimensionId, prev); } catch (Throwable ignored) {}
+            } else {
+                try { Constants.logDebug("[ROT] No pending rotations map for {} in {}", framePos, dimensionId); } catch (Throwable ignored) {}
+            }
         }
     }
 
@@ -351,10 +361,14 @@ public class FrameRegistry {
         try {
             Map<BlockPos, Integer> pending = PENDING_ROTATIONS.remove(dimensionId);
             if (pending != null && !pending.isEmpty()) {
+                try { Constants.logDebug("[ROT] Flushing {} pending rotations for {}", pending.size(), dimensionId); } catch (Throwable ignored) {}
                 for (Map.Entry<BlockPos, Integer> p : pending.entrySet()) {
                         try {
                             FrameEntry fe = map.get(p.getKey());
-                            if (fe != null && fe.animating) continue;
+                            if (fe != null && fe.animating) {
+                                try { Constants.logDebug("[ROT] Skipping pending rotation for {} because animating=true", p.getKey()); } catch (Throwable ignored) {}
+                                continue;
+                            }
                             FrameScanner.applyScheduledRotation(level, p.getKey(), p.getValue());
                         } catch (Throwable t) {
                             Constants.logDebug("[ROT] Failed to apply scheduled rotation for " + p.getKey(), t);

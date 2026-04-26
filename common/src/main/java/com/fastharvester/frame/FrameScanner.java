@@ -513,6 +513,8 @@ public class FrameScanner {
         int numberOfTicksNeeded = 0;
         boolean fullAnimationScheduled = false;
         int animationInterval = 1;
+        final List<Integer> fullAnimationSequence = new ArrayList<>();
+        int fullAnimationIndex = 0;
 
         FarmScanTask(Anchor anchor, Level level, String dimId) {
             this.anchor = anchor;
@@ -612,11 +614,15 @@ public class FrameScanner {
                 try {
                     boolean shouldApply = !fullAnimationScheduled || (fullAnimationScheduled && (tickCounter % animationInterval == 0));
                     if (shouldApply) {
-                        int before = getFrameRotation(level, center) & 7;
-                        int next = (before + 1) & 7;
-                        setFrameRotation(level, center, next, fullAnimationScheduled);
-                        int after = getFrameRotation(level, center) & 7;
-                        if (after != before) animationStepsRemaining--;
+                        if (!fullAnimationSequence.isEmpty() && fullAnimationIndex < fullAnimationSequence.size()) {
+                            int next = fullAnimationSequence.get(fullAnimationIndex);
+                            try { Constants.logDebug("[ROT] Animation step (apply) for {} tick={} next={} idx={} remaining={}", center, tickCounter, next, fullAnimationIndex, animationStepsRemaining); } catch (Throwable ignored) {}
+                            setFrameRotation(level, center, next, true);
+                            fullAnimationIndex++;
+                            animationStepsRemaining--;
+                        } else {
+                            if (Config.debugLogging) try { Constants.logDebug("[ROT] No animation sequence available for {} (idx={} size={})", center, fullAnimationIndex, fullAnimationSequence.size()); } catch (Throwable ignored) {}
+                        }
                     }
                 } catch (Throwable ignored) {}
             }
@@ -624,6 +630,9 @@ public class FrameScanner {
             if (fullAnimationScheduled && animationStepsRemaining <= 0) {
                 try { com.fastharvester.frame.FrameRegistry.setAnimating(dimId, center, false); } catch (Throwable ignored) {}
                 fullAnimationScheduled = false;
+                try { fullAnimationSequence.clear(); } catch (Throwable ignored) {}
+                fullAnimationIndex = 0;
+                try { Constants.logDebug("[ROT] Full animation complete for {} — cleared sequence", center); } catch (Throwable ignored) {}
             }
 
             int endIndex = Math.min(totalPositions - 1, currentIndex + positionsPerTick - 1);
@@ -727,9 +736,20 @@ public class FrameScanner {
                         case FULL_ROTATION_PER_HARVEST -> {
                             if (!fullAnimationScheduled) {
                                 fullAnimationScheduled = true;
-                                animationStepsRemaining = 8;
-                                animationInterval = Math.max(1, (int) Math.ceil((double) numberOfTicksNeeded / 8.0));
                                 tickCounter = 0;
+                                // Prepare a deterministic 8-step rotation sequence starting from current rotation
+                                try {
+                                    int start = getFrameRotation(level, center) & 7;
+                                    fullAnimationSequence.clear();
+                                    for (int s = 1; s <= 8; s++) fullAnimationSequence.add((start + s) & 7);
+                                    fullAnimationIndex = 0;
+                                    animationStepsRemaining = fullAnimationSequence.size();
+                                    animationInterval = Math.max(1, (int) Math.ceil((double) numberOfTicksNeeded / (double) fullAnimationSequence.size()));
+                                    try { Constants.logDebug("[ROT] Prepared full animation sequence for {} start={} seq={}", center, start, fullAnimationSequence); } catch (Throwable ignored) {}
+                                } catch (Throwable ignored) {
+                                    animationStepsRemaining = 8;
+                                    animationInterval = Math.max(1, (int) Math.ceil((double) numberOfTicksNeeded / 8.0));
+                                }
                                 try { com.fastharvester.frame.FrameRegistry.setAnimating(dimId, center, true); } catch (Throwable ignored) {}
                             }
                         }
@@ -951,6 +971,7 @@ public class FrameScanner {
         if (bypassCooldown) {
             try { FrameRegistry.tryRotation(dimId, pos, gameTime); } catch (Throwable ignored) {}
             try {
+                try { Constants.logDebug("[ROT] Direct apply (bypass) for {} -> {} (gametime={})", pos, newRotation & 7, gameTime); } catch (Throwable ignored) {}
                 applyScheduledRotation(level, pos, newRotation);
             } catch (Throwable t) {
                 Constants.logDebug("[ROT] applyScheduledRotation failed at " + pos, t);
@@ -974,6 +995,7 @@ public class FrameScanner {
         } catch (Throwable ignored) {}
 
         try {
+            try { Constants.logDebug("[ROT] Request scheduleRotation for {} -> {} (gametime={})", pos, newRotation & 7, gameTime); } catch (Throwable ignored) {}
             FrameRegistry.scheduleRotation(dimId, pos, newRotation, gameTime);
         } catch (Throwable t) {
             Constants.logDebug("[ROT] Failed to schedule rotation for " + pos, t);
@@ -985,7 +1007,7 @@ public class FrameScanner {
         try {
             long gameTime = -1L;
             try { gameTime = level != null ? level.getGameTime() : -1L; } catch (Throwable ignored) {}
-            try { Constants.logInfo("[ROT] applyScheduledRotation pos={} newRot={} mode={} gametime={}", pos, newRotation, Config.rotationMode, gameTime); } catch (Throwable ignored) {}
+            try { Constants.logDebug("[ROT] applyScheduledRotation pos={} newRot={} mode={} gametime={}", pos, newRotation, Config.rotationMode, gameTime); } catch (Throwable ignored) {}
 
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(pos));
             for (ItemFrame f : frames) {
