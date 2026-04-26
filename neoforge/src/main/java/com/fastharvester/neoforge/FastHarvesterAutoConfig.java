@@ -20,7 +20,8 @@ public class FastHarvesterAutoConfig implements ConfigData {
     /** Ticks between automatic rediscovery passes for loaded frames. */
     public int frameRediscoveryInterval = Config.frameRediscoveryInterval;
     /** Radius (blocks) to search for crops around each frame. */
-    public int scanRange = Config.scanRange;
+    public int scanRangeX = Config.scanRangeX;
+    public int scanRangeZ = Config.scanRangeZ;
     /** How durability is handled for tools used by the harvester. */
     public DurabilityMode durabilityMode = Config.durabilityMode;
     /** Whether mending negation is enabled (ignore mending behavior). */

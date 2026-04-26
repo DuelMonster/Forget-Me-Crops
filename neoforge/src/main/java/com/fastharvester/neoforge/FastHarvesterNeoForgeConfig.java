@@ -28,7 +28,8 @@ public class FastHarvesterNeoForgeConfig {
     /** Config spec value for frame rediscovery interval. */
     public static ModConfigSpec.IntValue FRAME_REDISCOVERY_INTERVAL;
     /** Config spec value for scan range. */
-    public static ModConfigSpec.IntValue SCAN_RANGE;
+    public static ModConfigSpec.IntValue SCAN_RANGE_X;
+    public static ModConfigSpec.IntValue SCAN_RANGE_Z;
     /** Config spec value for durability mode. */
     public static ModConfigSpec.EnumValue<DurabilityMode> DURABILITY_MODE;
     /** Config spec flag for mending negation. */
@@ -50,7 +51,8 @@ public class FastHarvesterNeoForgeConfig {
         BUILDER.push("FastHarvester");
         TICK_INTERVAL = BUILDER.defineInRange("tickInterval", 300, 1, Integer.MAX_VALUE);
         FRAME_REDISCOVERY_INTERVAL = BUILDER.defineInRange("frameRediscoveryInterval", 100, 1, Integer.MAX_VALUE);
-        SCAN_RANGE = BUILDER.defineInRange("scanRange", 4, 1, 64);
+        SCAN_RANGE_X = BUILDER.defineInRange("scanRangeX", 4, 1, 64);
+        SCAN_RANGE_Z = BUILDER.defineInRange("scanRangeZ", 4, 1, 64);
         DURABILITY_MODE = BUILDER.defineEnum("durabilityMode", DurabilityMode.NORMAL);
         MENDING_NEGATION = BUILDER.define("mendingNegation", true);
         DEBUG_LOGGING = BUILDER.define("debugLogging", false);
@@ -71,7 +73,8 @@ public class FastHarvesterNeoForgeConfig {
     public static void update() {
         Config.tickInterval = TICK_INTERVAL.get();
         Config.frameRediscoveryInterval = FRAME_REDISCOVERY_INTERVAL.get();
-        Config.scanRange = SCAN_RANGE.get();
+        Config.scanRangeX = SCAN_RANGE_X.get();
+        Config.scanRangeZ = SCAN_RANGE_Z.get();
         Config.durabilityMode = DURABILITY_MODE.get();
         Config.mendingNegation = MENDING_NEGATION.get();
         Config.debugLogging = DEBUG_LOGGING.get();

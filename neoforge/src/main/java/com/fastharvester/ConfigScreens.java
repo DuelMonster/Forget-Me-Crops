@@ -41,11 +41,18 @@ public final class ConfigScreens {
                 .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.TICK_INTERVAL_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startIntField(Component.literal(com.fastharvester.ConfigDescriptors.SCAN_RANGE_LABEL), Config.scanRange)
-                .setDefaultValue(com.fastharvester.ConfigDescriptors.SCAN_RANGE_DEFAULT)
-                .setMin(com.fastharvester.ConfigDescriptors.SCAN_RANGE_MIN)
-                .setSaveConsumer(v -> Config.scanRange = v)
-                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.SCAN_RANGE_TOOLTIP))
+        server.addEntry(entryBuilder.startIntField(Component.literal(com.fastharvester.ConfigDescriptors.SCAN_RANGE_X_LABEL), Config.scanRangeX)
+                .setDefaultValue(com.fastharvester.ConfigDescriptors.SCAN_RANGE_X_DEFAULT)
+                .setMin(com.fastharvester.ConfigDescriptors.SCAN_RANGE_X_MIN)
+                .setSaveConsumer(v -> Config.scanRangeX = v)
+                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.SCAN_RANGE_X_TOOLTIP))
+                .build());
+
+        server.addEntry(entryBuilder.startIntField(Component.literal(com.fastharvester.ConfigDescriptors.SCAN_RANGE_Z_LABEL), Config.scanRangeZ)
+                .setDefaultValue(com.fastharvester.ConfigDescriptors.SCAN_RANGE_Z_DEFAULT)
+                .setMin(com.fastharvester.ConfigDescriptors.SCAN_RANGE_Z_MIN)
+                .setSaveConsumer(v -> Config.scanRangeZ = v)
+                .setTooltip(Component.literal(com.fastharvester.ConfigDescriptors.SCAN_RANGE_Z_TOOLTIP))
                 .build());
 
         server.addEntry(entryBuilder.startEnumSelector(Component.literal(com.fastharvester.ConfigDescriptors.DURABILITY_MODE_LABEL), DurabilityMode.class, Config.durabilityMode)

@@ -58,7 +58,7 @@ public final class NeoForgeModInitializer {
 
             // Sync loaded values into the shared Config object
             holder.registerLoadListener((h, d) -> {
-                Config.applyServerSettings(d.tickInterval, d.frameRediscoveryInterval, d.scanRange,
+                Config.applyServerSettings(d.tickInterval, d.frameRediscoveryInterval, d.scanRangeX, d.scanRangeZ,
                     d.durabilityMode, d.mendingNegation, d.debugLogging,
                     d.chestFullCooldownTicks, d.maxSpiralDurationTicks,
                     d.rotationMode, d.seedClutterMode, d.seedReservePerType);
@@ -68,7 +68,7 @@ public final class NeoForgeModInitializer {
 
             // When autoconfig saves, persist to our toml files.
             holder.registerSaveListener((h, d) -> {
-                Config.applyServerSettings(d.tickInterval, d.frameRediscoveryInterval, d.scanRange,
+                Config.applyServerSettings(d.tickInterval, d.frameRediscoveryInterval, d.scanRangeX, d.scanRangeZ,
                     d.durabilityMode, d.mendingNegation, d.debugLogging,
                     d.chestFullCooldownTicks, d.maxSpiralDurationTicks,
                     d.rotationMode, d.seedClutterMode, d.seedReservePerType);
