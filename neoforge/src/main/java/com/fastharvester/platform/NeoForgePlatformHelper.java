@@ -103,10 +103,23 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
             } catch (Throwable ignored) {
             }
 
-            // Try FastItemFrames block-entity or other custom frames via reflection
+            // Try FastItemFrames block-entity or other custom frames via the adapter (preferred)
             BlockEntity be = level.getBlockEntity(pos);
             if (be == null)
                 return;
+            try {
+                boolean wrote = com.fastharvester.platform.adapter.FastItemFrameAdapterImpl.writeItemToBE(be, stack == null ? ItemStack.EMPTY : stack.copy());
+                if (wrote) {
+                    try { Constants.logDebug("[PLATFORM] updateFrameItem: adapter wrote item to BE {} at {}", be.getClass().getName(), pos); } catch (Throwable ignored) {}
+                    try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
+                    return;
+                } else {
+                    try { Constants.logDebug("[PLATFORM] updateFrameItem: adapter did not find a write path for BE {} at {}", be.getClass().getName(), pos); } catch (Throwable ignored) {}
+                }
+            } catch (Throwable t) {
+                try { Constants.logDebug("[PLATFORM] updateFrameItem: adapter writeItemToBE failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+            }
+
             // Fallback: use shared reflective helper for BE method/field writes
             try {
                 boolean wrote = com.fastharvester.platform.PlatformReflective.reflectiveUpdateFrameItemFallback(level, pos, be, stack == null ? ItemStack.EMPTY : stack.copy());
