@@ -52,7 +52,7 @@ public class HarvestContext {
         this.config = config;
         this.harvestedCount = 0;
         this.blocksScanned = 0;
-        Constants.logInfo("[CTX] Created new HarvestContext: anchor={}, level={}, hoe={}, chest={}, config={}", anchor, level, hoe, chest, config);
+        Constants.logDebug("[CTX] Created new HarvestContext: anchor={}, level={}, hoe={}, chest={}, config={}", anchor, level, hoe, chest, config);
     }
     /**
      * Increment the harvested counter and emit a debug message.
@@ -74,6 +74,6 @@ public class HarvestContext {
      * Log a summary of the harvest context, useful at the end of a scan.
      */
     public void logSummary() {
-        Constants.logInfo("[CTX] Harvest summary: harvestedCount={}, blocksScanned={}", harvestedCount, blocksScanned);
+        Constants.logDebug("[CTX] Harvest summary: harvestedCount={}, blocksScanned={}", harvestedCount, blocksScanned);
     }
 }

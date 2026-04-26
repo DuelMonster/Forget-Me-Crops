@@ -83,7 +83,7 @@ public class FrameScanner {
      * @return true if any crops were harvested
      */
     public boolean scanFarm(Anchor anchor, Level level) {
-        Constants.logInfo("[SCAN] Starting farm scan from anchor: {}", anchor);
+        Constants.logDebug("[SCAN] Starting farm scan from anchor: {}", anchor);
         if (anchor == null || anchor.chest == null || level == null) {
             Constants.logWarn("[SCAN] Anchor or environment missing, aborting scan.");
             return false;
@@ -112,7 +112,7 @@ public class FrameScanner {
         } catch (Throwable ignored) {}
 
         if (currentHoe == null || currentHoe.isEmpty()) {
-            Constants.logInfo("[SCAN] No hoe available for anchor {}; aborting scan.", anchor);
+            Constants.logDebug("[SCAN] No hoe available for anchor {}; aborting scan.", anchor);
             return false;
         }
 
@@ -226,7 +226,7 @@ public class FrameScanner {
             setFrameRotation(level, center, newRot);
         }
 
-        Constants.logInfo("[SCAN] Scan complete. Blocks scanned: {}, crops found: {}.", blocksScanned, cropsFound);
+        Constants.logDebug("[SCAN] Scan complete. Blocks scanned: {}, crops found: {}.", blocksScanned, cropsFound);
         return cropsFound > 0;
     }
 
@@ -454,7 +454,7 @@ public class FrameScanner {
             }
             FarmScanTask task = new FarmScanTask(anchor, level, dimId);
             list.add(task);
-            Constants.logInfo("[SCAN] Scheduled scan task for {} in {} (will span up to {} ticks)", anchor, dimId, Config.maxSpiralDurationTicks);
+            Constants.logDebug("[SCAN] Scheduled scan task for {} in {} (will span up to {} ticks)", anchor, dimId, Config.maxSpiralDurationTicks);
         } catch (Throwable t) {
             Constants.logWarn("[SCAN] Failed to schedule scan task for " + anchor, t);
         }
@@ -477,7 +477,7 @@ public class FrameScanner {
                 boolean finished = task.tick();
                     if (finished) {
                     it.remove();
-                    Constants.logInfo("[SCAN] Finished scan task for {} in {}", task.anchor, dimId);
+                    Constants.logDebug("[SCAN] Finished scan task for {} in {}", task.anchor, dimId);
                 }
             } catch (Throwable t) {
                 Constants.logWarn("[SCAN] Scan task failed for " + task.anchor, t);

@@ -27,12 +27,12 @@ public class CommonClass {
      * Logs some fun facts about the environment and diamonds, because who doesn't love diamonds?
      */
     public static void init() {
-        Constants.logInfo("Hello from Common init on {}! We are currently in a {} environment!", Services.PLATFORM.getPlatformName(), Services.PLATFORM.getEnvironmentName());
-        Constants.logInfo("The ID for diamonds is {}", BuiltInRegistries.ITEM.getKey(Items.DIAMOND));
+        Constants.logDebug("Hello from Common init on {}! We are currently in a {} environment!", Services.PLATFORM.getPlatformName(), Services.PLATFORM.getEnvironmentName());
+        Constants.logDebug("The ID for diamonds is {}", BuiltInRegistries.ITEM.getKey(Items.DIAMOND));
 
         // ServiceLoader magic: lets us call platform-specific code from common code. It's like having a secret agent for every loader.
         if (Services.PLATFORM.isModLoaded("FastHarvester")) {
-            Constants.logInfo("Hello to FastHarvester");
+            Constants.logDebug("Hello to FastHarvester");
         }
     }
 }

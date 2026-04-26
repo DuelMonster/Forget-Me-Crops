@@ -54,7 +54,7 @@ public class FrameDiscovery {
                     Constants.logDebug("[TICK] Skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                     return false;
                 }
-                Constants.logInfo("[TICK] Discovered anchor (vanilla) at {} in {}; registering.", pos, dimId);
+                Constants.logDebug("[TICK] Discovered anchor (vanilla) at {} in {}; registering.", pos, dimId);
                 FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
                 return true;
             } else {
@@ -92,7 +92,7 @@ public class FrameDiscovery {
                 Constants.logDebug("[TICK] FIF anchor at {} in {} skipped: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                 return false;
             }
-            Constants.logInfo("[TICK] Discovered anchor (FIF) at {} in {}; registering.", pos, dimId);
+            Constants.logDebug("[TICK] Discovered anchor (FIF) at {} in {}; registering.", pos, dimId);
             FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
             return true;
         } catch (Throwable t) {

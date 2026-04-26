@@ -56,14 +56,14 @@ public class FrameRegistry {
         Map<BlockPos, FrameEntry> map = framesByDimension.computeIfAbsent(dimensionId, k -> new HashMap<>());
         FrameScanner.Anchor anchor = new FrameScanner.Anchor(chest, framePos, hoe);
         FrameEntry existing = map.get(framePos);
-        if (existing == null) {
+            if (existing == null) {
             map.put(framePos, new FrameEntry(anchor));
-            Constants.logInfo("[REG] Registered frame at {} in {}.", framePos, dimensionId);
+            Constants.logDebug("[REG] Registered frame at {} in {}.", framePos, dimensionId);
         } else {
             existing.active = true;
             existing.lastSeenMs = System.currentTimeMillis();
             existing.ticksUntilNextRun = Math.min(existing.ticksUntilNextRun, Config.tickInterval);
-            Constants.logInfo("[REG] Refreshed frame at {} in {}.", framePos, dimensionId);
+            Constants.logDebug("[REG] Refreshed frame at {} in {}.", framePos, dimensionId);
         }
         try {
             long chunkKey = computeChunkKey(framePos);
@@ -81,7 +81,7 @@ public class FrameRegistry {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
         if (map == null) return;
         if (map.remove(framePos) != null) {
-            Constants.logInfo("[REG] Unregistered frame at {} in {}.", framePos, dimensionId);
+            Constants.logDebug("[REG] Unregistered frame at {} in {}.", framePos, dimensionId);
         }
     }
 
@@ -197,7 +197,7 @@ public class FrameRegistry {
         replacement.lastSeenMs = old.lastSeenMs;
         replacement.lastRotationGameTime = old.lastRotationGameTime;
         map.put(framePos, replacement);
-        Constants.logInfo("[REG] Updated hoe for {} in {}.", framePos, dimensionId);
+        Constants.logDebug("[REG] Updated hoe for {} in {}.", framePos, dimensionId);
     }
 
     /**
@@ -269,7 +269,7 @@ public class FrameRegistry {
     public static synchronized void clearAll() {
         framesByDimension.clear();
         CHUNK_INDEX.clear();
-        Constants.logInfo("[REG] Cleared all frame registry data.");
+        Constants.logDebug("[REG] Cleared all frame registry data.");
     }
 
     /**
@@ -291,7 +291,7 @@ public class FrameRegistry {
             }
         }
 
-        Constants.logInfo("[REG] Cleared {} anchors and {} chunk entries for dimension {}.", removedAnchors, removedKeys.size(), dimensionId);
+        Constants.logDebug("[REG] Cleared {} anchors and {} chunk entries for dimension {}.", removedAnchors, removedKeys.size(), dimensionId);
     }
 
     /**

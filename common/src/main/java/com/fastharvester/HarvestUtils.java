@@ -242,7 +242,7 @@ public class HarvestUtils {
      * @param oldHoe The hoe ItemStack that broke.
      */
     public static void handleBrokenHoe(HarvestContext ctx, ItemStack oldHoe) {
-        Constants.logInfo("[HOE] Hoe broke during harvest. Previous: {}", oldHoe);
+        Constants.logDebug("[HOE] Hoe broke during harvest. Previous: {}", oldHoe);
         // Play visual/sound effects for the broken hoe
         try { playHoeBreakEffects(ctx, oldHoe); } catch (Throwable ignored) {}
         if (ctx.chest == null) return;
@@ -270,7 +270,7 @@ public class HarvestUtils {
                 // Ask platform to persist the frame-held item if possible
                 try { syncFrameHoe(ctx); } catch (Throwable ignored) {}
 
-                Constants.logInfo("[HOE] Pulled replacement hoe from chest: {}", replacement);
+                Constants.logDebug("[HOE] Pulled replacement hoe from chest: {}", replacement);
                 return;
             } else {
                 Constants.logDebug("[HOE] No replacement hoe available in chest for frame at {}", anchor == null ? "unknown" : anchor.framePos);
