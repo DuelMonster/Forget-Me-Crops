@@ -185,7 +185,7 @@ NeoForge integration:
 | `debugLogging`           | `false`   | Enables verbose server log output                   |
 | `chestFullCooldownTicks` | `100`     | Delay before retrying a full chest                  |
 | `maxSpiralDurationTicks` | `100`     | Max number of ticks to spread one scan cycle across |
-| `rotationMode`          | `follow_harvest_spiral`     | Controls how frame rotation progresses during a harvest cycle |
+| `rotationMode`          | `full_rotation_per_harvest`     | Controls how frame rotation progresses during a harvest cycle |
 | `seedClutterMode`        | `reduced` | Controls extra seed-drop filtering                  |
 | `seedReservePerType`     | `80`      | Reserve kept per supported seed type in `reduced` mode |
 
