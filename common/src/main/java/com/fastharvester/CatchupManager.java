@@ -33,14 +33,14 @@ public class CatchupManager {
      */
     public static void queueLoadedFrames(ServerLevel level, String dimId) {
         try {
-            Constants.logInfo("[TICK] Queuing loaded item frames in {}", dimId);
+            Constants.logDebug("[TICK] Queuing loaded item frames in {}", dimId);
             AABB worldBox = new AABB(-30000000, 0, -30000000, 30000000, 256, 30000000);
             List<ItemFrame> loadedFrames = level.getEntitiesOfClass(ItemFrame.class, worldBox);
             Deque<BlockPos> q = new ArrayDeque<>();
             for (ItemFrame f : loadedFrames) q.addLast(f.blockPosition());
             queues.put(dimId, q);
             initialCounts.put(dimId, q.size());
-            Constants.logInfo("[TICK] Queued {} item frames for gradual processing in {}", q.size(), dimId);
+            Constants.logDebug("[TICK] Queued {} item frames for gradual processing in {}", q.size(), dimId);
         } catch (Throwable t) {
             Constants.logWarn("[TICK] Catch-up queueing error", t);
         }
@@ -67,12 +67,12 @@ public class CatchupManager {
                 List<ItemFrame> framesAtPos = level.getEntitiesOfClass(ItemFrame.class, new AABB(p));
                 ItemFrame found = null;
                 for (ItemFrame ff : framesAtPos) { if (ff.blockPosition().equals(p)) { found = ff; break; } }
-                if (found == null) { Constants.logInfo("[TICK] Catch-up: no frame at {}", p); processed++; continue; }
+                if (found == null) { Constants.logDebug("[TICK] Catch-up: no frame at {}", p); processed++; continue; }
                 // Delegate validation & registration to FrameDiscovery
                 FrameDiscovery.registerVanillaFrameIfValid(dimId, level, found);
             } catch (Throwable t) { Constants.logWarn("[TICK] Catch-up per-pos error", t); }
             processed++;
         }
-        if (dq.isEmpty()) { Constants.logInfo("[TICK] Catch-up processing complete for {}", dimId); queues.remove(dimId); initialCounts.remove(dimId); }
+        if (dq.isEmpty()) { Constants.logDebug("[TICK] Catch-up processing complete for {}", dimId); queues.remove(dimId); initialCounts.remove(dimId); }
     }
 }
