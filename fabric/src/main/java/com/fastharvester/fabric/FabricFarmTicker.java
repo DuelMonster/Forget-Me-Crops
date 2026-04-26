@@ -61,24 +61,30 @@ public class FabricFarmTicker {
                 AABB box = new AABB(minX, 0, minZ, maxX + 1, 256, maxZ + 1);
 
                 // Vanilla item frames
+                // Collect vanilla item-frame positions and defer validation to the catch-up queue
                 List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box);
-                Constants.logDebug("[TICK] Found {} item frames in chunk {} (filtering for UP and hoes afterwards).", frames.size(), chunk.getPos());
+                Constants.logDebug("[TICK] Found {} item frames in chunk {} (deferring validation).", frames.size(), chunk.getPos());
+                java.util.List<BlockPos> vanillaCandidates = new java.util.ArrayList<>();
                 for (ItemFrame f : frames) {
                     try {
-                        FrameDiscovery.registerVanillaFrameIfValid(dimId, level, f);
-                    } catch (Throwable t) { Constants.logWarn("[TICK] Per-frame processing error", t); }
+                        vanillaCandidates.add(f.blockPosition());
+                    } catch (Throwable ignored) {}
                 }
+                if (!vanillaCandidates.isEmpty()) com.fastharvester.CatchupManager.enqueueVanillaPositions(level, dimId, vanillaCandidates);
 
-                // FastItemFrames: iterate block entities and detect FIF block-entities by classname
+                // FastItemFrames: collect FIF block-entity positions and defer validation
                 try {
                     Map<BlockPos, BlockEntity> blockEntities = chunk.getBlockEntities();
+                    java.util.List<BlockPos> fifCandidates = new java.util.ArrayList<>();
                     for (Map.Entry<BlockPos, BlockEntity> e : blockEntities.entrySet()) {
                         BlockPos pos = e.getKey();
                         BlockEntity be = e.getValue();
                         if (be == null) continue;
+                        // Fast and permissive classname check; defer heavier validation
                         if (!FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
-                        FrameDiscovery.registerFIFIfValid(dimId, level, be, pos);
+                        fifCandidates.add(pos);
                     }
+                    if (!fifCandidates.isEmpty()) com.fastharvester.CatchupManager.enqueueFifPositions(level, dimId, fifCandidates);
                 } catch (Throwable t) {
                     Constants.logDebug("[FIF] FastItemFrames discovery failed", t);
                 }

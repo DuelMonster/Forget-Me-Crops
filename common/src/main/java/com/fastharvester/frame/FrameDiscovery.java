@@ -7,6 +7,7 @@ import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.Blocks;
@@ -34,10 +35,7 @@ public class FrameDiscovery {
         try {
             try { Constants.logDebug("[TICK] Frame at {} direction={}", f.blockPosition(), f.getDirection()); } catch (Throwable ignored) {}
             var held = f.getItem();
-            if (held == null || held.isEmpty()) { Constants.logDebug("[TICK] Frame {} holds nothing.", f.blockPosition()); return false; }
-            try { Constants.logDebug("[TICK] Frame {} holds item: {}", f.blockPosition(), held.getItem().getClass().getName()); } catch (Throwable ignored) {}
             if (f.getDirection() != Direction.UP) { Constants.logDebug("[TICK] Frame {} skipped: not facing UP ({}).", f.blockPosition(), f.getDirection()); return false; }
-            if (!(held.getItem() instanceof HoeItem)) { Constants.logDebug("[TICK] Frame {} skipped: held item is not a hoe.", f.blockPosition()); return false; }
             BlockPos pos = f.blockPosition();
             BlockPos chestPos = pos;
             BlockEntity be = level.getBlockEntity(chestPos);
@@ -54,7 +52,14 @@ public class FrameDiscovery {
                     Constants.logDebug("[TICK] Skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                     return false;
                 }
-                Constants.logDebug("[TICK] Discovered anchor (vanilla) at {} in {}; registering.", pos, dimId);
+                if (held == null || held.isEmpty()) {
+                    try { Constants.logDebug("[TICK] Discovered empty frame at {} above chest {}; registering inactive.", pos, chestPos); } catch (Throwable ignored) {}
+                    FrameRegistry.registerFrame(dimId, pos, chest, ItemStack.EMPTY);
+                    return true;
+                }
+                try { Constants.logDebug("[TICK] Frame {} holds item: {}", pos, held.getItem().getClass().getName()); } catch (Throwable ignored) {}
+                if (!(held.getItem() instanceof HoeItem)) { Constants.logDebug("[TICK] Frame {} skipped: held item is not a hoe.", pos); return false; }
+                Constants.logDebug("[TICK] Discovered anchor (vanilla) at {} in {}; registering active.", pos, dimId);
                 FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
                 return true;
             } else {
@@ -78,21 +83,40 @@ public class FrameDiscovery {
      */
     public static boolean registerFIFIfValid(String dimId, ServerLevel level, BlockEntity be, BlockPos pos) {
         try {
+            try { Constants.logDebug("[FIF] Inspecting potential FIF at {} in {} (be={})", pos, dimId, be == null ? "null" : be.getClass().getName()); } catch (Throwable ignored) {}
             net.minecraft.world.item.ItemStack held = FastItemFrameAdapterImpl.extractHeldItem(be);
-            if (held == null || held.isEmpty()) return false;
-            if (!(held.getItem() instanceof HoeItem)) return false;
+            if (held != null && !held.isEmpty()) {
+                try { Constants.logDebug("[FIF] Held item at {}: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable ignored) {}
+                boolean isHoe = held.getItem() instanceof HoeItem;
+                try { Constants.logDebug("[FIF] Held is HoeItem: {}", isHoe); } catch (Throwable ignored) {}
+                if (!isHoe) return false;
+            } else {
+                try { Constants.logDebug("[FIF] No held item at {} (held == null or empty) — will register inactive if chest valid.", pos); } catch (Throwable ignored) {}
+            }
             BlockPos chestPos = pos.below();
             var chestBe = level.getBlockEntity(chestPos);
-            if (!(chestBe instanceof Container)) return false;
+            try { Constants.logDebug("[FIF] BlockEntity at chest pos {}: {}", chestPos, chestBe == null ? "null" : chestBe.getClass().getName()); } catch (Throwable ignored) {}
+            if (!(chestBe instanceof Container)) {
+                try { Constants.logDebug("[FIF] No Container at {} — aborting FIF anchor.", chestPos); } catch (Throwable ignored) {}
+                return false;
+            }
             Container chest = (Container) chestBe;
             boolean chestWaterlogged = false;
-            try { BlockState cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
+            BlockState cs = null;
+            try { cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
+            try { Constants.logDebug("[FIF] Chest waterlogged at {}: {}, blockState={}", chestPos, chestWaterlogged, cs == null ? "null" : cs.getBlock().getClass().getName()); } catch (Throwable ignored) {}
             boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, Math.min(5, Math.max(1, Config.scanRange)));
+            try { Constants.logDebug("[FIF] nearbyFarmlandCrop={}, chestWaterlogged={}", nearbyFarmlandCrop, chestWaterlogged); } catch (Throwable ignored) {}
             if (nearbyFarmlandCrop && !chestWaterlogged) {
                 Constants.logDebug("[TICK] FIF anchor at {} in {} skipped: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                 return false;
             }
-            Constants.logDebug("[TICK] Discovered anchor (FIF) at {} in {}; registering.", pos, dimId);
+            if (held == null || held.isEmpty()) {
+                try { Constants.logDebug("[FIF] Registering inactive FIF anchor at {} above chest {}.", pos, chestPos); } catch (Throwable ignored) {}
+                FrameRegistry.registerFrame(dimId, pos, chest, ItemStack.EMPTY);
+                return true;
+            }
+            Constants.logDebug("[TICK] Discovered anchor (FIF) at {} in {}; registering active.", pos, dimId);
             FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
             return true;
         } catch (Throwable t) {

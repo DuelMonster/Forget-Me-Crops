@@ -37,7 +37,7 @@ public class FrameRegistry {
 
         FrameEntry(FrameScanner.Anchor anchor) {
             this.anchor = anchor;
-            this.active = true;
+            this.active = anchor != null && anchor.hoe != null && !anchor.hoe.isEmpty();
             this.ticksUntilNextRun = Config.tickInterval;
             this.lastSeenMs = System.currentTimeMillis();
             this.lastRotationGameTime = -1L;
@@ -56,14 +56,19 @@ public class FrameRegistry {
         Map<BlockPos, FrameEntry> map = framesByDimension.computeIfAbsent(dimensionId, k -> new HashMap<>());
         FrameScanner.Anchor anchor = new FrameScanner.Anchor(chest, framePos, hoe);
         FrameEntry existing = map.get(framePos);
-            if (existing == null) {
+        if (existing == null) {
             map.put(framePos, new FrameEntry(anchor));
-            Constants.logDebug("[REG] Registered frame at {} in {}.", framePos, dimensionId);
+            if (anchor.hoe != null && !anchor.hoe.isEmpty()) {
+                Constants.logDebug("[REG] Registered active frame at {} in {}.", framePos, dimensionId);
+            } else {
+                Constants.logDebug("[REG] Registered inactive frame at {} in {}.", framePos, dimensionId);
+            }
         } else {
-            existing.active = true;
+            boolean wasActive = existing.active;
+            if (hoe != null && !hoe.isEmpty()) existing.active = true;
             existing.lastSeenMs = System.currentTimeMillis();
             existing.ticksUntilNextRun = Math.min(existing.ticksUntilNextRun, Config.tickInterval);
-            Constants.logDebug("[REG] Refreshed frame at {} in {}.", framePos, dimensionId);
+            Constants.logDebug("[REG] Refreshed frame at {} in {}. active={}", framePos, dimensionId, existing.active);
         }
         try {
             long chunkKey = computeChunkKey(framePos);
@@ -188,7 +193,7 @@ public class FrameRegistry {
 
         FrameScanner.Anchor newAnchor = new FrameScanner.Anchor(old.anchor.chest, framePos, hoe == null ? ItemStack.EMPTY : hoe.copy());
         FrameEntry replacement = new FrameEntry(newAnchor);
-        replacement.active = old.active;
+        replacement.active = old.active || (hoe != null && !hoe.isEmpty());
         if (hoe != null && !hoe.isEmpty()) {
             replacement.ticksUntilNextRun = 0;
         } else {
@@ -197,7 +202,11 @@ public class FrameRegistry {
         replacement.lastSeenMs = old.lastSeenMs;
         replacement.lastRotationGameTime = old.lastRotationGameTime;
         map.put(framePos, replacement);
-        Constants.logDebug("[REG] Updated hoe for {} in {}.", framePos, dimensionId);
+        if (!old.active && replacement.active) {
+            Constants.logDebug("[REG] Activated frame at {} in {} via replacement.", framePos, dimensionId);
+        } else {
+            Constants.logDebug("[REG] Updated hoe for {} in {}.", framePos, dimensionId);
+        }
     }
 
     /**
@@ -311,7 +320,6 @@ public class FrameRegistry {
         for (Map.Entry<BlockPos, FrameEntry> e : map.entrySet()) {
             BlockPos pos = e.getKey();
             FrameEntry fe = e.getValue();
-            if (!fe.active) continue;
             try {
                 net.minecraft.world.item.ItemStack stored = fe.anchor.hoe;
                 if (stored == null || stored.isEmpty()) {
