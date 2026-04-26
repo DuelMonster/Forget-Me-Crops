@@ -621,6 +621,11 @@ public class FrameScanner {
                 } catch (Throwable ignored) {}
             }
 
+            if (fullAnimationScheduled && animationStepsRemaining <= 0) {
+                try { com.fastharvester.frame.FrameRegistry.setAnimating(dimId, center, false); } catch (Throwable ignored) {}
+                fullAnimationScheduled = false;
+            }
+
             int endIndex = Math.min(totalPositions - 1, currentIndex + positionsPerTick - 1);
 
             int beforeHarvest = ctx.harvestedCount;
@@ -725,6 +730,7 @@ public class FrameScanner {
                                 animationStepsRemaining = 8;
                                 animationInterval = Math.max(1, (int) Math.ceil((double) numberOfTicksNeeded / 8.0));
                                 tickCounter = 0;
+                                try { com.fastharvester.frame.FrameRegistry.setAnimating(dimId, center, true); } catch (Throwable ignored) {}
                             }
                         }
                         case FOLLOW_HARVEST_SPIRAL -> {

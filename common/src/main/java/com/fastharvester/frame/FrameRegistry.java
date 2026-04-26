@@ -32,6 +32,8 @@ public class FrameRegistry {
         public long lastSeenMs;
         /** Last game time at which a rotation was recorded (-1 if none). */
         public long lastRotationGameTime = -1L;
+        /** Whether a full rotation animation is currently active for this frame. */
+        public boolean animating = false;
 
         FrameEntry(FrameScanner.Anchor anchor) {
             this.anchor = anchor;
@@ -224,12 +226,32 @@ public class FrameRegistry {
      * @param requestGameTime game time of the request
      */
     public static synchronized void scheduleRotation(String dimensionId, BlockPos framePos, int rotation, long requestGameTime) {
-        Map<BlockPos, Integer> map = PENDING_ROTATIONS.computeIfAbsent(dimensionId, k -> new HashMap<>());
-        map.put(framePos, rotation & 7);
         Map<BlockPos, FrameEntry> frames = framesByDimension.get(dimensionId);
         if (frames != null) {
             FrameEntry fe = frames.get(framePos);
-            if (fe != null) fe.lastRotationGameTime = requestGameTime;
+            if (fe != null) {
+                // If a full rotation animation is active for this frame, skip scheduling
+                if (fe.animating) return;
+                fe.lastRotationGameTime = requestGameTime;
+            }
+        }
+        Map<BlockPos, Integer> map = PENDING_ROTATIONS.computeIfAbsent(dimensionId, k -> new HashMap<>());
+        map.put(framePos, rotation & 7);
+    }
+
+    /**
+     * Mark/unmark a frame as currently animating. When animating, scheduled rotations are ignored.
+     */
+    public static synchronized void setAnimating(String dimensionId, BlockPos framePos, boolean animating) {
+        Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
+        if (map == null) return;
+        FrameEntry fe = map.get(framePos);
+        if (fe == null) return;
+        fe.animating = animating;
+        if (animating) {
+            // remove any pending scheduled rotation for this frame to avoid conflicts
+            Map<BlockPos, Integer> pending = PENDING_ROTATIONS.get(dimensionId);
+            if (pending != null) pending.remove(framePos);
         }
     }
 
@@ -330,12 +352,14 @@ public class FrameRegistry {
             Map<BlockPos, Integer> pending = PENDING_ROTATIONS.remove(dimensionId);
             if (pending != null && !pending.isEmpty()) {
                 for (Map.Entry<BlockPos, Integer> p : pending.entrySet()) {
-                    try {
-                        FrameScanner.applyScheduledRotation(level, p.getKey(), p.getValue());
-                    } catch (Throwable t) {
-                        Constants.logDebug("[ROT] Failed to apply scheduled rotation for " + p.getKey(), t);
+                        try {
+                            FrameEntry fe = map.get(p.getKey());
+                            if (fe != null && fe.animating) continue;
+                            FrameScanner.applyScheduledRotation(level, p.getKey(), p.getValue());
+                        } catch (Throwable t) {
+                            Constants.logDebug("[ROT] Failed to apply scheduled rotation for " + p.getKey(), t);
+                        }
                     }
-                }
             }
         } catch (Throwable ignored) {}
 
