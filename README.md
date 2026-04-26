@@ -142,3 +142,17 @@ Release jars are copied into `releases/`.
 ## License
 
 MIT. See LICENSE.
+
+## Developer & Debugging Notes
+
+Recent internal fixes and refactors improved rotation animation correctness, logging, and harvest stability. For developers and server operators who need to diagnose behavior, the following notes are useful:
+
+- Rotation and animation: the `FULL_ROTATION_PER_HARVEST` mode now uses a deterministic 8-step animation sequence computed from the frame's starting rotation. Per-frame animation state is guarded so scheduled rotations do not conflict with active animations.
+- Rotation logs are now behind the debug flag and use a `[ROT]` tag; enable `debugLogging=true` in `fastharvester-server.toml` to see detailed rotation scheduling and flush events.
+- Debounced per-tick rotation batching: `FrameRegistry` batches requested rotations in `PENDING_ROTATIONS` and applies them once per tick to avoid races and renderer hiccups.
+- Logging: routine and per-block INFO logs were lowered to DEBUG behind `Constants.logDebug(...)`. Keep `debugLogging` off for normal servers to reduce log volume.
+- Loot logic: block-drop calculation was hardened to honor Fortune and Silk Touch using server-side `LootContext` where available and safe reflective fallbacks when needed.
+- Hoe handling: broken-hoe replacement and frame-hoeing sync were hardened so replacements are persisted and `FrameRegistry` is updated when a spare is loaded into a frame.
+- Tickers: Fabric and NeoForge ticker implementations now clear the `FrameRegistry` on world/server unload to avoid stale references.
+
+See [TECHNICAL.md](TECHNICAL.md) for implementation details and where to look in the codebase.

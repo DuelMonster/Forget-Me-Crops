@@ -114,6 +114,44 @@ Current hard limits in `FrameScanner`:
 
 Work can be spread across multiple ticks using `maxSpiralDurationTicks`.
 
+## Rotation & Animation Internals
+
+FastHarvester's frame rotation system was recently refactored to avoid races and produce deterministic animations. Key implementation notes for contributors and debuggers:
+
+- Per-tick rotation batching: rotation requests are enqueued per-dimension in `FrameRegistry.PENDING_ROTATIONS` and flushed once per server tick by `FrameRegistry.tickAndCollectReady(...)`. This reduces conflicting concurrent rotation attempts and concentrates world updates into a single flush pass.
+- `FrameRegistry.scheduleRotation(...)` records a tentative `lastRotationGameTime` and places the requested rotation in the pending map. `tryRotation(...)` simply records the attempt time.
+- `FrameEntry.animating`: each frame entry has an `animating` boolean set while a full multi-step animation is running. When `animating==true`, `scheduleRotation(...)` will skip adding new rotation requests and the tick flush will skip applying pending rotations for that frame.
+- `FrameRegistry.setAnimating(...)` marks a frame animating/unanimating and proactively removes any pending rotation for that frame when animation starts so previously queued rotations do not interfere.
+- Deterministic full-rotation animation: `FrameScanner.FarmScanTask` computes a deterministic 8-step `fullAnimationSequence` derived from the current frame rotation (start+1..start+8 mod 8). The task marks the frame animating at animation start and unmarks it on completion. This eliminates the previously observed bouncing and out-of-order stepping.
+- Synchronous bypass removed: earlier forced synchronous rotation application caused renderer-freeze issues. The implementation now prefers scheduled per-tick application and relies on the `animating` guard to avoid visual races.
+
+## FarmScanTask: spiral + neighbor pass behavior
+
+- The `FarmScanTask` executes a spiral pass over farm tiles and performs an additional neighbor/repair pass exactly once per task to handle auto-planting and tilling. This ensures repair actions (auto-plant/till) run during the same logical scan and do not repeat unnecessarily across ticks.
+- Auto-plant and auto-till logic are executed during the spiral and neighbor pass so replanting decisions can consider local context and avoid removing valid seeds or overwriting neighboring farms.
+
+## Loot & Enchantment Handling
+
+- Block drop calculation now prefers server-side `LootContext` builders so `Fortune` and `Silk Touch` enchantments are respected for drop determination where available. When running in environments that require compatibility fallbacks, the code uses guarded reflection paths that safely degrade to conservative drop estimates.
+- Enchantment lookups and handler logic were moved into safer, loader-adaptable helpers under `util/loot` and `util/hoe` to centralize platform differences and reduce reflective fragility.
+
+## Hoe replacement and chest interactions
+
+- Broken-hoe handling now persists replacements by updating `FrameRegistry` and calling into platform adapters to sync the frame-held item. `HarvestUtils.handleBrokenHoe(...)` attempts to load a replacement hoe from the chest, updates the registry via `FrameRegistry.updateHoe(...)`, and calls `Services.PLATFORM.updateFrameItem(...)` where supported.
+- Chest insert/remove debug messages were moved behind `Constants.logDebug(...)` to avoid noisy per-item INFO messages on busy farms.
+
+## Tickers & Lifecycle
+
+- Fabric and NeoForge tickers were updated to call `FrameRegistry.clearAll()` when the server/world unloads so memory is freed and stale references are not kept across restarts.
+
+See code references in the following files for the canonical implementation:
+
+- `common/src/main/java/com/fastharvester/frame/FrameRegistry.java`
+- `common/src/main/java/com/fastharvester/frame/FrameScanner.java`
+- `common/src/main/java/com/fastharvester/util/loot/LootLogic.java`
+- `common/src/main/java/com/fastharvester/HarvestUtils.java`
+
+
 ## Configuration Reference
 
 Runtime config file:
