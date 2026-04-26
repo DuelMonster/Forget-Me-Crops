@@ -2,6 +2,7 @@ package com.fastharvester.neoforge;
 
 import net.minecraft.client.gui.screens.Screen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
+import net.neoforged.fml.ModContainer;
 
 /**
  * Service implementation for NeoForge's config-screen SPI.
@@ -13,7 +14,7 @@ public final class NeoForgeConfigFactory implements IConfigScreenFactory {
     public NeoForgeConfigFactory() {}
 
     @Override
-    public Screen createScreen(Screen parent) {
+    public Screen createScreen(ModContainer container, Screen parent) {
         return NeoForgeClothConfig.create(parent);
     }
 }
