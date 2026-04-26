@@ -37,8 +37,6 @@ public class Config {
     public static int tickInterval = 300;
     /** Ticks between rediscovery passes for frames. */
     public static int frameRediscoveryInterval = 600;
-    /** Scanning radius around each frame (in blocks). */
-    public static int scanRange = 4; // legacy: largest of X/Z
     /** Scanning radius along the X axis (in blocks). */
     public static int scanRangeX = 4; // 9x9 area by default
     /** Scanning radius along the Z axis (in blocks). */
@@ -117,7 +115,6 @@ public class Config {
         Config.frameRediscoveryInterval = frameRediscoveryInterval;
         Config.scanRangeX = scanRangeX;
         Config.scanRangeZ = scanRangeZ;
-        Config.scanRange = Math.max(scanRangeX, scanRangeZ);
         Config.durabilityMode = durabilityMode;
         Config.mendingNegation = mendingNegation;
         Config.debugLogging = debugLogging;
@@ -161,12 +158,9 @@ public class Config {
         Map<String, String> values = readToml(SERVER_CONFIG_PATH);
         tickInterval = positiveInt(values, "tickInterval", tickInterval);
         frameRediscoveryInterval = positiveInt(values, "frameRediscoveryInterval", frameRediscoveryInterval);
-        // Read legacy single-axis value first so it can act as a fallback for older configs.
-        scanRange = positiveInt(values, "scanRange", scanRange);
-        scanRangeX = positiveInt(values, "scanRangeX", scanRange);
-        scanRangeZ = positiveInt(values, "scanRangeZ", scanRange);
-        // Keep legacy scanRange in sync for any code still referencing it.
-        scanRange = Math.max(scanRangeX, scanRangeZ);
+        // Read explicit per-axis ranges; older single-axis `scanRange` values are no longer supported.
+        scanRangeX = positiveInt(values, "scanRangeX", scanRangeX);
+        scanRangeZ = positiveInt(values, "scanRangeZ", scanRangeZ);
         durabilityMode = DurabilityMode.fromConfigValue(stringValue(values, "durabilityMode", durabilityMode.configValue()));
         mendingNegation = booleanValue(values, "mendingNegation", mendingNegation);
         debugLogging = booleanValue(values, "debugLogging", debugLogging);
