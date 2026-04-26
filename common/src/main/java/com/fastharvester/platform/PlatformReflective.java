@@ -25,9 +25,11 @@ public final class PlatformReflective {
                     m.setAccessible(true);
                     Object raw = m.invoke(null, stack);
                     if (raw instanceof java.util.Map) {
+                        @SuppressWarnings("rawtypes")
                         java.util.Map rawMap = (java.util.Map) raw;
                         java.util.Map<String,Integer> out = new java.util.HashMap<>();
                         for (Object oe : rawMap.entrySet()) {
+                            @SuppressWarnings("rawtypes")
                             java.util.Map.Entry e = (java.util.Map.Entry) oe;
                             Object key = e.getKey();
                             Object val = e.getValue();

@@ -9,10 +9,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import com.fastharvester.Constants;
-import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.phys.AABB;
 
@@ -56,7 +54,6 @@ public class FabricPlatformHelper implements IPlatformHelper {
      * Extract enchantments from an ItemStack and return them as a simple map.
      * Humanized aside: we pry into the stack to see what magical stickers it has.
      */
-    @SuppressWarnings("rawtypes")
     @Override
     public java.util.Map<String, Integer> getEnchantments(ItemStack stack) {
         return com.fastharvester.platform.PlatformReflective.extractEnchantments(stack);
@@ -76,7 +73,6 @@ public class FabricPlatformHelper implements IPlatformHelper {
      * and attempts reflective setters for FastItemFrames block-entities. Marks block-entity
      * changed and requests a block update on the server when possible.
      */
-    @SuppressWarnings("null")
     @Override
     public void updateFrameItem(Level level, BlockPos pos, ItemStack stack) {
         if (level == null || pos == null) return;

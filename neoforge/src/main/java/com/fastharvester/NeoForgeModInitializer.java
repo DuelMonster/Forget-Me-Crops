@@ -15,8 +15,6 @@ import com.fastharvester.neoforge.FastHarvesterAutoConfig;
 import me.shedaniel.autoconfig.AutoConfig;
 import me.shedaniel.autoconfig.serializer.Toml4jConfigSerializer;
 import me.shedaniel.autoconfig.ConfigHolder;
-import net.minecraft.client.gui.screens.Screen;
-import com.fastharvester.neoforge.NeoForgeClothConfig;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;

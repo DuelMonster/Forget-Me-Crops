@@ -66,7 +66,7 @@ public class FrameRegistry {
                 Constants.logDebug("[REG] Registered inactive frame at {} in {}.", framePos, dimensionId);
             }
         } else {
-            boolean wasActive = existing.active;
+            // boolean wasActive = existing.active;
             if (hoe != null && !hoe.isEmpty()) existing.active = true;
             existing.lastSeenMs = System.currentTimeMillis();
             existing.ticksUntilNextRun = Math.min(existing.ticksUntilNextRun, Config.tickInterval);

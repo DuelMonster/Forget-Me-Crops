@@ -9,10 +9,8 @@ import net.minecraft.world.phys.AABB;
 import com.fastharvester.platform.services.IPlatformHelper;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLLoader;
-import net.minecraft.server.level.ServerLevel;
 import com.fastharvester.Constants;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.phys.Vec3;
 
 /**
  * NeoForgePlatformHelper: The futuristic friend of platform helpers!
@@ -58,7 +56,6 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
      * Humanized aside: we peek under the hood to see what spell levels are present.
      */
     @Override
-    @SuppressWarnings({ "rawtypes" })
     public java.util.Map<String, Integer> getEnchantments(net.minecraft.world.item.ItemStack stack) {
         return com.fastharvester.platform.PlatformReflective.extractEnchantments(stack);
     }
@@ -83,7 +80,6 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
      * block-entity
      * changed and requests a block update on the server when possible.
      */
-    @SuppressWarnings("null")
     @Override
     public void updateFrameItem(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
             ItemStack stack) {

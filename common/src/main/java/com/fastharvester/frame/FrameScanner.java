@@ -267,9 +267,9 @@ public class FrameScanner {
         }
     }
 
-    private static List<SpiralStep> generateSpiral(BlockPos center, int range) {
-        return generateSpiral(center, range, range);
-    }
+    // private static List<SpiralStep> generateSpiral(BlockPos center, int range) {
+    //     return generateSpiral(center, range, range);
+    // }
 
     private static List<SpiralStep> generateSpiral(BlockPos center, int rangeX, int rangeZ) {
         List<SpiralStep> spiral = new ArrayList<>();
@@ -600,7 +600,7 @@ public class FrameScanner {
             }
             this.computedMaxRing = maxRing;
 
-            int range = Math.max(rX, rZ);
+            // int range = Math.max(rX, rZ);
             spiralPositions.add(new SpiralStep(center, Direction.NORTH));
             int x = 0, z = 0;
             int stepSize = 1;

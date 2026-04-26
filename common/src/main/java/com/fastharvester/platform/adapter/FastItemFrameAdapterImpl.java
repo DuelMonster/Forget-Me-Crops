@@ -497,6 +497,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                                         if (v.toString().equalsIgnoreCase(String.valueOf(newRotation & 7))) { chosen = v; break; }
                                     }
                                     if (chosen != null) {
+                                        @SuppressWarnings({ "rawtypes", "unchecked" })
                                         BlockState ns = state.setValue((Property) prop, (Comparable) chosen);
                                         level.setBlock(pos, ns, 3);
                                         try { be.setChanged(); } catch (Throwable ignored) {}
@@ -508,6 +509,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                                         if (!list.isEmpty() && list.get(0) instanceof Number) {
                                             int idx = (newRotation & 7) % list.size();
                                             Object pick = list.get(idx);
+                                            @SuppressWarnings({ "rawtypes", "unchecked" })
                                             BlockState ns = state.setValue((Property) prop, (Comparable) pick);
                                             level.setBlock(pos, ns, 3);
                                             try { be.setChanged(); } catch (Throwable ignored) {}
@@ -567,6 +569,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
      * Attempt to write an ItemStack into a FastItemFrames block-entity using API-first
      * methods and reflective fallbacks. Returns true on success.
      */
+    @SuppressWarnings("null")
     public static boolean writeItemToBE(BlockEntity be, ItemStack stack) {
         ensureApiProbed();
         if (be == null) return false;

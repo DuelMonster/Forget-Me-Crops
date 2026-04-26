@@ -1,7 +1,5 @@
 package com.fastharvester;
 
-import com.fastharvester.Constants;
-
 /**
  * TitleScreenLogger: small common helper to centralize title-screen logging.
  */

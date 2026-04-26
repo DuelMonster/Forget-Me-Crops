@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.fastharvester.CatchupManager;
-import com.fastharvester.frame.FrameDiscovery;
 import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
 
 /**
