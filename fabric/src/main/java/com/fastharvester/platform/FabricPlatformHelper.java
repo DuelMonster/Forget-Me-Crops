@@ -59,50 +59,7 @@ public class FabricPlatformHelper implements IPlatformHelper {
     @SuppressWarnings("rawtypes")
     @Override
     public java.util.Map<String, Integer> getEnchantments(ItemStack stack) {
-        try {
-            Class<?> enchHelper = Class.forName("net.minecraft.world.item.enchantment.EnchantmentHelper");
-            java.lang.reflect.Method[] methods = enchHelper.getDeclaredMethods();
-            for (java.lang.reflect.Method m : methods) {
-                if (!java.lang.reflect.Modifier.isStatic(m.getModifiers())) continue;
-                if (!m.getName().equals("getEnchantments")) continue;
-                Class<?>[] params = m.getParameterTypes();
-                if (params.length != 1) continue;
-                try {
-                    m.setAccessible(true);
-                    Object raw = m.invoke(null, stack);
-                    if (raw instanceof java.util.Map) {
-                        java.util.Map rawMap = (java.util.Map) raw;
-                        java.util.Map<String,Integer> out = new java.util.HashMap<>();
-                        for (Object oe : rawMap.entrySet()) {
-                            java.util.Map.Entry e = (java.util.Map.Entry) oe;
-                            Object key = e.getKey();
-                            Object val = e.getValue();
-                            String id = null;
-                            if (key != null) {
-                                try {
-                                    java.lang.reflect.Method desc = key.getClass().getMethod("getDescriptionId");
-                                    Object d = desc.invoke(key);
-                                    if (d != null) id = d.toString();
-                                } catch (Throwable t) { /* ignore */ }
-                                if (id == null) id = key.toString();
-                            }
-                            int level = 0;
-                            if (val instanceof Number) level = ((Number) val).intValue();
-                            else if (val != null) {
-                                try { level = Integer.parseInt(val.toString()); } catch (Throwable tt) { level = 0; }
-                            }
-                            if (id != null) out.put(id, level);
-                        }
-                        return out;
-                    }
-                } catch (Throwable t) {
-                    // ignore and try next
-                }
-            }
-        } catch (Throwable ignored) {
-            // ignore
-        }
-        return java.util.Collections.emptyMap();
+        return com.fastharvester.platform.PlatformReflective.extractEnchantments(stack);
     }
 
     /**
@@ -111,143 +68,7 @@ public class FabricPlatformHelper implements IPlatformHelper {
      */
     @Override
     public java.util.List<ItemStack> getBlockDrops(Level level, BlockPos pos, BlockState state, ItemStack tool) {
-        if (level == null || state == null) return java.util.Collections.emptyList();
-        // Prefer accurate server-side loot using the platform's LootContext if available.
-        try {
-            if (level instanceof ServerLevel serverLevel) {
-                try {
-                    // Reflectively build a LootContext using whatever builder signature is available in mappings
-                    ClassLoader cl = FabricPlatformHelper.class.getClassLoader();
-                    Class<?> lootContextClass = Class.forName("net.minecraft.world.level.storage.loot.LootContext", true, cl);
-                    Class<?>[] declared = lootContextClass.getDeclaredClasses();
-                    Class<?> builderClass = null;
-                    for (Class<?> c : declared) {
-                        if (c.getSimpleName().equals("Builder")) { builderClass = c; break; }
-                    }
-                    if (builderClass != null) {
-                        java.lang.Object builder = null;
-                        // try constructor(ServerLevel)
-                        try {
-                            java.lang.reflect.Constructor<?> ctor = builderClass.getConstructor(ServerLevel.class);
-                            builder = ctor.newInstance(serverLevel);
-                        } catch (NoSuchMethodException ignore) {
-                            // try other constructors
-                            for (java.lang.reflect.Constructor<?> cstr : builderClass.getConstructors()) {
-                                Class<?>[] ptypes = cstr.getParameterTypes();
-                                if (ptypes.length == 1 && ptypes[0].isAssignableFrom(serverLevel.getClass())) {
-                                    try { builder = cstr.newInstance(serverLevel); break; } catch (Throwable tt) { /* ignore */ }
-                                }
-                            }
-                        }
-                        if (builder != null) {
-                            // find a method that accepts (LootContextParams, Object) or (ContextKey, Object)
-                            Class<?> paramsClass = Class.forName("net.minecraft.world.level.storage.loot.parameters.LootContextParams", true, cl);
-                            java.lang.reflect.Method withParam = null;
-                            for (java.lang.reflect.Method m : builderClass.getMethods()) {
-                                Class<?>[] pts = m.getParameterTypes();
-                                if (pts.length == 2 && pts[0].isAssignableFrom(paramsClass)) { withParam = m; break; }
-                            }
-                            if (withParam != null) {
-                                // set common parameters
-                                java.lang.reflect.Field originField = paramsClass.getField("ORIGIN");
-                                Object originKey = originField.get(null);
-                                withParam.invoke(builder, originKey, Vec3.atCenterOf(pos));
-                                java.lang.reflect.Field stateField = paramsClass.getField("BLOCK_STATE");
-                                Object stateKey = stateField.get(null);
-                                withParam.invoke(builder, stateKey, state);
-                                java.lang.reflect.Field toolField = paramsClass.getField("TOOL");
-                                Object toolKey = toolField.get(null);
-                                withParam.invoke(builder, toolKey, tool);
-                                BlockEntity be = serverLevel.getBlockEntity(pos);
-                                if (be != null) {
-                                    java.lang.reflect.Field beField = paramsClass.getField("BLOCK_ENTITY");
-                                    Object beKey = beField.get(null);
-                                    // try optional setter if present
-                                    try {
-                                        java.lang.reflect.Method opt = builderClass.getMethod("withOptionalParameter", beKey.getClass(), Object.class);
-                                        opt.invoke(builder, beKey, be);
-                                    } catch (NoSuchMethodException nsm) {
-                                        // fallback to same withParam invocation
-                                        try { withParam.invoke(builder, beKey, be); } catch (Throwable tt) { /* ignore */ }
-                                    }
-                                }
-
-                                // find create/build method that produces a LootContext
-                                java.lang.reflect.Method createMethod = null;
-                                for (java.lang.reflect.Method m : builderClass.getMethods()) {
-                                    if (m.getReturnType().getName().equals(lootContextClass.getName())) {
-                                        createMethod = m; break;
-                                    }
-                                }
-                                Object lootCtx = null;
-                                if (createMethod != null) {
-                                    if (createMethod.getParameterCount() == 1) {
-                                        Class<?> paramSetsClass = Class.forName("net.minecraft.world.level.storage.loot.parameters.LootContextParamSets", true, cl);
-                                        java.lang.reflect.Field blockField = paramSetsClass.getField("BLOCK");
-                                        Object blockSet = blockField.get(null);
-                                        lootCtx = createMethod.invoke(builder, blockSet);
-                                    } else {
-                                        lootCtx = createMethod.invoke(builder);
-                                    }
-                                }
-                                if (lootCtx != null) {
-                                    // find state.getDrops(LootContext) method
-                                    for (java.lang.reflect.Method m : state.getClass().getMethods()) {
-                                        if (m.getName().equals("getDrops") && m.getParameterCount() == 1 && m.getParameterTypes()[0].getName().equals(lootContextClass.getName())) {
-                                            Object res = m.invoke(state, lootCtx);
-                                            if (res instanceof java.util.List) {
-                                                @SuppressWarnings("unchecked")
-                                                java.util.List<ItemStack> asList = (java.util.List<ItemStack>) res;
-                                                return asList;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } catch (Throwable t) {
-                    Constants.logDebug("[LOOT] Reflective LootContext attempt failed", t);
-                }
-            }
-        } catch (Throwable t) {
-            // fall through to reflective fallback for unexpected mappings or client-side environments
-            Constants.logDebug("[LOOT] Native loot lookup failed, falling back", t);
-        }
-
-        // Reflection fallback: try various getDrops signatures (client or mapping differences)
-        try {
-            java.lang.reflect.Method[] methods = state.getClass().getMethods();
-            for (java.lang.reflect.Method m : methods) {
-                if (!"getDrops".equals(m.getName())) continue;
-                Class<?>[] params = m.getParameterTypes();
-                Object res = null;
-                try {
-                    if (params.length == 2) {
-                        try { res = m.invoke(state, level, pos); } catch (Throwable t) { /* ignore */ }
-                    }
-                    if (res == null && params.length == 3) {
-                        try { res = m.invoke(state, level, pos, (Object) null); } catch (Throwable t1) { /* ignore */ }
-                        if (res == null) {
-                            try { res = m.invoke(state, level, pos, tool); } catch (Throwable t2) { /* ignore */ }
-                        }
-                        if (res == null) {
-                            try { res = m.invoke(state, level, pos, level.getRandom()); } catch (Throwable t3) { /* ignore */ }
-                        }
-                    }
-                } catch (Throwable ignored) { continue; }
-                if (res instanceof java.util.List) {
-                    try {
-                        @SuppressWarnings("unchecked")
-                        java.util.List<ItemStack> asList = (java.util.List<ItemStack>) res;
-                        return asList;
-                    } catch (Throwable t) { return java.util.Collections.emptyList(); }
-                }
-            }
-        } catch (Throwable t) {
-            // ignore
-        }
-        return java.util.Collections.emptyList();
+        return com.fastharvester.platform.PlatformReflective.getBlockDropsReflective(level, pos, state, tool);
     }
 
     /**
@@ -277,7 +98,7 @@ public class FabricPlatformHelper implements IPlatformHelper {
             BlockEntity be = level.getBlockEntity(pos);
             if (be == null) return;
             try {
-                boolean wrote = com.fastharvester.platform.adapter.FastItemFrameAdapterImpl.writeItemToBE(be, stack == null ? ItemStack.EMPTY : stack);
+                boolean wrote = com.fastharvester.platform.adapter.FastItemFrameAdapterImpl.writeItemToBE(be, stack == null ? ItemStack.EMPTY : stack.copy());
                 if (wrote) {
                     try { Constants.logDebug("[PLATFORM] updateFrameItem: adapter wrote item to BE {} at {}", be.getClass().getName(), pos); } catch (Throwable ignored) {}
                     try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
@@ -289,40 +110,10 @@ public class FabricPlatformHelper implements IPlatformHelper {
                 try { Constants.logDebug("[PLATFORM] updateFrameItem: adapter writeItemToBE failed: {}", t.getMessage()); } catch (Throwable ignored) {}
             }
 
-            // Fallback: Try setter methods first (reflective fallback)
+            // Fallback: use shared reflective helper for BE method/field writes
             try {
-                for (java.lang.reflect.Method m : be.getClass().getMethods()) {
-                    String name = m.getName().toLowerCase();
-                    if (!(name.contains("set") || name.contains("display") || name.contains("held") || name.contains("item"))) continue;
-                    if (m.getParameterCount() != 1) continue;
-                    Class<?> p = m.getParameterTypes()[0];
-                    try {
-                        if (p.isAssignableFrom(stack.getClass()) || p.getName().contains("ItemStack") || p == Object.class) {
-                            m.setAccessible(true);
-                            m.invoke(be, stack == null ? ItemStack.EMPTY : stack.copy());
-                            try { be.setChanged(); } catch (Throwable ignored) {}
-                            try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
-                            try { Constants.logDebug("[PLATFORM] updateFrameItem: fallback wrote via method {} on {}", m.getName(), be.getClass().getName()); } catch (Throwable ignored) {}
-                            return;
-                        }
-                    } catch (Throwable ignored) { continue; }
-                }
-            } catch (Throwable ignored) {}
-
-            // Fallback: Try setting common field names
-            try {
-                String[] fields = new String[] {"item", "displayedItem", "heldItem", "stack"};
-                for (String fn : fields) {
-                    try {
-                        java.lang.reflect.Field fld = be.getClass().getDeclaredField(fn);
-                        fld.setAccessible(true);
-                        fld.set(be, stack == null ? ItemStack.EMPTY : stack.copy());
-                        try { be.setChanged(); } catch (Throwable ignored) {}
-                        try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
-                        try { Constants.logDebug("[PLATFORM] updateFrameItem: fallback wrote via field {} on {}", fn, be.getClass().getName()); } catch (Throwable ignored) {}
-                        return;
-                    } catch (Throwable ignored) {}
-                }
+                boolean wrote = com.fastharvester.platform.PlatformReflective.reflectiveUpdateFrameItemFallback(level, pos, be, stack == null ? ItemStack.EMPTY : stack.copy());
+                if (wrote) return;
             } catch (Throwable ignored) {}
         } catch (Throwable t) {
             Constants.logDebug("[PLATFORM] updateFrameItem failed at " + pos, t);
