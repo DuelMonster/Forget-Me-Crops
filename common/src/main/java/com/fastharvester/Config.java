@@ -44,7 +44,7 @@ public class Config {
     /** Whether to negate mending behavior for replacement logic. */
     public static boolean mendingNegation = true;
     /** Enable verbose debug logging for troubleshooting. */
-    public static boolean debugLogging = false;
+    public static boolean debugLogging = true;
     /** Cooldown applied when a linked chest is full (in ticks). */
     public static int chestFullCooldownTicks = 300;
     /** Maximum number of ticks to spend scanning a farm spiral. */
