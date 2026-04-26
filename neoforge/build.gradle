@@ -27,6 +27,8 @@ neoForge {
         }
         client {
             client()
+            // Use runs/client like Fabric so installed related_mods jars are picked up
+            runDir('runs/client')
         }
         data {
             clientData()
@@ -37,6 +39,8 @@ neoForge {
         }
         server {
             server()
+            // Use runs/server to match Fabric layout
+            runDir('runs/server')
         }
     }
     mods {
