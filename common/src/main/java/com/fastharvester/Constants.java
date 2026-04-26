@@ -33,4 +33,110 @@ public class Constants {
 	 * Logger: For when you need to talk to the console, vent your frustrations, or just say hi.
 	 */
 	public static final Logger LOG = LoggerFactory.getLogger(MOD_NAME);
+
+	private static Object[] mergeArgs(Object... args) {
+		if (args == null || args.length == 0) return new Object[] { MOD_NAME };
+		Object[] out = new Object[args.length + 1];
+		out[0] = MOD_NAME;
+		System.arraycopy(args, 0, out, 1, args.length);
+		return out;
+	}
+
+	/**
+	 * Log an informational message prefixed with the mod name.
+	 *
+	 * @param format SLF4J format string
+	 * @param args format arguments
+	 */
+	public static void logInfo(String format, Object... args) {
+		LOG.info("[{}] " + format, mergeArgs(args));
+	}
+
+	/**
+	 * Log a debug message when debug logging is enabled.
+	 *
+	 * @param format SLF4J format string
+	 * @param args format arguments
+	 */
+	public static void logDebug(String format, Object... args) {
+		if (Config.debugLogging) {
+			LOG.debug("[{}] " + format, mergeArgs(args));
+		}
+	}
+
+	/**
+	 * Log a debug message with an attached Throwable when debug logging is enabled.
+	 *
+	 * @param format message text
+	 * @param t throwable to include in the log
+	 */
+	public static void logDebug(String format, Throwable t) {
+		if (Config.debugLogging) {
+			String msg = "[" + MOD_NAME + "] " + format;
+			LOG.debug(msg, t);
+		}
+	}
+
+	/**
+	 * Log an error with formatted arguments.
+	 *
+	 * @param format SLF4J format string
+	 * @param args format arguments
+	 */
+	public static void logError(String format, Object... args) {
+		LOG.error("[{}] " + format, mergeArgs(args));
+	}
+
+	/**
+	 * Log an error with an attached Throwable.
+	 *
+	 * @param format message text
+	 * @param t throwable to include in the log
+	 */
+	public static void logError(String format, Throwable t) {
+		String msg = "[" + MOD_NAME + "] " + format;
+		LOG.error(msg, t);
+	}
+
+	/**
+	 * Log a warning with formatted arguments.
+	 *
+	 * @param format SLF4J format string
+	 * @param args format arguments
+	 */
+	public static void logWarn(String format, Object... args) {
+		LOG.warn("[{}] " + format, mergeArgs(args));
+	}
+
+	/**
+	 * Log a warning with an attached Throwable.
+	 *
+	 * @param format message text
+	 * @param t throwable to include in the log
+	 */
+	public static void logWarn(String format, Throwable t) {
+		String msg = "[" + MOD_NAME + "] " + format;
+		LOG.warn(msg, t);
+	}
+
+	/**
+	 * Log a trace message with formatted arguments.
+	 *
+	 * @param format SLF4J format string
+	 * @param args format arguments
+	 */
+	public static void logTrace(String format, Object... args) {
+		LOG.trace("[{}] " + format, mergeArgs(args));
+	}
+
+	/**
+	 * Log a trace message with an attached Throwable.
+	 *
+	 * @param format message text
+	 * @param t throwable to include in the log
+	 */
+	public static void logTrace(String format, Throwable t) {
+		String msg = "[" + MOD_NAME + "] " + format;
+		LOG.trace(msg, t);
+	}
 }

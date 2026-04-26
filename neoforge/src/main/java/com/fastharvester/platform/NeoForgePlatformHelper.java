@@ -237,14 +237,12 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
                         }
                     }
                 } catch (Throwable t) {
-                    Constants.LOG.debug("[FastHarvester][LOOT] Reflective LootContext attempt failed on NeoForge: {}",
-                            t.toString());
+                    Constants.logDebug("[LOOT] Reflective LootContext attempt failed on NeoForge", t);
                 }
             }
         } catch (Throwable t) {
             // fall through to reflective fallback for client or mapping differences
-            Constants.LOG.debug("[FastHarvester][LOOT] Native loot lookup failed on NeoForge, falling back: {}",
-                    t.toString());
+            Constants.logDebug("[LOOT] Native loot lookup failed on NeoForge, falling back", t);
         }
 
         // Reflection fallback for client or mapping differences
@@ -385,7 +383,7 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
             } catch (Throwable ignored) {
             }
         } catch (Throwable t) {
-            Constants.LOG.debug("[FastHarvester][PLATFORM] updateFrameItem failed at {}: {}", pos, t.toString());
+            Constants.logDebug("[PLATFORM] updateFrameItem failed at " + pos, t);
         }
     }
 }

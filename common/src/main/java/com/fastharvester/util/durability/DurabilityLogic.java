@@ -59,7 +59,7 @@ public class DurabilityLogic {
                 }
             }
         } catch (Throwable t) {
-            Constants.LOG.debug("[FastHarvester][DURABILITY] Could not read enchantments: {}", t.toString());
+            Constants.logDebug("[DURABILITY] Could not read enchantments", t);
         }
 
         boolean hasMending = mendingLevel > 0;
@@ -94,7 +94,7 @@ public class DurabilityLogic {
                 hoe.setDamageValue(next);
             }
         } catch (Throwable t) {
-            Constants.LOG.warn("[FastHarvester][DURABILITY] Failed to apply damage to hoe", t);
+            Constants.logWarn("[DURABILITY] Failed to apply damage to hoe", t);
         }
     }
 }

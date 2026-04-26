@@ -9,7 +9,6 @@ import net.minecraft.core.registries.Registries;
 /**
  * HoeUtils: Helpers for inspecting hoe enchantments.
  */
-@SuppressWarnings("deprecation")
 public class HoeUtils {
     /** Utility class: do not instantiate. */
     private HoeUtils() {}

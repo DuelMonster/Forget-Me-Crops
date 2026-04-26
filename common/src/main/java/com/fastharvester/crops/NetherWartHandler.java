@@ -23,10 +23,10 @@ public class NetherWartHandler {
      * @return true if the handler performed a successful harvest simulation
      */
     public static boolean handle(Object cropPos, Object world) {
-        com.fastharvester.Constants.LOG.info("[FastHarvester][NETHER_WART] Handling Nether Wart at {}...", cropPos);
+        com.fastharvester.Constants.logInfo("[NETHER_WART] Handling Nether Wart at {}...", cropPos);
         // Simulate harvest
         boolean success = Math.random() > 0.1;
-        com.fastharvester.Constants.LOG.debug("[FastHarvester][NETHER_WART] Harvest {} at {}.", success ? "SUCCESS" : "FAILURE", cropPos);
+        com.fastharvester.Constants.logDebug("[NETHER_WART] Harvest {} at {}.", success ? "SUCCESS" : "FAILURE", cropPos);
         return success;
     }
 }

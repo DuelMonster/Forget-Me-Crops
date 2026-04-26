@@ -23,10 +23,10 @@ public class SweetBerryHandler {
      * @return true if the handler performed a successful harvest simulation
      */
     public static boolean handle(Object cropPos, Object world) {
-        com.fastharvester.Constants.LOG.info("[FastHarvester][SWEET_BERRY] Handling Sweet Berry at {}...", cropPos);
+        com.fastharvester.Constants.logInfo("[SWEET_BERRY] Handling Sweet Berry at {}...", cropPos);
         // Simulate harvest
         boolean success = Math.random() > 0.1;
-        com.fastharvester.Constants.LOG.debug("[FastHarvester][SWEET_BERRY] Harvest {} at {}.", success ? "SUCCESS" : "FAILURE", cropPos);
+        com.fastharvester.Constants.logDebug("[SWEET_BERRY] Harvest {} at {}.", success ? "SUCCESS" : "FAILURE", cropPos);
         return success;
     }
 }

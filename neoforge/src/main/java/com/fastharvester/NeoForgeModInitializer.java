@@ -7,8 +7,6 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import com.fastharvester.neoforge.FastHarvesterNeoForgeConfig;
@@ -30,7 +28,7 @@ import net.minecraft.world.InteractionResult;
  */
 @Mod(ModCommon.MOD_ID)
 public final class NeoForgeModInitializer {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ModCommon.MOD_NAME);
+    
 
     /**
      * NeoForge mod initializer: register config listeners and initialize the farm ticker.
@@ -56,7 +54,7 @@ public final class NeoForgeModInitializer {
         try {
             AutoConfig.register(FastHarvesterAutoConfig.class, Toml4jConfigSerializer::new);
             ConfigHolder<FastHarvesterAutoConfig> holder = AutoConfig.getConfigHolder(FastHarvesterAutoConfig.class);
-            LOGGER.info("AutoConfig registered, holder={}", holder != null);
+            Constants.logInfo("AutoConfig registered, holder={}", holder != null);
 
             // Sync loaded values into the shared Config object
             holder.registerLoadListener((h, d) -> {
@@ -79,7 +77,7 @@ public final class NeoForgeModInitializer {
                 return InteractionResult.SUCCESS;
             });
         } catch (Throwable t) {
-            LOGGER.debug("AutoConfig/ClothConfig not available at runtime", t);
+            Constants.logDebug("AutoConfig/ClothConfig not available at runtime", t);
         }
 
         // Try to register a native NeoForge config screen provider so the "Config"
@@ -88,12 +86,12 @@ public final class NeoForgeModInitializer {
         try {
             Class<?> factoryClass = Class.forName("net.neoforged.neoforge.client.gui.IConfigScreenFactory");
             Object factory = Proxy.newProxyInstance(factoryClass.getClassLoader(), new Class<?>[]{factoryClass}, (proxy, method, args) -> {
-                LOGGER.info("IConfigScreenFactory invoked: {} with args={}", method.getName(), Arrays.toString(args));
+                    Constants.logInfo("IConfigScreenFactory invoked: {} with args={}", method.getName(), Arrays.toString(args));
                 if ("createScreen".equals(method.getName())) {
                     // defensive: attempt to locate Screen argument
                     for (Object a : args) {
                         if (a instanceof Screen) {
-                            LOGGER.info("Creating ClothConfig screen for FastHarvester (parent={})", a.getClass().getName());
+                            Constants.logInfo("Creating ClothConfig screen for FastHarvester (parent={})", a.getClass().getName());
                             return NeoForgeClothConfig.create((Screen) a);
                         }
                     }
@@ -114,19 +112,19 @@ public final class NeoForgeModInitializer {
             }
 
             if (registerMethod != null) {
-                LOGGER.info("Invoking {} on ModContainer {} with factoryClass={}, factoryClassLoader={}",
-                        registerMethod.getName(), container.getClass().getName(), factoryClass.getName(), factory.getClass().getClassLoader());
+                Constants.logInfo("Invoking {} on ModContainer {} with factoryClass={}, factoryClassLoader={}",
+                    registerMethod.getName(), container.getClass().getName(), factoryClass.getName(), factory.getClass().getClassLoader());
                 registerMethod.invoke(container, factoryClass, factory);
-                LOGGER.info("Registered NeoForge IConfigScreenFactory via {}", registerMethod.getName());
-                LOGGER.debug("Registered factory types: {}", Arrays.toString(factory.getClass().getInterfaces()));
+                Constants.logInfo("Registered NeoForge IConfigScreenFactory via {}", registerMethod.getName());
+                Constants.logDebug("Registered factory types: {}", Arrays.toString(factory.getClass().getInterfaces()));
             } else {
-                LOGGER.debug("Could not find ModContainer registration method; listing methods for debugging...");
+                Constants.logDebug("Could not find ModContainer registration method; listing methods for debugging...");
                 for (Method m : container.getClass().getMethods()) {
-                    LOGGER.debug("ModContainer method: {} {}", m.getName(), Arrays.toString(m.getParameterTypes()));
+                    Constants.logDebug("ModContainer method: {} {}", m.getName(), Arrays.toString(m.getParameterTypes()));
                 }
             }
         } catch (Throwable t) {
-            LOGGER.debug("Reflective config-screen registration failed", t);
+            Constants.logDebug("Reflective config-screen registration failed", t);
         }
     }
 
@@ -152,7 +150,7 @@ public final class NeoForgeModInitializer {
      * Common setup invoked during mod initialization; boots core logic.
      */
     private void commonSetup(FMLCommonSetupEvent event) {
-        LOGGER.info("{} v{} loaded for NeoForge", ModCommon.MOD_NAME, ModCommon.MOD_VERSION);
+        Constants.logInfo("{} v{} loaded for NeoForge", ModCommon.MOD_NAME, ModCommon.MOD_VERSION);
         FastHarvester.init();
     }
 }

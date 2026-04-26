@@ -52,14 +52,14 @@ public class HarvestContext {
         this.config = config;
         this.harvestedCount = 0;
         this.blocksScanned = 0;
-        Constants.LOG.info("[FastHarvester][CTX] Created new HarvestContext: anchor={}, level={}, hoe={}, chest={}, config={}", anchor, level, hoe, chest, config);
+        Constants.logInfo("[CTX] Created new HarvestContext: anchor={}, level={}, hoe={}, chest={}, config={}", anchor, level, hoe, chest, config);
     }
     /**
      * Increment the harvested counter and emit a debug message.
      */
     public void incrementHarvested() {
         harvestedCount++;
-        Constants.LOG.debug("[FastHarvester][CTX] Crops harvested incremented: {}", harvestedCount);
+        Constants.logDebug("[CTX] Crops harvested incremented: {}", harvestedCount);
     }
 
     /**
@@ -67,13 +67,13 @@ public class HarvestContext {
      */
     public void incrementBlocksScanned() {
         blocksScanned++;
-        Constants.LOG.debug("[FastHarvester][CTX] Blocks scanned incremented: {}", blocksScanned);
+        Constants.logDebug("[CTX] Blocks scanned incremented: {}", blocksScanned);
     }
 
     /**
      * Log a summary of the harvest context, useful at the end of a scan.
      */
     public void logSummary() {
-        Constants.LOG.info("[FastHarvester][CTX] Harvest summary: harvestedCount={}, blocksScanned={}", harvestedCount, blocksScanned);
+        Constants.logInfo("[CTX] Harvest summary: harvestedCount={}, blocksScanned={}", harvestedCount, blocksScanned);
     }
 }

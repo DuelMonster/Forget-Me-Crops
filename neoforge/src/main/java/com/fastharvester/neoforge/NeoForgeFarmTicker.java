@@ -57,10 +57,10 @@ public class NeoForgeFarmTicker {
 
     private static void onLevelUnload(LevelEvent.Unload event) {
         try {
-            Constants.LOG.info("[FastHarvester][TICK] world unload — clearing entire FrameRegistry.");
+            Constants.logInfo("[TICK] world unload — clearing entire FrameRegistry.");
             FrameRegistry.clearAll();
         } catch (Throwable t) {
-            Constants.LOG.warn("[FastHarvester][TICK] Failed to handle level unload: {}", t.toString());
+            Constants.logWarn("[TICK] Failed to handle level unload", t);
         }
     }
 
@@ -102,7 +102,7 @@ public class NeoForgeFarmTicker {
                 }
             } catch (Throwable ignored) {}
         } catch (Throwable t) {
-            Constants.LOG.warn("[FastHarvester][TICK] NeoForge chunk-unload cleanup error: {}", t.toString());
+            Constants.logWarn("[TICK] NeoForge chunk-unload cleanup error", t);
         }
     }
 
@@ -128,11 +128,11 @@ public class NeoForgeFarmTicker {
 
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box);
             String dimId = level.dimension().identifier().toString();
-            if (Config.debugLogging) Constants.LOG.info("[FastHarvester][TICK] NeoForge found {} item frames in chunk {}.", frames.size(), lc.getPos());
-            for (ItemFrame f : frames) {
+            if (Config.debugLogging) Constants.logInfo("[TICK] NeoForge found {} item frames in chunk {}.", frames.size(), lc.getPos());
+                for (ItemFrame f : frames) {
                 try {
                     FrameDiscovery.registerVanillaFrameIfValid(dimId, level, f);
-                } catch (Throwable t) { Constants.LOG.warn("[FastHarvester][TICK] NeoForge per-frame processing error: {}", t.toString()); }
+                } catch (Throwable t) { Constants.logWarn("[TICK] NeoForge per-frame processing error", t); }
             }
 
             // FastItemFrames: attempt block-entity enumeration on the chunk
@@ -145,11 +145,11 @@ public class NeoForgeFarmTicker {
                     FrameDiscovery.registerFIFIfValid(dimId, level, be, pos);
                 }
             } catch (Throwable t) {
-                Constants.LOG.debug("[FastHarvester][FIF] NeoForge FIF discovery failed: {}", t.toString());
+                Constants.logDebug("[FIF] NeoForge FIF discovery failed", t);
             }
 
         } catch (Throwable t) {
-            Constants.LOG.warn("[FastHarvester][TICK] NeoForge chunk-load discovery error: {}", t.toString());
+            Constants.logWarn("[TICK] NeoForge chunk-load discovery error", t);
         }
     }
 
@@ -170,7 +170,7 @@ public class NeoForgeFarmTicker {
                     int rem = rediscoveryCountdown.getOrDefault(dimId, Config.frameRediscoveryInterval);
                     rem--;
                     if (rem <= 0) {
-                        Constants.LOG.info("[FastHarvester][TICK] NeoForge rediscovery pass for {}", dimId);
+                        Constants.logInfo("[TICK] NeoForge rediscovery pass for {}", dimId);
                         CatchupManager.queueLoadedFrames(level, dimId);
                         rem = Config.frameRediscoveryInterval;
                     }
@@ -184,21 +184,21 @@ public class NeoForgeFarmTicker {
 
                 var ready = FrameRegistry.tickAndCollectReady(dimId, level);
                 if (!ready.isEmpty()) {
-                    Constants.LOG.info("[FastHarvester][TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
+                    Constants.logInfo("[TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
                     FrameScanner scanner = new FrameScanner();
                     for (var anchor : ready) {
                         try {
                             if (Config.maxSpiralDurationTicks <= 1) {
-                                try {
-                                    scanner.scanFarm(anchor, level);
-                                } catch (Throwable t) {
-                                    Constants.LOG.warn("[FastHarvester][TICK] Scan failed for {}: {}", anchor, t.toString());
-                                }
+                                        try {
+                                            scanner.scanFarm(anchor, level);
+                                        } catch (Throwable t) {
+                                            Constants.logWarn("[TICK] Scan failed for " + anchor, t);
+                                        }
                             } else {
                                 FrameScanner.submitScan(dimId, anchor, level);
                             }
                         } catch (Throwable t) {
-                            Constants.LOG.warn("[FastHarvester][TICK] Failed to submit/execute scan for {}: {}", anchor, t.toString());
+                            Constants.logWarn("[TICK] Failed to submit/execute scan for " + anchor, t);
                         }
                     }
                 }
@@ -208,7 +208,7 @@ public class NeoForgeFarmTicker {
                 tickSnapshotLogged = true;
             }
         } catch (Throwable t) {
-            Constants.LOG.warn("[FastHarvester][TICK] NeoForge ticker error: {}", t.toString());
+            Constants.logWarn("[TICK] NeoForge ticker error", t);
         }
     }
 

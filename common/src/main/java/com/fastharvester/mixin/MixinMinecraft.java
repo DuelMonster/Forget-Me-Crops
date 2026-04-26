@@ -30,7 +30,7 @@ public class MixinMinecraft {
      */
     @Inject(at = @At("TAIL"), method = "<init>")
     private void init(CallbackInfo info) {
-        Constants.LOG.info("This line is printed by an example mod common mixin!");
-        Constants.LOG.info("MC Version: {}", Minecraft.getInstance().getVersionType());
+        Constants.logInfo("This line is printed by an example mod common mixin!");
+        Constants.logInfo("MC Version: {}", Minecraft.getInstance().getVersionType());
     }
 }

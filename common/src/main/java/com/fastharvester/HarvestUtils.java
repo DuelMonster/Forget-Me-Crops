@@ -73,7 +73,7 @@ public class HarvestUtils {
                 if (s == null || s.isEmpty()) continue;
                 sbBefore.append(s.getCount()).append('x').append(s.getItem()).append(',');
             }
-            Constants.LOG.info("[FastHarvester][HARVEST] Drops before clutterPolicy: {}", sbBefore.length() > 0 ? sbBefore.toString() : "(none)");
+            Constants.logInfo("[HARVEST] Drops before clutterPolicy: {}", sbBefore.length() > 0 ? sbBefore.toString() : "(none)");
         } catch (Throwable ignored) {}
 
         // Don't let seeds take over your chest like rabbits.
@@ -84,7 +84,7 @@ public class HarvestUtils {
                 if (s == null || s.isEmpty()) continue;
                 sbAfter.append(s.getCount()).append('x').append(s.getItem()).append(',');
             }
-            Constants.LOG.info("[FastHarvester][HARVEST] Drops after clutterPolicy: {}", sbAfter.length() > 0 ? sbAfter.toString() : "(none)");
+            Constants.logInfo("[HARVEST] Drops after clutterPolicy: {}", sbAfter.length() > 0 ? sbAfter.toString() : "(none)");
         } catch (Throwable ignored) {}
 
         // Prefer to consume a seed from the freshly-harvested drops for replanting so we don't drain the chest reserve.
@@ -101,7 +101,7 @@ public class HarvestUtils {
                         it.remove();
                     }
                     tookFromDropsForReplant = true;
-                    try { Constants.LOG.info("[FastHarvester][HARVEST] Took seed from drops for replant: {} at {}", seedItem, pos); } catch (Throwable ignored) {}
+                    try { Constants.logInfo("[HARVEST] Took seed from drops for replant: {} at {}", seedItem, pos); } catch (Throwable ignored) {}
                     break;
                 }
             }
@@ -112,7 +112,7 @@ public class HarvestUtils {
             if (cost != null && !cost.isEmpty()) {
                 Item sItem = cost.getItem();
                 int before = ChestUtils.countItem(ctx.chest, sItem);
-                try { Constants.LOG.info("[FastHarvester][HARVEST] Chest before insertAll has {} of {}", before, sItem); } catch (Throwable ignored) {}
+                try { Constants.logInfo("[HARVEST] Chest before insertAll has {} of {}", before, sItem); } catch (Throwable ignored) {}
             }
         } catch (Throwable ignored) {}
 
@@ -122,7 +122,7 @@ public class HarvestUtils {
             if (cost != null && !cost.isEmpty()) {
                 Item sItem = cost.getItem();
                 int after = ChestUtils.countItem(ctx.chest, sItem);
-                try { Constants.LOG.info("[FastHarvester][HARVEST] After insertAll: chest has {} of {}", after, sItem); } catch (Throwable ignored) {}
+                try { Constants.logInfo("[HARVEST] After insertAll: chest has {} of {}", after, sItem); } catch (Throwable ignored) {}
             }
         } catch (Throwable ignored) {}
 
@@ -158,7 +158,7 @@ public class HarvestUtils {
                         ctx.level.setBlock(pos, replanted, 3);
                     }
                 } else {
-                    Constants.LOG.debug("[FastHarvester][HARVEST] Could not take seed for replant: {} at {}", cost.getItem(), pos);
+                    Constants.logDebug("[HARVEST] Could not take seed for replant: {} at {}", cost.getItem(), pos);
                     try {
                         ctx.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
                     } catch (Throwable ignored) {}
@@ -242,7 +242,7 @@ public class HarvestUtils {
      * @param oldHoe The hoe ItemStack that broke.
      */
     public static void handleBrokenHoe(HarvestContext ctx, ItemStack oldHoe) {
-        Constants.LOG.info("[FastHarvester][HOE] Hoe broke during harvest. Previous: {}", oldHoe);
+        Constants.logInfo("[HOE] Hoe broke during harvest. Previous: {}", oldHoe);
         // Play visual/sound effects for the broken hoe
         try { playHoeBreakEffects(ctx, oldHoe); } catch (Throwable ignored) {}
         if (ctx.chest == null) return;
@@ -270,10 +270,10 @@ public class HarvestUtils {
                 // Ask platform to persist the frame-held item if possible
                 try { syncFrameHoe(ctx); } catch (Throwable ignored) {}
 
-                Constants.LOG.info("[FastHarvester][HOE] Pulled replacement hoe from chest: {}", replacement);
+                Constants.logInfo("[HOE] Pulled replacement hoe from chest: {}", replacement);
                 return;
             } else {
-                Constants.LOG.debug("[FastHarvester][HOE] No replacement hoe available in chest for frame at {}", anchor == null ? "unknown" : anchor.framePos);
+                Constants.logDebug("[HOE] No replacement hoe available in chest for frame at {}", anchor == null ? "unknown" : anchor.framePos);
                 try {
                     if (anchor != null) {
                         String dimId = ctx.level.dimension().identifier().toString();
@@ -286,7 +286,7 @@ public class HarvestUtils {
                 ctx.chestFull = true;
             }
         } catch (Throwable t) {
-            Constants.LOG.warn("[FastHarvester][HOE] Error attempting to replace broken hoe: {}", t.toString());
+            Constants.logWarn("[HOE] Error attempting to replace broken hoe", t);
         }
     }
 
@@ -384,7 +384,7 @@ public class HarvestUtils {
      */
     private static void syncFrameHoe(HarvestContext ctx) {
         // Loader-specific: update the frame/block-held item if possible.
-        Constants.LOG.debug("[FastHarvester][HOE] syncFrameHoe called. Current hoe: {}", ctx.hoe);
+        Constants.logDebug("[HOE] syncFrameHoe called. Current hoe: {}", ctx.hoe);
         try {
             FrameScanner.Anchor anchor = null;
             try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {}

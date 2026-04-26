@@ -207,12 +207,12 @@ public class FabricPlatformHelper implements IPlatformHelper {
                         }
                     }
                 } catch (Throwable t) {
-                    Constants.LOG.debug("[FastHarvester][LOOT] Reflective LootContext attempt failed: {}", t.toString());
+                    Constants.logDebug("[LOOT] Reflective LootContext attempt failed", t);
                 }
             }
         } catch (Throwable t) {
             // fall through to reflective fallback for unexpected mappings or client-side environments
-            Constants.LOG.debug("[FastHarvester][LOOT] Native loot lookup failed, falling back: {}", t.toString());
+            Constants.logDebug("[LOOT] Native loot lookup failed, falling back", t);
         }
 
         // Reflection fallback: try various getDrops signatures (client or mapping differences)
@@ -309,7 +309,7 @@ public class FabricPlatformHelper implements IPlatformHelper {
                 }
             } catch (Throwable ignored) {}
         } catch (Throwable t) {
-            Constants.LOG.debug("[FastHarvester][PLATFORM] updateFrameItem failed at {}: {}", pos, t.toString());
+            Constants.logDebug("[PLATFORM] updateFrameItem failed at " + pos, t);
         }
     }
     

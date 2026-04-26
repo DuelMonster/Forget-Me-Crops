@@ -56,12 +56,12 @@ public class FrameRegistry {
         FrameEntry existing = map.get(framePos);
         if (existing == null) {
             map.put(framePos, new FrameEntry(anchor));
-            Constants.LOG.info("[FastHarvester][REG] Registered frame at {} in {}.", framePos, dimensionId);
+            Constants.logInfo("[REG] Registered frame at {} in {}.", framePos, dimensionId);
         } else {
             existing.active = true;
             existing.lastSeenMs = System.currentTimeMillis();
             existing.ticksUntilNextRun = Math.min(existing.ticksUntilNextRun, Config.tickInterval);
-            Constants.LOG.info("[FastHarvester][REG] Refreshed frame at {} in {}.", framePos, dimensionId);
+            Constants.logInfo("[REG] Refreshed frame at {} in {}.", framePos, dimensionId);
         }
         try {
             long chunkKey = computeChunkKey(framePos);
@@ -79,7 +79,7 @@ public class FrameRegistry {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
         if (map == null) return;
         if (map.remove(framePos) != null) {
-            Constants.LOG.info("[FastHarvester][REG] Unregistered frame at {} in {}.", framePos, dimensionId);
+            Constants.logInfo("[REG] Unregistered frame at {} in {}.", framePos, dimensionId);
         }
     }
 
@@ -168,7 +168,7 @@ public class FrameRegistry {
         if (fe == null) return;
         fe.ticksUntilNextRun = Math.max(0, ticks);
         fe.active = true;
-        Constants.LOG.debug("[FastHarvester][REG] Set cooldown for {} in {}: {} ticks", framePos, dimensionId, ticks);
+        Constants.logDebug("[REG] Set cooldown for {} in {}: {} ticks", framePos, dimensionId, ticks);
     }
 
     /**
@@ -195,7 +195,7 @@ public class FrameRegistry {
         replacement.lastSeenMs = old.lastSeenMs;
         replacement.lastRotationGameTime = old.lastRotationGameTime;
         map.put(framePos, replacement);
-        Constants.LOG.info("[FastHarvester][REG] Updated hoe for {} in {}.", framePos, dimensionId);
+        Constants.logInfo("[REG] Updated hoe for {} in {}.", framePos, dimensionId);
     }
 
     /**
@@ -237,7 +237,7 @@ public class FrameRegistry {
     public static synchronized void clearAll() {
         framesByDimension.clear();
         CHUNK_INDEX.clear();
-        Constants.LOG.info("[FastHarvester][REG] Cleared all frame registry data.");
+        Constants.logInfo("[REG] Cleared all frame registry data.");
     }
 
     /**
@@ -259,7 +259,7 @@ public class FrameRegistry {
             }
         }
 
-        Constants.LOG.info("[FastHarvester][REG] Cleared {} anchors and {} chunk entries for dimension {}.", removedAnchors, removedKeys.size(), dimensionId);
+        Constants.logInfo("[REG] Cleared {} anchors and {} chunk entries for dimension {}.", removedAnchors, removedKeys.size(), dimensionId);
     }
 
     /**
@@ -310,7 +310,7 @@ public class FrameRegistry {
             try {
                 updateHoe(dimensionId, r.getKey(), r.getValue());
             } catch (Throwable t) {
-                Constants.LOG.debug("[FastHarvester][REG] Failed to apply auto-replacement for {}: {}", r.getKey(), t.toString());
+                Constants.logDebug("[REG] Failed to apply auto-replacement for " + r.getKey(), t);
             }
             try {
                 com.fastharvester.platform.Services.PLATFORM.updateFrameItem(level, r.getKey(), r.getValue());
@@ -333,7 +333,7 @@ public class FrameRegistry {
                     try {
                         FrameScanner.applyScheduledRotation(level, p.getKey(), p.getValue());
                     } catch (Throwable t) {
-                        Constants.LOG.debug("[FastHarvester][ROT] Failed to apply scheduled rotation for {}: {}", p.getKey(), t.toString());
+                        Constants.logDebug("[ROT] Failed to apply scheduled rotation for " + p.getKey(), t);
                     }
                 }
             }

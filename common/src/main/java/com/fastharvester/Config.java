@@ -4,8 +4,7 @@ package com.fastharvester;
 // Why it matters: changes here change how your virtual garden feels.
 
 import com.fastharvester.enums.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+// Logging via Constants wrapper
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,7 +28,7 @@ import java.util.Map;
 public class Config {
     /** Public config holder constructor; loaders may instantiate for injection. */
     public Config() {}
-    private static final Logger LOGGER = LoggerFactory.getLogger(Config.class);
+    
     private static final Path CONFIG_DIR = Path.of("config");
     private static final Path SERVER_CONFIG_PATH = CONFIG_DIR.resolve("fastharvester-server.toml");
     private static final Path CLIENT_CONFIG_PATH = CONFIG_DIR.resolve("fastharvester-client.toml");
@@ -71,7 +70,7 @@ public class Config {
             loadClient();
             logEffectiveConfig();
         } catch (Exception e) {
-            LOGGER.error("[FastHarvester] Failed to load config", e);
+            Constants.logError("Failed to load config", e);
         }
     }
 
@@ -84,7 +83,7 @@ public class Config {
             writeToml(SERVER_CONFIG_PATH, serverConfigValues(), serverHeader());
             writeToml(CLIENT_CONFIG_PATH, clientConfigValues(), clientHeader());
         } catch (Exception e) {
-            LOGGER.error("[FastHarvester] Failed to save config", e);
+            Constants.logError("Failed to save config", e);
         }
     }
 
@@ -138,7 +137,7 @@ public class Config {
      */
     public static void logEffectiveConfig() {
         if (debugLogging) {
-            LOGGER.info("[FastHarvester] Debug config enabled: tickInterval={}, scanRange={}, rotationMode={}, seedClutterMode={}, seedReservePerType={}, harvestParticles={}",
+            Constants.logInfo("Debug config enabled: tickInterval={}, scanRange={}, rotationMode={}, seedClutterMode={}, seedReservePerType={}, harvestParticles={}",
                     tickInterval, scanRange, rotationMode, seedClutterMode, seedReservePerType, harvestParticles);
         }
     }
@@ -328,7 +327,7 @@ public class Config {
         if ("false".equalsIgnoreCase(rawValue)) {
             return false;
         }
-        LOGGER.warn("[FastHarvester] Ignoring invalid boolean for {} in {}: {}", key, configFileForKey(key), rawValue);
+        Constants.logWarn("Ignoring invalid boolean for {} in {}: {}", key, configFileForKey(key), rawValue);
         return fallback;
     }
 
@@ -361,7 +360,7 @@ public class Config {
             }
         } catch (NumberFormatException ignored) {
         }
-        LOGGER.warn("[FastHarvester] Ignoring invalid integer for {} in {}: {}", key, configFileForKey(key), rawValue);
+        Constants.logWarn("Ignoring invalid integer for {} in {}: {}", key, configFileForKey(key), rawValue);
         return fallback;
     }
 

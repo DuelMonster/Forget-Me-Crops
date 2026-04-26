@@ -83,9 +83,9 @@ public class FrameScanner {
      * @return true if any crops were harvested
      */
     public boolean scanFarm(Anchor anchor, Level level) {
-        Constants.LOG.info("[FastHarvester][SCAN] Starting farm scan from anchor: {}", anchor);
+        Constants.logInfo("[SCAN] Starting farm scan from anchor: {}", anchor);
         if (anchor == null || anchor.chest == null || level == null) {
-            Constants.LOG.warn("[FastHarvester][SCAN] Anchor or environment missing, aborting scan.");
+            Constants.logWarn("[SCAN] Anchor or environment missing, aborting scan.");
             return false;
         }
 
@@ -112,7 +112,7 @@ public class FrameScanner {
         } catch (Throwable ignored) {}
 
         if (currentHoe == null || currentHoe.isEmpty()) {
-            Constants.LOG.info("[FastHarvester][SCAN] No hoe available for anchor {}; aborting scan.", anchor);
+            Constants.logInfo("[SCAN] No hoe available for anchor {}; aborting scan.", anchor);
             return false;
         }
 
@@ -197,7 +197,7 @@ public class FrameScanner {
                     }
                 }
             } catch (Throwable t) {
-                Constants.LOG.debug("[FastHarvester][SCAN] Exception while scanning {}: {}", pos, t.toString());
+                Constants.logDebug("[SCAN] Exception while scanning " + pos, t);
             }
 
             if (harvested) anyHarvested = true;
@@ -226,7 +226,7 @@ public class FrameScanner {
             setFrameRotation(level, center, newRot);
         }
 
-        Constants.LOG.info("[FastHarvester][SCAN] Scan complete. Blocks scanned: {}, crops found: {}.", blocksScanned, cropsFound);
+        Constants.logInfo("[SCAN] Scan complete. Blocks scanned: {}, crops found: {}.", blocksScanned, cropsFound);
         return cropsFound > 0;
     }
 
@@ -405,7 +405,7 @@ public class FrameScanner {
             }
         }
 
-        Constants.LOG.debug("[FastHarvester][SCAN] BFS seeded {} nodes around {} (range {}).", visited.size(), center, range);
+        Constants.logDebug("[SCAN] BFS seeded {} nodes around {} (range {}).", visited.size(), center, range);
 
         while (!q.isEmpty()) {
             BlockPos cur = q.poll();
@@ -428,7 +428,7 @@ public class FrameScanner {
             }
         }
 
-        Constants.LOG.debug("[FastHarvester][SCAN] BFS discovered {} connected nodes for center {}.", result.size(), center);
+        Constants.logDebug("[SCAN] BFS discovered {} connected nodes for center {}.", result.size(), center);
 
         return result;
     }
@@ -448,15 +448,15 @@ public class FrameScanner {
             List<FarmScanTask> list = activeScans.computeIfAbsent(dimId, k -> new ArrayList<>());
             for (FarmScanTask t : list) {
                 if (t != null && t.anchor != null && t.anchor.framePos != null && anchor.framePos != null && t.anchor.framePos.equals(anchor.framePos)) {
-                    Constants.LOG.debug("[FastHarvester][SCAN] Scan already active for {}, skipping schedule.", anchor);
+                    Constants.logDebug("[SCAN] Scan already active for {}, skipping schedule.", anchor);
                     return;
                 }
             }
             FarmScanTask task = new FarmScanTask(anchor, level, dimId);
             list.add(task);
-            Constants.LOG.info("[FastHarvester][SCAN] Scheduled scan task for {} in {} (will span up to {} ticks)", anchor, dimId, Config.maxSpiralDurationTicks);
+            Constants.logInfo("[SCAN] Scheduled scan task for {} in {} (will span up to {} ticks)", anchor, dimId, Config.maxSpiralDurationTicks);
         } catch (Throwable t) {
-            Constants.LOG.warn("[FastHarvester][SCAN] Failed to schedule scan task for {}: {}", anchor, t.toString());
+            Constants.logWarn("[SCAN] Failed to schedule scan task for " + anchor, t);
         }
     }
 
@@ -475,12 +475,12 @@ public class FrameScanner {
             FarmScanTask task = it.next();
             try {
                 boolean finished = task.tick();
-                if (finished) {
+                    if (finished) {
                     it.remove();
-                    Constants.LOG.info("[FastHarvester][SCAN] Finished scan task for {} in {}", task.anchor, dimId);
+                    Constants.logInfo("[SCAN] Finished scan task for {} in {}", task.anchor, dimId);
                 }
             } catch (Throwable t) {
-                Constants.LOG.warn("[FastHarvester][SCAN] Scan task failed for {}: {}", task.anchor, t.toString());
+                Constants.logWarn("[SCAN] Scan task failed for " + task.anchor, t);
                 it.remove();
             }
         }
@@ -592,7 +592,7 @@ public class FrameScanner {
                 for (int j = 0; j < list.size(); j++) indexToPosInRing.put(list.get(j), j);
             }
             this.numberOfTicksNeeded = (int) Math.ceil((double) this.totalPositions / (double) this.positionsPerTick);
-            Constants.LOG.debug("[FastHarvester][SCAN] Created FarmScanTask center={} totalPositions={} positionsPerTick={} computedMaxRing={} ticksNeeded={}", center, totalPositions, positionsPerTick, computedMaxRing, numberOfTicksNeeded);
+            Constants.logDebug("[SCAN] Created FarmScanTask center={} totalPositions={} positionsPerTick={} computedMaxRing={} ticksNeeded={}", center, totalPositions, positionsPerTick, computedMaxRing, numberOfTicksNeeded);
         }
 
         boolean tick() {
@@ -624,7 +624,7 @@ public class FrameScanner {
             int endIndex = Math.min(totalPositions - 1, currentIndex + positionsPerTick - 1);
 
             int beforeHarvest = ctx.harvestedCount;
-            int baseRotation = getFrameRotation(level, center);
+            // int baseRotation = getFrameRotation(level, center);
             int computedMaxRingLocal = computedMaxRing;
             int maxRing = computedMaxRingLocal;
             Map<Integer, List<Integer>> ringToIndices = new HashMap<>();
@@ -705,7 +705,7 @@ public class FrameScanner {
                             }
                         }
                     } catch (Throwable t) {
-                        Constants.LOG.debug("[FastHarvester][SCAN] Exception while scanning {}: {}", center, t.toString());
+                        Constants.logDebug("[SCAN] Exception while scanning " + center, t);
                     }
 
                     if (ctx.chestFull) {
@@ -715,7 +715,7 @@ public class FrameScanner {
                     }
                 }
                 if (ringHarvested) {
-                    int newRotation = baseRotation;
+                    // int newRotation = baseRotation;
                     switch (Config.rotationMode) {
                         case STEP_PER_HARVEST -> {
                         }
@@ -904,7 +904,7 @@ public class FrameScanner {
                 try { return FastItemFrameAdapterImpl.getRotation(be); } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
-            Constants.LOG.debug("[FastHarvester][ROT] getFrameRotation failed at {}: {}", pos, t.toString());
+            Constants.logDebug("[ROT] getFrameRotation failed at " + pos, t);
         }
         return 0;
     }
@@ -931,12 +931,10 @@ public class FrameScanner {
         return ItemStack.EMPTY;
     }
 
-    @SuppressWarnings("null")
     private static void setFrameRotation(Level level, BlockPos pos, int newRotation) {
         setFrameRotation(level, pos, newRotation, false);
     }
 
-    @SuppressWarnings("null")
     private static void setFrameRotation(Level level, BlockPos pos, int newRotation, boolean bypassCooldown) {
         long gameTime = -1L;
         try { gameTime = level != null ? level.getGameTime() : -1L; } catch (Throwable ignored) {}
@@ -949,22 +947,22 @@ public class FrameScanner {
             try {
                 applyScheduledRotation(level, pos, newRotation);
             } catch (Throwable t) {
-                Constants.LOG.debug("[FastHarvester][ROT] applyScheduledRotation failed at {}: {}", pos, t.toString());
+                Constants.logDebug("[ROT] applyScheduledRotation failed at " + pos, t);
             }
             return;
         }
 
-        try {
+            try {
             if (!FrameRegistry.tryRotation(dimId, pos, gameTime)) {
-                if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Skipped rotation for {} due to cooldown (gametime={})", pos, gameTime); } catch (Throwable ignored) {}
+                if (Config.debugLogging) try { Constants.logDebug("[ROT] Skipped rotation for {} due to cooldown (gametime={})", pos, gameTime); } catch (Throwable ignored) {}
                 return;
             }
         } catch (Throwable ignored) {}
 
-        try {
+            try {
             int cur = getFrameRotation(level, pos) & 7;
             if (cur == (newRotation & 7)) {
-                if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] No-op rotation for {} (already {})", pos, cur); } catch (Throwable ignored) {}
+                if (Config.debugLogging) try { Constants.logDebug("[ROT] No-op rotation for {} (already {})", pos, cur); } catch (Throwable ignored) {}
                 return;
             }
         } catch (Throwable ignored) {}
@@ -972,15 +970,16 @@ public class FrameScanner {
         try {
             FrameRegistry.scheduleRotation(dimId, pos, newRotation, gameTime);
         } catch (Throwable t) {
-            Constants.LOG.debug("[FastHarvester][ROT] Failed to schedule rotation for {}: {}", pos, t.toString());
+            Constants.logDebug("[ROT] Failed to schedule rotation for " + pos, t);
         }
     }
 
+    @SuppressWarnings("null")
     static void applyScheduledRotation(Level level, BlockPos pos, int newRotation) {
         try {
             long gameTime = -1L;
             try { gameTime = level != null ? level.getGameTime() : -1L; } catch (Throwable ignored) {}
-            try { Constants.LOG.info("[FastHarvester][ROT] applyScheduledRotation pos={} newRot={} mode={} gametime={}", pos, newRotation, Config.rotationMode, gameTime); } catch (Throwable ignored) {}
+            try { Constants.logInfo("[ROT] applyScheduledRotation pos={} newRot={} mode={} gametime={}", pos, newRotation, Config.rotationMode, gameTime); } catch (Throwable ignored) {}
 
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(pos));
             for (ItemFrame f : frames) {
@@ -992,16 +991,16 @@ public class FrameScanner {
                             try {
                                 if (p == int.class || p == Integer.class) {
                                     m.invoke(f, newRotation);
-                                    if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
+                                    if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
                                     return;
                                 }
                                 if (p == byte.class || p == Byte.class) {
                                     m.invoke(f, (byte) newRotation);
-                                    if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
+                                    if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
                                     return;
                                 }
                             } catch (Throwable t) {
-                                if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Failed to invoke setter {} on ItemFrame {}: {}", m.getName(), pos, t.toString()); } catch (Throwable ignored) {}
+                                if (Config.debugLogging) try { Constants.logDebug("[ROT] Failed to invoke setter " + m.getName() + " on ItemFrame " + pos, t); } catch (Throwable ignored) {}
                             }
                         }
                     }
@@ -1009,7 +1008,7 @@ public class FrameScanner {
                         Field fld = f.getClass().getDeclaredField("rotation");
                         fld.setAccessible(true);
                         fld.setInt(f, newRotation & 7);
-                        if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Applied rotation via field on ItemFrame at {} => {}", pos, newRotation & 7); } catch (Throwable ignored) {}
+                        if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation via field on ItemFrame at {} => {}", pos, newRotation & 7); } catch (Throwable ignored) {}
                         return;
                     } catch (Throwable ignored) {}
                 }
@@ -1020,14 +1019,14 @@ public class FrameScanner {
                 try {
                     FastItemFrameAdapterImpl.setRotation(be, newRotation);
                     try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
-                    if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Applied rotation on FIF block-entity at {} => {}", pos, newRotation); } catch (Throwable ignored) {}
+                    if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {}", pos, newRotation); } catch (Throwable ignored) {}
                     return;
                 } catch (Throwable t) {
-                    if (Config.debugLogging) try { Constants.LOG.debug("[FastHarvester][ROT] Failed to apply rotation on FIF block-entity at {}: {}", pos, t.toString()); } catch (Throwable ignored) {}
+                    if (Config.debugLogging) try { Constants.logDebug("[ROT] Failed to apply rotation on FIF block-entity at " + pos, t); } catch (Throwable ignored) {}
                 }
             }
         } catch (Throwable t) {
-            Constants.LOG.debug("[FastHarvester][ROT] applyScheduledRotation failed at {}: {}", pos, t.toString());
+            Constants.logDebug("[ROT] applyScheduledRotation failed at " + pos, t);
         }
     }
 }

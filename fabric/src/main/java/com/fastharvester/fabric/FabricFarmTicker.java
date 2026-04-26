@@ -52,7 +52,7 @@ public class FabricFarmTicker {
         ServerChunkEvents.CHUNK_LOAD.register((ServerLevel level, LevelChunk chunk) -> {
             try {
                 // Diagnostic: log that chunk-load handler ran for this chunk
-                if (Config.debugLogging) Constants.LOG.info("[FastHarvester][TICK] Chunk-load event for chunk {} in {}", chunk.getPos(), level.dimension().identifier().toString());
+                if (Config.debugLogging) Constants.logInfo("[TICK] Chunk-load event for chunk {} in {}", chunk.getPos(), level.dimension().identifier().toString());
                 String dimId = level.dimension().identifier().toString();
                 int minX = chunk.getPos().getMinBlockX();
                 int minZ = chunk.getPos().getMinBlockZ();
@@ -62,11 +62,11 @@ public class FabricFarmTicker {
 
                 // Vanilla item frames
                 List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box);
-                if (Config.debugLogging) Constants.LOG.info("[FastHarvester][TICK] Found {} item frames in chunk {} (filtering for UP and hoes afterwards).", frames.size(), chunk.getPos());
+                if (Config.debugLogging) Constants.logInfo("[TICK] Found {} item frames in chunk {} (filtering for UP and hoes afterwards).", frames.size(), chunk.getPos());
                 for (ItemFrame f : frames) {
                     try {
                         FrameDiscovery.registerVanillaFrameIfValid(dimId, level, f);
-                    } catch (Throwable t) { Constants.LOG.warn("[FastHarvester][TICK] Per-frame processing error: {}", t.toString()); }
+                    } catch (Throwable t) { Constants.logWarn("[TICK] Per-frame processing error", t); }
                 }
 
                 // FastItemFrames: iterate block entities and detect FIF block-entities by classname
@@ -80,11 +80,11 @@ public class FabricFarmTicker {
                         FrameDiscovery.registerFIFIfValid(dimId, level, be, pos);
                     }
                 } catch (Throwable t) {
-                    Constants.LOG.debug("[FastHarvester][FIF] FastItemFrames discovery failed: {}", t.toString());
+                    Constants.logDebug("[FIF] FastItemFrames discovery failed", t);
                 }
 
             } catch (Throwable t) {
-                Constants.LOG.warn("[FastHarvester][TICK] Chunk-load discovery error: {}", t.toString());
+                Constants.logWarn("[TICK] Chunk-load discovery error", t);
             }
         });
 
@@ -116,17 +116,17 @@ public class FabricFarmTicker {
                     }
                 } catch (Throwable ignored) {}
             } catch (Throwable t) {
-                Constants.LOG.warn("[FastHarvester][TICK] Chunk-unload cleanup error: {}", t.toString());
+                Constants.logWarn("[TICK] Chunk-unload cleanup error", t);
             }
         });
 
         // Server stopping: clear registry to free memory when the server/world is left
         ServerLifecycleEvents.SERVER_STOPPING.register((MinecraftServer server) -> {
-            try {
-                Constants.LOG.info("[FastHarvester][TICK] Server stopping — clearing FrameRegistry.");
+                try {
+                Constants.logInfo("[TICK] Server stopping — clearing FrameRegistry.");
                 FrameRegistry.clearAll();
             } catch (Throwable t) {
-                Constants.LOG.warn("[FastHarvester][TICK] Failed to clear FrameRegistry on server stop: {}", t.toString());
+                Constants.logWarn("[TICK] Failed to clear FrameRegistry on server stop", t);
             }
         });
 
@@ -138,7 +138,7 @@ public class FabricFarmTicker {
                     int rem = rediscoveryCountdown.getOrDefault(dimId, Config.frameRediscoveryInterval);
                     rem--;
                     if (rem <= 0) {
-                        Constants.LOG.info("[FastHarvester][TICK] Running rediscovery pass for {}", dimId);
+                        Constants.logInfo("[TICK] Running rediscovery pass for {}", dimId);
                         CatchupManager.queueLoadedFrames(level, dimId);
                         rem = Config.frameRediscoveryInterval;
                     }
@@ -152,7 +152,7 @@ public class FabricFarmTicker {
                     CatchupManager.processBatch(level, dimId, CATCHUP_TICKS);
                         var ready = FrameRegistry.tickAndCollectReady(dimId, level);
                         if (!ready.isEmpty()) {
-                            Constants.LOG.info("[FastHarvester][TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
+                            Constants.logInfo("[TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
                             // Decide between synchronous scan (fast path) and tick-sliced scheduling
                             FrameScanner scanner = new FrameScanner();
                             for (var anchor : ready) {
@@ -161,13 +161,13 @@ public class FabricFarmTicker {
                                         try {
                                             scanner.scanFarm(anchor, level);
                                         } catch (Throwable t) {
-                                            Constants.LOG.warn("[FastHarvester][TICK] Scan failed for {}: {}", anchor, t.toString());
+                                            Constants.logWarn("[TICK] Scan failed for " + anchor, t);
                                         }
                                     } else {
                                         FrameScanner.submitScan(dimId, anchor, level);
                                     }
                                 } catch (Throwable t) {
-                                    Constants.LOG.warn("[FastHarvester][TICK] Failed to submit/execute scan for {}: {}", anchor, t.toString());
+                                    Constants.logWarn("[TICK] Failed to submit/execute scan for " + anchor, t);
                                 }
                             }
 
@@ -178,7 +178,7 @@ public class FabricFarmTicker {
                     tickSnapshotLogged = true;
                 }
             } catch (Throwable t) {
-                Constants.LOG.warn("[FastHarvester][TICK] Unexpected ticker error: {}", t.toString());
+                Constants.logWarn("[TICK] Unexpected ticker error", t);
             }
         });
     }
