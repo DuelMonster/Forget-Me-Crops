@@ -98,7 +98,7 @@
         "@D:\\Mod_Source\\FastHarvester\\neoforge\\build\\moddev\\clientRunVmArgs.txt",
         "-Dfml.modFolders\u003dfastharvester%%D:\\Mod_Source\\FastHarvester\\neoforge\\bin\\main"
       ],
-      "cwd": "${workspaceFolder}\\neoforge\\run",
+      "cwd": "${workspaceFolder}\\neoforge\\runs\\client",
       "env": {},
       "console": "internalConsole",
       "shortenCommandLine": "none"
@@ -142,7 +142,7 @@
         "@D:\\Mod_Source\\FastHarvester\\neoforge\\build\\moddev\\serverRunVmArgs.txt",
         "-Dfml.modFolders\u003dfastharvester%%D:\\Mod_Source\\FastHarvester\\neoforge\\bin\\main"
       ],
-      "cwd": "${workspaceFolder}\\neoforge\\run",
+      "cwd": "${workspaceFolder}\\neoforge\\runs\\server",
       "env": {},
       "console": "internalConsole",
       "shortenCommandLine": "none"
