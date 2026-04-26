@@ -439,7 +439,9 @@ public class HarvestUtils {
             FrameScanner.Anchor anchor = null;
             try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {}
             if (anchor != null && ctx.level != null) {
-                com.fastharvester.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor.framePos, ctx.hoe == null ? net.minecraft.world.item.ItemStack.EMPTY : ctx.hoe);
+                // Pass a defensive copy to platform code so any channel that mutates
+                // the stack doesn't affect our authoritative `ctx.hoe` instance.
+                com.fastharvester.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor.framePos, ctx.hoe == null ? net.minecraft.world.item.ItemStack.EMPTY : ctx.hoe.copy());
             }
         } catch (Throwable ignored) {}
     }

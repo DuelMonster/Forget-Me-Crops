@@ -54,7 +54,9 @@ public class FrameRegistry {
      */
     public static synchronized void registerFrame(String dimensionId, BlockPos framePos, Container chest, ItemStack hoe) {
         Map<BlockPos, FrameEntry> map = framesByDimension.computeIfAbsent(dimensionId, k -> new HashMap<>());
-        FrameScanner.Anchor anchor = new FrameScanner.Anchor(chest, framePos, hoe);
+        // Always store a defensive copy of the incoming ItemStack to avoid
+        // accidental shared-mutation when callers retain references.
+        FrameScanner.Anchor anchor = new FrameScanner.Anchor(chest, framePos, hoe == null ? ItemStack.EMPTY : hoe.copy());
         FrameEntry existing = map.get(framePos);
         if (existing == null) {
             map.put(framePos, new FrameEntry(anchor));
