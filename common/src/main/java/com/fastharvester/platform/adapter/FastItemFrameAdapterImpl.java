@@ -75,6 +75,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                         }
                     }
                     apiAvailable = true;
+                    try { com.fastharvester.Constants.logDebug("[FIF] Detected FastItemFrames API class: {}", cn); } catch (Throwable ignored) {}
                     break;
                 }
             } catch (Throwable ignored) {
