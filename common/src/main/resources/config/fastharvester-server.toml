@@ -3,7 +3,8 @@
 
 tickInterval = 300
 frameRediscoveryInterval = 100
-scanRange = 4
+scanRangeX = 4
+scanRangeZ = 4
 durabilityMode = "normal"
 mendingNegation = true
 debugLogging = true
