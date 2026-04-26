@@ -34,12 +34,13 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
     static {
         // Candidate FastItemFrames implementation class names to probe for an API-first path.
         String[] candidates = new String[] {
-                "com.fuzs.fastitemframes.block.entity.FastItemFrameBlockEntity",
-                "com.fuzs.fastitemframes.block.FastItemFrameBlockEntity",
-                "com.fuzs.fastitemframes.FastItemFrameBlockEntity",
-                "fastitemframes.block.entity.FastItemFrameBlockEntity",
-                "fastitemframes.FastItemFrameBlockEntity",
-                "com.fuzs.fastitemframes.blockentity.FastItemFrameBlockEntity"
+            "fuzs.fastitemframes.world.level.block.entity.ItemFrameBlockEntity",
+            "com.fuzs.fastitemframes.block.entity.FastItemFrameBlockEntity",
+            "com.fuzs.fastitemframes.block.FastItemFrameBlockEntity",
+            "com.fuzs.fastitemframes.FastItemFrameBlockEntity",
+            "fastitemframes.block.entity.FastItemFrameBlockEntity",
+            "fastitemframes.FastItemFrameBlockEntity",
+            "com.fuzs.fastitemframes.blockentity.FastItemFrameBlockEntity"
         };
         for (String cn : candidates) {
             try {
