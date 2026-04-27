@@ -5,6 +5,7 @@ package com.fastharvester.fabric;
 
 import com.fastharvester.Config;
 import com.fastharvester.FastHarvester;
+import com.fastharvester.fabric.ticker.FabricFarmTicker;
 import net.fabricmc.api.ModInitializer;
 
 /**
