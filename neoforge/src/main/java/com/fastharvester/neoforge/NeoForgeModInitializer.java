@@ -1,7 +1,7 @@
-package com.fastharvester;
+package com.fastharvester.neoforge;
 
-// ❤️ Playful note: NeoForge initializer here, quietly cheering when mods boot.
-// This little bootstrapping class wakes up the mod in NeoForge and whispers "go harvest".
+// ❤️ NeoForge initializer moved into the neoforge package to keep loader-specific
+// initialization code inside the module's namespace.
 
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -19,42 +19,33 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import net.minecraft.world.InteractionResult;
+import com.fastharvester.Constants;
+import com.fastharvester.Config;
+import com.fastharvester.FastHarvester;
 
 /**
  * NeoForge mod initializer: bootstraps FastHarvester on the NeoForge loader,
  * registers config handlers, and wires the NeoForge farm ticker.
  */
-@Mod(ModCommon.MOD_ID)
+@Mod(com.fastharvester.ModCommon.MOD_ID)
 public final class NeoForgeModInitializer {
-    
 
-    /**
-     * NeoForge mod initializer: register config listeners and initialize the farm ticker.
-        *
-        * @param modEventBus the mod event bus to register lifecycle listeners on
-        * @param container the mod container instance provided by the loader
-     */
     @SuppressWarnings("null")
     public NeoForgeModInitializer(IEventBus modEventBus, ModContainer container) {
         // Register config spec
         container.registerConfig(ModConfig.Type.COMMON, FastHarvesterNeoForgeConfig.SPEC);
-        
+
         // Register config listeners
         modEventBus.addListener(this::onConfigLoading);
         modEventBus.addListener(this::onConfigReloading);
         modEventBus.addListener(this::commonSetup);
-        // Register NeoForge-specific farm discovery and ticker on the global NeoForge event bus.
-        // This is the bus that `EventHooks` posts runtime events to (chunk/tick/etc.).
         NeoForgeFarmTicker.init(net.neoforged.neoforge.common.NeoForge.EVENT_BUS);
 
-        // Register AutoConfig-backed config so ClothConfig/AutoConfig can supply
-        // a native mods-list config button and generate the config screen.
         try {
             AutoConfig.register(FastHarvesterAutoConfig.class, Toml4jConfigSerializer::new);
             ConfigHolder<FastHarvesterAutoConfig> holder = AutoConfig.getConfigHolder(FastHarvesterAutoConfig.class);
             Constants.logInfo("AutoConfig registered, holder={}", holder != null);
 
-            // Sync loaded values into the shared Config object
             holder.registerLoadListener((h, d) -> {
                 Config.applyServerSettings(d.tickInterval, d.frameRediscoveryInterval, d.scanRangeX, d.scanRangeZ,
                     d.durabilityMode, d.mendingNegation, d.debugLogging,
@@ -64,7 +55,6 @@ public final class NeoForgeModInitializer {
                 return InteractionResult.SUCCESS;
             });
 
-            // When autoconfig saves, persist to our toml files.
             holder.registerSaveListener((h, d) -> {
                 Config.applyServerSettings(d.tickInterval, d.frameRediscoveryInterval, d.scanRangeX, d.scanRangeZ,
                     d.durabilityMode, d.mendingNegation, d.debugLogging,
@@ -78,10 +68,6 @@ public final class NeoForgeModInitializer {
             Constants.logDebug("AutoConfig/ClothConfig not available at runtime", t);
         }
 
-        // Try to register a native NeoForge config screen provider so the "Config"
-        // button in the mods list becomes enabled. We do this reflectively so
-        // the code remains robust across loader API changes. Only attempt this
-        // on a physical client where the client GUI classes are present.
         boolean isClient = true;
         try {
             Class.forName("net.minecraft.client.Minecraft", false, this.getClass().getClassLoader());
@@ -92,22 +78,18 @@ public final class NeoForgeModInitializer {
         if (isClient) try {
             Class<?> factoryClass = Class.forName("net.neoforged.neoforge.client.gui.IConfigScreenFactory");
             ClassLoader loader = factoryClass.getClassLoader();
-            // Resolve our NeoForgeClothConfig.create(Screen) using the loader classloader so
-            // returned Screen instances are created in the same loader and avoid
-            // cross-classloader instanceof/return-type issues.
             final java.lang.reflect.Method[] neoForgeCreate = new java.lang.reflect.Method[1];
-                try {
-                    Class<?> neoCfg = loader.loadClass("com.fastharvester.neoforge.client.NeoForgeClothConfig");
-                    Class<?> screenClass = loader.loadClass("net.minecraft.client.gui.screens.Screen");
-                    neoForgeCreate[0] = neoCfg.getMethod("create", screenClass);
-                } catch (Throwable t2) {
+            try {
+                Class<?> neoCfg = loader.loadClass("com.fastharvester.neoforge.client.NeoForgeClothConfig");
+                Class<?> screenClass = loader.loadClass("net.minecraft.client.gui.screens.Screen");
+                neoForgeCreate[0] = neoCfg.getMethod("create", screenClass);
+            } catch (Throwable t2) {
                 Constants.logDebug("Could not resolve NeoForgeClothConfig.create on loader", t2);
             }
 
             Object factory = Proxy.newProxyInstance(loader, new Class<?>[]{factoryClass}, (proxy, method, args) -> {
                     Constants.logInfo("IConfigScreenFactory invoked: {} with args={}", method.getName(), Arrays.toString(args));
                 if ("createScreen".equals(method.getName()) && neoForgeCreate[0] != null) {
-                    // Find the Screen argument (we compare by name to avoid classloader instanceof)
                     for (Object a : args) {
                         if (a == null) continue;
                         Class<?> argClass = a.getClass();
@@ -168,29 +150,20 @@ public final class NeoForgeModInitializer {
         }
     }
 
-    /**
-     * Handle config loading events and update runtime values.
-     */
     private void onConfigLoading(ModConfigEvent.Loading event) {
         if (event.getConfig().getSpec() == FastHarvesterNeoForgeConfig.SPEC) {
             FastHarvesterNeoForgeConfig.update();
         }
     }
-    
-    /**
-     * Handle config reload events and refresh in-memory config.
-     */
+
     private void onConfigReloading(ModConfigEvent.Reloading event) {
         if (event.getConfig().getSpec() == FastHarvesterNeoForgeConfig.SPEC) {
             FastHarvesterNeoForgeConfig.update();
         }
     }
 
-    /**
-     * Common setup invoked during mod initialization; boots core logic.
-     */
     private void commonSetup(FMLCommonSetupEvent event) {
-        Constants.logInfo("{} v{} loaded for NeoForge", ModCommon.MOD_NAME, ModCommon.MOD_VERSION);
+        Constants.logInfo("{} v{} loaded for NeoForge", com.fastharvester.ModCommon.MOD_NAME, com.fastharvester.ModCommon.MOD_VERSION);
         FastHarvester.init();
     }
 }
