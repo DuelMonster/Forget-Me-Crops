@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -77,8 +78,10 @@ public class HarvestUtils {
             Constants.logDebug("[HARVEST] Drops before clutterPolicy: {}", sbBefore.length() > 0 ? sbBefore.toString() : "(none)");
         } catch (Throwable ignored) {}
 
-        // Don't let seeds take over your chest like rabbits.
-        applySeedClutterPolicy(drops, clutterSeedItemFor(block), ctx.chest);
+        // Seed clutter: apply pre-replant policy (NONE removes seeds unless they're crop-fruit)
+        Item seedItem = clutterSeedItemFor(block);
+        boolean seedIsCropFruit = isSeedAlsoCropFruit(seedItem);
+        applyPreReplantSeedClutterPolicy(drops, seedItem, seedIsCropFruit);
         try {
             StringBuilder sbAfter = new StringBuilder();
             for (ItemStack s : drops) {
@@ -92,21 +95,24 @@ public class HarvestUtils {
         ItemStack cost = replantCostItemFor(block);
         boolean tookFromDropsForReplant = false;
         if (cost != null && !cost.isEmpty()) {
-            Item seedItem = cost.getItem();
+            Item replantSeedItem = cost.getItem();
             for (Iterator<ItemStack> it = drops.iterator(); it.hasNext();) {
                 ItemStack s = it.next();
-                if (s != null && !s.isEmpty() && s.getItem() == seedItem) {
+                if (s != null && !s.isEmpty() && s.getItem() == replantSeedItem) {
                     if (s.getCount() > 1) {
                         s.setCount(s.getCount() - 1);
                     } else {
                         it.remove();
                     }
                     tookFromDropsForReplant = true;
-                    try { Constants.logDebug("[HARVEST] Took seed from drops for replant: {} at {}", seedItem, pos); } catch (Throwable ignored) {}
+                    try { Constants.logDebug("[HARVEST] Took seed from drops for replant: {} at {}", replantSeedItem, pos); } catch (Throwable ignored) {}
                     break;
                 }
             }
         }
+
+        // Post-replant seed clutter policy: NORMAL=no-op, REDUCED=halve remaining seed drops (unless crop-fruit)
+        applyPostReplantSeedClutterPolicy(drops, seedItem, seedIsCropFruit);
 
         // Insert remaining drops into the chest
         try {
@@ -261,6 +267,53 @@ public class HarvestUtils {
         }
 
         // Normal mode: keep all supported seed drops (no-op)
+    }
+
+    /**
+     * Pre-replant policy: currently handles NONE mode which removes seed drops unless the seed is the crop fruit.
+     */
+    private static void applyPreReplantSeedClutterPolicy(List<ItemStack> drops, Item seedItem, boolean seedIsCropFruit) {
+        if (seedItem == null) return;
+        if (Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.NONE) {
+            if (seedIsCropFruit) return; // allow crop-fruit seeds through
+            drops.removeIf(s -> s.getItem() == seedItem);
+        }
+        // NORMAL and REDUCED: no pre-replant trimming here
+    }
+
+    /**
+     * Post-replant policy: NORMAL=no-op, REDUCED=halve remaining seed drops (unless crop-fruit)
+     */
+    private static void applyPostReplantSeedClutterPolicy(List<ItemStack> drops, Item seedItem, boolean seedIsCropFruit) {
+        if (seedItem == null) return;
+        if (Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.REDUCED) {
+            if (seedIsCropFruit) return; // do not halve crop-fruit seeds
+            for (Iterator<ItemStack> it = drops.iterator(); it.hasNext();) {
+                ItemStack s = it.next();
+                if (s == null || s.isEmpty()) continue;
+                if (s.getItem() == seedItem) {
+                    int newCount = s.getCount() / 2; // floor
+                    if (newCount <= 0) {
+                        it.remove();
+                    } else {
+                        s.setCount(newCount);
+                    }
+                }
+            }
+        }
+        // NORMAL: no post-replant trimming (replant already removed one)
+    }
+
+    /**
+     * Helper to detect items that are both seed and crop fruit (e.g. torchflower-like crops)
+     */
+    private static boolean isSeedAlsoCropFruit(Item seedItem) {
+        if (seedItem == null) return false;
+        // items that represent crop fruit use their block item as the seed (torchflower-like)
+        return seedItem == Items.CARROT || seedItem == Items.POTATO || seedItem == Items.NETHER_WART
+                // || seedItem == Items.MELON_SEEDS || seedItem == Items.PUMPKIN_SEEDS
+                // || seedItem == Items.WHEAT_SEEDS || seedItem == Items.BEETROOT_SEEDS
+                || seedItem instanceof BlockItem && ((BlockItem)seedItem).getBlock().getClass().getName().toLowerCase().contains("torchflower");
     }
 
     /**

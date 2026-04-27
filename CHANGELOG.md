@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Unreleased
+
+- Implement seed-clutter policies: `NONE` removes supported seed drops before insertion (except crop-fruit), `NORMAL` consumes one seed per harvest from drops and inserts remaining seeds, `REDUCED` consumes one seed and halves remaining seed drops before insertion; `seedReservePerType` prevents chest removals that would drop below the configured reserve. Docs updated to reflect behavior.
+
 ## 0.9.0
 
 - Regenerate CHANGELOG.md from git history

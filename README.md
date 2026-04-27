@@ -76,8 +76,8 @@ Here are the main settings you can change:
 | `maxSpiralDurationTicks`| `100`       | Spreads farm work across multiple ticks to reduce lag spikes on larger farms.                               |
 | `rotationMode`         | `follow_harvest_spiral`     | Controls how the frame rotates during a harvest cycle.                                      |
 | `debugLogging`          | `false`     | Writes extra farm activity information to the log for troubleshooting.                                      |
-| `seedClutterMode`       | `reduced`   | Controls how extra wheat and beetroot seeds are handled.                                                    |
-| `seedReservePerType`    | `80`        | In `reduced` mode, this is how many seeds of each supported type the chest will keep before extras are discarded. |
+| `seedClutterMode`       | `reduced`   | Controls how extra seeds are handled. See "Seed Clutter Mode" below for full behavior.                     |
+| `seedReservePerType`    | `80`        | Minimum number of seeds to reserve per seed type in the chest; removals for replanting will not reduce the chest below this threshold. |
 
 Client config:
 
@@ -103,13 +103,13 @@ Client config:
 
 ### Seed Clutter Mode
 
-| Mode      | Behavior                                                  |
-|-----------|-----------------------------------------------------------|
-| `normal`  | Keeps all supported seed drops.                           |
-| `reduced` | Keeps only a reserve amount of supported seeds in the chest. |
-| `none`    | Discards supported seed drops completely.                 |
+These modes control how excess seed items from harvested crops are handled before they are inserted into the chest and how replanting draws from drops or the chest.
 
-Right now seed clutter filtering only applies to Wheat Seeds and Beetroot Seeds.
+- `none` — Remove supported seed drops before insertion. Replant still prefers seeds found in the freshly-harvested drops; if none are available the chest will be used (but chest removals are prevented when doing so would reduce the chest below `seedReservePerType`). Exception: when the crop's seed item is also the crop's fruit (for example torchflower-like crops, carrots, potatoes), those items are treated as crop-fruit and are allowed into the chest.
+- `normal` — For each mature crop harvested the harvester will preferentially consume one seed from the freshly-harvested drops for replanting (if present). Any remaining seed drops are inserted into the chest unchanged. Chest removals for replant will not reduce a seed type below `seedReservePerType`.
+- `reduced` — Same as `normal` (one seed consumed from drops for replant), then the remaining seed drops of that harvest are reduced by half (rounded down) before insertion into the chest. Do not halve when the seed item is the crop fruit.
+
+Supported seed types for these policies include wheat seeds, beetroot seeds, melon/pumpkin seeds, carrot, potato, nether wart, and torchflower-like crops when present. Reserve enforcement is performed when removing seeds from the chest for replanting (the chest will refuse to provide seeds if doing so would drop the total at-or-below `seedReservePerType`).
 
 ## Compatibility
 
