@@ -9,9 +9,9 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.config.ModConfigEvent;
-import com.fastharvester.neoforge.FastHarvesterNeoForgeConfig;
-import com.fastharvester.neoforge.NeoForgeFarmTicker;
-import com.fastharvester.neoforge.FastHarvesterAutoConfig;
+import com.fastharvester.neoforge.config.FastHarvesterNeoForgeConfig;
+import com.fastharvester.neoforge.ticker.NeoForgeFarmTicker;
+import com.fastharvester.neoforge.config.FastHarvesterAutoConfig;
 import me.shedaniel.autoconfig.AutoConfig;
 import me.shedaniel.autoconfig.serializer.Toml4jConfigSerializer;
 import me.shedaniel.autoconfig.ConfigHolder;
@@ -96,11 +96,11 @@ public final class NeoForgeModInitializer {
             // returned Screen instances are created in the same loader and avoid
             // cross-classloader instanceof/return-type issues.
             final java.lang.reflect.Method[] neoForgeCreate = new java.lang.reflect.Method[1];
-            try {
-                Class<?> neoCfg = loader.loadClass("com.fastharvester.neoforge.NeoForgeClothConfig");
-                Class<?> screenClass = loader.loadClass("net.minecraft.client.gui.screens.Screen");
-                neoForgeCreate[0] = neoCfg.getMethod("create", screenClass);
-            } catch (Throwable t2) {
+                try {
+                    Class<?> neoCfg = loader.loadClass("com.fastharvester.neoforge.client.NeoForgeClothConfig");
+                    Class<?> screenClass = loader.loadClass("net.minecraft.client.gui.screens.Screen");
+                    neoForgeCreate[0] = neoCfg.getMethod("create", screenClass);
+                } catch (Throwable t2) {
                 Constants.logDebug("Could not resolve NeoForgeClothConfig.create on loader", t2);
             }
 

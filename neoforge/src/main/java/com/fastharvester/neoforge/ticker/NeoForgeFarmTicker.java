@@ -1,4 +1,4 @@
-package com.fastharvester.neoforge;
+package com.fastharvester.neoforge.ticker;
 
 // 🌾 NeoForge ticker: quietly counts down and nudges farms to do their thing.
 // Emotional state: hopeful. It believes in your crops.
@@ -64,13 +64,6 @@ public class NeoForgeFarmTicker {
         }
     }
 
-    /**
-     * Handle chunk unload events: unregister any anchors in the unloading chunk.
-     * <p>
-     * We clear out recorded anchors for the chunk so the registry doesn't hold stale references.
-     * </p>
-     * @param event Chunk unload event
-     */
     private static void onChunkUnload(ChunkEvent.Unload event) {
         try {
             var levelAccessor = event.getLevel();
@@ -85,13 +78,11 @@ public class NeoForgeFarmTicker {
             int maxZ = minZ + 15;
             AABB box = new AABB(minX, 0, minZ, maxX + 1, 256, maxZ + 1);
 
-            // Unregister vanilla item frames
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box, ef -> ef.getDirection() == Direction.UP);
             for (ItemFrame f : frames) {
                 try { FrameRegistry.unregisterFrame(dimId, f.blockPosition()); } catch (Throwable ignored) {}
             }
 
-            // Unregister FIF block-entities (use adapter detection to avoid fragile string checks)
             try {
                 for (var e : lc.getBlockEntities().entrySet()) {
                     BlockPos pos = e.getKey();
@@ -106,13 +97,6 @@ public class NeoForgeFarmTicker {
         }
     }
 
-    /**
-     * Handle chunk load events: discover vanilla frames and FastItemFrames in the loaded chunk.
-     * <p>
-     * Newly discovered frames are validated and registered so they can be scheduled for harvesting.
-     * </p>
-     * @param event Chunk load event
-     */
     private static void onChunkLoad(ChunkEvent.Load event) {
         try {
             var levelAccessor = event.getLevel();
@@ -135,7 +119,6 @@ public class NeoForgeFarmTicker {
                 } catch (Throwable t) { Constants.logWarn("[TICK] NeoForge per-frame processing error", t); }
             }
 
-            // FastItemFrames: attempt block-entity enumeration on the chunk
             try {
                 for (var e : lc.getBlockEntities().entrySet()) {
                     BlockPos pos = e.getKey();
@@ -153,13 +136,6 @@ public class NeoForgeFarmTicker {
         }
     }
 
-    /**
-     * Server tick handler: process catch-up batches, decrement frame timers, and run scans.
-     * <p>
-     * This spreads discovery and scanning across ticks to avoid single-tick spikes.
-     * </p>
-     * @param event Server tick event
-     */
     private static void onServerTick(ServerTickEvent.Post event) {
         try {
             if (!event.hasTime()) return;
@@ -175,8 +151,6 @@ public class NeoForgeFarmTicker {
                         rem = Config.frameRediscoveryInterval;
                     }
                     rediscoveryCountdown.put(dimId, rem);
-                // Capture a one-time snapshot and then process a small catch-up batch
-                // each tick so we don't overload the server on startup.
                 if (!tickSnapshotLogged) {
                     CatchupManager.queueLoadedFrames(level, dimId);
                 }
@@ -203,7 +177,6 @@ public class NeoForgeFarmTicker {
                     }
                 }
 
-                // Process one tick-slice for active scan jobs in this dimension
                 FrameScanner.tickScans(dimId, level);
                 tickSnapshotLogged = true;
             }

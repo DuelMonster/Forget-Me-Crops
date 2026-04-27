@@ -1,4 +1,4 @@
-package com.fastharvester.neoforge;
+package com.fastharvester.neoforge.client;
 
 import net.minecraft.client.gui.screens.Screen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;

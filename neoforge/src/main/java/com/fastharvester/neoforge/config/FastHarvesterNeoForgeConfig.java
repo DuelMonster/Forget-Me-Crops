@@ -1,4 +1,4 @@
-package com.fastharvester.neoforge;
+package com.fastharvester.neoforge.config;
 
 // 🛠️ NeoForge config: holds settings and quietly judges your choices.
 // Why it matters: your harvest personality lives here.

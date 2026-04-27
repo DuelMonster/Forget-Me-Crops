@@ -1,4 +1,4 @@
-package com.fastharvester.neoforge;
+package com.fastharvester.neoforge.config;
 
 import com.fastharvester.Config;
 import com.fastharvester.enums.DurabilityMode;
@@ -6,11 +6,6 @@ import com.fastharvester.enums.RotationMode;
 import com.fastharvester.enums.SeedClutterMode;
 import me.shedaniel.autoconfig.ConfigData;
 
-/**
- * Autoconfig data class used by ClothConfig/AutoConfig integration on NeoForge.
- * This mirrors the runtime values in `Config` so the ClothConfig screen can
- * be presented via the native mods list.
- */
 @me.shedaniel.autoconfig.annotation.Config(name = "fastharvester")
 public class FastHarvesterAutoConfig implements ConfigData {
     /** Public no-arg constructor for AutoConfig. */
