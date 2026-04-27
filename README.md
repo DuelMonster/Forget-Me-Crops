@@ -41,6 +41,8 @@ It also repairs common farm problems automatically:
 
 Anchors run whenever their chunks are loaded. That means vanilla chunk loaders and modded chunk loaders can keep farms active even when no player is standing nearby.
 
+Pre-scan maturity check: before starting the spiral harvest pass the scanner performs a quick pre-scan for any mature crops or harvestable fruit. If none are found the spiral pass is skipped for that cycle and the frame rotation/animation will not advance. This reduces unnecessary world updates and frame rotations on idle farms.
+
 ## Supported Crops
 
 - Wheat

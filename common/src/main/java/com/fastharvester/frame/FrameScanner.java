@@ -555,6 +555,7 @@ public class FrameScanner {
         int lastComputedRotation = -1;
         int tickCounter = 0;
         boolean neighborPassDone = false;
+        boolean hasMature = false;
         int numberOfTicksNeeded = 0;
         boolean fullAnimationScheduled = false;
         int animationInterval = 1;
@@ -627,6 +628,32 @@ public class FrameScanner {
                 stepSize++;
             }
 
+            // Quick pre-scan: determine whether any spiral position contains a mature crop or harvestable fruit.
+            boolean foundMature = false;
+            for (SpiralStep step : spiralPositions) {
+                BlockPos p = step.pos;
+                try {
+                    BlockState s = level.getBlockState(p);
+                    if (s == null || s.isAir()) continue;
+                    if (s.is(Blocks.MELON) || s.is(Blocks.PUMPKIN)) { foundMature = true; break; }
+                    if (s.is(Blocks.MELON_STEM) || s.is(Blocks.PUMPKIN_STEM)) {
+                        Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+                        for (Direction d : dirs) {
+                            BlockPos np = p.relative(d);
+                            BlockState ns = level.getBlockState(np);
+                            if (ns.is(Blocks.MELON) || ns.is(Blocks.PUMPKIN)) { foundMature = true; break; }
+                        }
+                        if (foundMature) break;
+                    } else {
+                        boolean isCrop = s.getBlock() instanceof CropBlock || s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH);
+                        if (isCrop) {
+                            int threshold = (s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH)) ? 3 : 7;
+                            try { int age = s.getValue(CropBlock.AGE); if (age >= threshold) { foundMature = true; break; } } catch (Throwable ignored) {}
+                        }
+                    }
+                } catch (Throwable ignored) {}
+            }
+            this.hasMature = foundMature;
             this.totalPositions = spiralPositions.size();
 
             int ticks = Math.max(1, Config.maxSpiralDurationTicks);
@@ -652,6 +679,12 @@ public class FrameScanner {
             }
 
             if (totalPositions == 0) {
+                ctx.logSummary();
+                return true;
+            }
+
+            if (!hasMature) {
+                try { Constants.logDebug("[SCAN] No mature crops found for {} — skipping spiral", center); } catch (Throwable ignored) {}
                 ctx.logSummary();
                 return true;
             }

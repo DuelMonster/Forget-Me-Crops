@@ -130,6 +130,8 @@ FastHarvester's frame rotation system was recently refactored to avoid races and
 - The `FarmScanTask` executes a spiral pass over farm tiles and performs an additional neighbor/repair pass exactly once per task to handle auto-planting and tilling. This ensures repair actions (auto-plant/till) run during the same logical scan and do not repeat unnecessarily across ticks.
 - Auto-plant and auto-till logic are executed during the spiral and neighbor pass so replanting decisions can consider local context and avoid removing valid seeds or overwriting neighboring farms.
 
+- Pre-scan maturity check: `FarmScanTask` now performs a quick maturity pre-check across the spiral candidate positions before beginning the harvest spiral. If no mature crops or harvestable fruit are present the task exits early for that cycle and no frame rotation/animation or neighbor repairs are scheduled. This reduces unnecessary world updates and frame rotations on idle farms.
+
 ## Loot & Enchantment Handling
 
 - Block drop calculation now prefers server-side `LootContext` builders so `Fortune` and `Silk Touch` enchantments are respected for drop determination where available. When running in environments that require compatibility fallbacks, the code uses guarded reflection paths that safely degrade to conservative drop estimates.
