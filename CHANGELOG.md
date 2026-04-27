@@ -1,23 +1,132 @@
-# Changelog
+# CHANGELOG
 
-All notable changes to this project will be documented in this file.
+## 0.8.0
 
-## Unreleased
+- Update .gitignore and workspace launch paths
+- Enable debugLogging and defer FastItemFrames API probe during init
+- API first FastItemFrames write path and block state fallback; invoke apiMarkUpdated when available
+- Defer frame validation and add FIF catch up queues; register empty frames as inactive anchors
+- Harden replacement flow, add skipNextDamage, verify persistence and add rotation readback logging
+- Use defensive copy for HarvestContext in FarmScanTask to avoid mutating registry ItemStack
+- Store defensive copy in FrameRegistry.registerFrame and pass copy in syncFrameHoe to avoid shared ItemStack mutation
+- Defensive copy in FastItemFrameAdapterImpl.extractHeldItem
+- Centralize config descriptors and update platform config screens
+- Centralize title screen logging and use helper in mixins
+- Add PlatformReflective and delegate reflection/fallbacks; pass defensive ItemStack.copy for BE writes
+- Split scanRange into scanRangeX/scanRangeZ and update scanning logic
+- Expose scanRangeX/scanRangeZ in Fabric and NeoForge config screens; update NeoForge config mapping
+- Add scanRangeX/scanRangeZ keys to server TOML and language entries
+- Document scanRangeX/scanRangeZ semantics and migration
+- Remove legacy scanRange; use scanRangeX/scanRangeZ exclusively
+- Remove legacy scanRange; document migration to scanRangeX/scanRangeZ
+- Try FastItemFrameAdapterImpl before reflection when updating frame items
+- Provide IConfigScreenFactory via service loader to enable Mods to Config button
+- Match IConfigScreenFactory signature)
+- Enable Mods to Config screen via SPI and robust reflective registration
+- Commit automated formatting and helper updates
 
-- Fix(rotation): deterministic full-rotation animation and per-frame `animating` guard to avoid scheduling conflicts; rotations are batched per-tick via `FrameRegistry.PENDING_ROTATIONS`.
-- Fix(loot): block-drop calculation now respects `Fortune` and `Silk Touch` using server-side `LootContext` where available, with safe reflective fallbacks for loader differences.
-- Fix(hoe): hardened broken-hoe replacement and frame-held-hoe synchronization between `HarvestUtils` and `FrameRegistry`.
-- Chore(logging): centralized runtime logging via `Constants.log*` wrappers; lowered noisy INFO messages to DEBUG and added `[ROT]` rotation tags behind `debugLogging`.
-- Feature(scan): `FarmScanTask` precomputes a deterministic `fullAnimationSequence` (8 steps) and performs a single neighbor/repair pass per scan; auto-plant and auto-till are executed during the spiral + neighbor pass.
-- Chore(tickers): Fabric and NeoForge tickers now call `FrameRegistry.clearAll()` on world/server unload to avoid stale references.
-- Refactor: consolidate frame and utility helpers, add safer FastItemFrames adapters, and separate loader-specific logic into platform adapters.
-- Build/test: Gradle packaging, CI pipelines, and release metadata improvements.
+## 0.7.0
 
-## [1.2.0] - 2026-04-22
-- Remove Forge support; keep Fabric and NeoForge only.
-- Implement platform-specific loot/durability logic with native LootContext usage.
-- Harden enchantment extraction by moving loader-specific logic into platform helpers.
-- Remove shared reflective `ReflectionUtils` and consolidate logic per-loader.
-- Add unit tests for core logic and CI for build + tests.
-- Add release packaging tasks and CHANGELOG.
+- Add Javadocs to common frame and util classes; tidy FrameScanner imports
+- Add minimal Javadocs and constructors in Fabric and NeoForge modules to fix doclint warnings
+- Add unused imports scanner script
+- Centralize logging wrappers; docs: add Javadocs for log wrappers; fix enchantment registry usage
+- Avoid scheduled rotation conflicts during full rotation animation
+- Lower noisy INFO logs and tidy rotation logging
+- Lower routine INFO logs to DEBUG
+- Reduce CatchupManager, SweetBerry, and mixin info logs to DEBUG
+- Reduce noisy INFO logs to DEBUG across registry, scanner, discovery, catchup, chest and harvest code
+- Update README, TECHNICAL, and CHANGELOG
+- Prefer FastItemFrames API when available, fall back to heuristics
+- Log detected FastItemFrames API class for debug verification
+- Make FIF detection log informational for runtime verification
+- Force load FastItemFrameAdapterImpl at init to run API probe
+- Add discovered FIF BE classname to API probe candidates
+- Use runs/client and runs/server for NeoForge run dirs to match Fabric
+- Use gameDirectory property for run configuration
 
+## 0.6.0
+
+- Harvest & loot â€” integrate LootLogic and HarvestUtils; chest/hoe handling, seed policies, and frame scanning updates
+- Fabric & NeoForge â€” tickers, platform helpers, lifecycle hooks and Javadocs
+- Javadoc pass and minor cleanups across modules
+- Resume anchor scans when hoe returned to frame or chest
+- Batch frame rotations per tick to reduce world updates
+- Normalize line endings via .gitattributes; ignore related mods/ and releases/; remove embedded releases/original from index
+- Related mods/
+- Remove duplicate placeholder CropRouter; use crops.CropRouter implementation
+- Add Javadocs and mark utility classes non instantiable
+- Clarify HarvestUtils behavior; seed clutter, replant and hoe replace docs
+- Implement per tick rotation batching and frame registry flush path
+- Mark utility classes non instantiable
+- Move FastItemFrameAdapterImpl to platform.adapter and update refs; move TestUtils to test sources
+- Move FrameScanner/FrameRegistry/FrameDiscovery to com.fastharvester.frame and update callers
+- Move LootLogic to com.fastharvester.util.loot; preserve vanilla fortune/silk touch behavior
+- Move HoeUtils, ChestUtils, DurabilityLogic to com.fastharvester.util.*; update callers and tests
+- Update callers to new com.fastharvester.frame and com.fastharvester.util.* packages
+
+## 0.5.0
+
+- Apply config defaults and runtime fixes
+- Respect seedReservePerType, mark chests changed, relax auto till
+- Insert drops then draw seed from chest
+
+## 0.4.0
+
+- Catch up, discovery, FIF adapter, comments
+- Refactor ticker, integrate catch up, comments
+- Refactor ticker, integrate catch up, comments
+- Guard NeoForgeFarmTicker init against modEventBus registration errors
+- Register runtime listeners on container.getEventBus
+- Register NeoForgeFarmTicker on global NeoForge.EVENT BUS
+- Deduplicate ClothConfig builders; add platform helpers and Javadoc
+- Prevent spiral generator infinite loop; implement spiral ordered tick sliced FarmScanTask and add debug logging
+
+## 0.3.0
+
+- Implement improved in game config UI with vanilla widgets and ModMenu integration for MC 1.21.11; no external dependencies required
+- Fix common compile errors; implement basic harvest helpers; bump version to 1.1.0
+- Record removal of Forge support
+- Commit workspace changes
+- Lowercase mod id/group and mixin packages for NeoForge dev run
+- Lower java version and neoforge mixin compatibility to JAVA 18 for dev loader compatibility
+- Align toolchain languageVersion with java version property
+- Set java version back to 21 and restore neoforge mixin compatibility to JAVA 21
+- Relax NeoForge loader version range for dev runs)
+- Correct mixin package names to com.fastharvester.mixin
+- Add tests, CI, packaging; bump version to 1.2.0; remove forge placeholders; update fabric mod metadata; add changelog
+- Add pure Java TestUtils and update tests to avoid Minecraft classes
+- Commit remaining platform/loot/durability changes
+- Add integration/runtime smoke tests for Fabric and NeoForge
+- Add release workflow
+- Chunk load discovery + NeoForge ticker + FastItemFrames detection
+- Seed clutter trimming in REDUCED mode
+- Melon/pumpkin fruit & auto plant; add ChestUtils.removeOne
+- Auto till repair and frame rotation rules
+- BFS farm discovery; chunk unload cleanup; waterlogged chest enforcement; Nether Wart & Torchflower support
+- Add playful inline comments to Java files
+- Add one time catch up discovery on first server tick; check chest below frame; add diagnostic logging
+
+## 0.2.0
+
+- Remove PuzzlesLib/ForgeConfigAPIPort dependencies and registration. Refactor config to plain POJO and update loader entrypoints for manual config handling
+- Implement TOML based config loading and update loader entrypoints to call Config.load
+- Implement NeoForge config sync logic and expand Fabric config UI to cover all options
+- Migrate config registration and reload to ModConfigSpec and event bus for NeoForge 21.11.x compatibility; resolve all build errors and ensure loader agnostic config sync
+- Add friendly and emotional class level Javadoc to config and enums for full documentation compliance
+
+## 0.1.0
+
+- Add friendly, emotional, and occasionally funny comments to all Java files as required by project rules. Every class and method is now documented in a human, engaging style
+- Add explicit default constructors and Javadoc comments to resolve all Javadoc warnings; update utility and logic classes in common module
+- Add PuzzlesLib, ForgeConfigAPIPort, and ModMenu dependencies for Fabric and NeoForge
+- Refactor Config.java to use PuzzlesLib @Config and ConfigCore
+- Register config with PuzzlesLib in Fabric and NeoForge initializers
+- Switch Fabric to intermediary mappings and update PuzzlesLib/ForgeConfigAPIPort versions for 1.21.11 compatibility. Fixes access widener namespace error
+
+## 0.0.0
+
+- Initial commit of FastHarvester mod skeleton
+- Implement core farm scanning and automation logic in common
+- Recreate common module structure, config, and core files
+- Add Fabric and NeoForge entrypoints and update loader metadata
