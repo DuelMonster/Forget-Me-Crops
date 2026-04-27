@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.9.0
+
+- Regenerate CHANGELOG.md from git history
+
 ## 0.8.0
 
 - Update .gitignore and workspace launch paths
@@ -21,7 +25,7 @@
 - Remove legacy scanRange; document migration to scanRangeX/scanRangeZ
 - Try FastItemFrameAdapterImpl before reflection when updating frame items
 - Provide IConfigScreenFactory via service loader to enable Mods to Config button
-- Match IConfigScreenFactory signature)
+- Match IConfigScreenFactory signature
 - Enable Mods to Config screen via SPI and robust reflective registration
 - Commit automated formatting and helper updates
 
@@ -92,7 +96,7 @@
 - Lower java version and neoforge mixin compatibility to JAVA 18 for dev loader compatibility
 - Align toolchain languageVersion with java version property
 - Set java version back to 21 and restore neoforge mixin compatibility to JAVA 21
-- Relax NeoForge loader version range for dev runs)
+- Relax NeoForge loader version range for dev runs
 - Correct mixin package names to com.fastharvester.mixin
 - Add tests, CI, packaging; bump version to 1.2.0; remove forge placeholders; update fabric mod metadata; add changelog
 - Add pure Java TestUtils and update tests to avoid Minecraft classes
