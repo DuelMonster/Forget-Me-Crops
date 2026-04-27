@@ -1,6 +1,5 @@
 package com.fastharvester.platform.adapter;
 
-import com.fastharvester.FastItemFrameAdapter;
 import com.fastharvester.Constants;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.ItemStack;

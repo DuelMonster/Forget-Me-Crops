@@ -22,7 +22,7 @@ public class MixinTitleScreen {
      */
     @Inject(at = @At("HEAD"), method = "init()V")
     private void init(CallbackInfo info) {
-        com.fastharvester.TitleScreenLogger.logPlatform();
+        com.fastharvester.client.TitleScreenLogger.logPlatform();
         Constants.logDebug("MC Version: {}", Minecraft.getInstance().getVersionType());
     }
 }

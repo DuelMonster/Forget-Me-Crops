@@ -1,13 +1,9 @@
 # CHANGELOG
 
-## Unreleased
-
-- Implement seed-clutter policies: `NONE` removes supported seed drops before insertion (except crop-fruit), `NORMAL` consumes one seed per harvest from drops and inserts remaining seeds, `REDUCED` consumes one seed and halves remaining seed drops before insertion; `seedReservePerType` prevents chest removals that would drop below the configured reserve. Docs updated to reflect behavior.
- - Scan optimization: `FarmScanTask` now performs a quick maturity pre-check before starting the spiral. If no mature crops or harvestable fruit are present the spiral pass exits early and no frame rotation/animation is scheduled for that cycle. This reduces unnecessary work on idle farms.
-
 ## 0.9.0
 
-- Regenerate CHANGELOG.md from git history
+- Implement seed-clutter policies: `NONE` removes supported seed drops before insertion (except crop-fruit), `NORMAL` consumes one seed per harvest from drops and inserts remaining seeds, `REDUCED` consumes one seed and halves remaining seed drops before insertion; `seedReservePerType` prevents chest removals that would drop below the configured reserve. Docs updated to reflect behavior.
+- Scan optimization: `FarmScanTask` now performs a quick maturity pre-check before starting the spiral. If no mature crops or harvestable fruit are present the spiral pass exits early and no frame rotation/animation is scheduled for that cycle. This reduces unnecessary work on idle farms.
 
 ## 0.8.0
 

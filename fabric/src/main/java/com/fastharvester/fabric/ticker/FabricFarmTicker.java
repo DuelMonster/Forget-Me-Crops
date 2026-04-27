@@ -22,8 +22,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 
 import java.util.List;
 import java.util.Map;
-
-import com.fastharvester.CatchupManager;
+import com.fastharvester.frame.CatchupManager;
 import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
 
 public class FabricFarmTicker {
@@ -49,7 +48,7 @@ public class FabricFarmTicker {
                 for (ItemFrame f : frames) {
                     try { vanillaCandidates.add(f.blockPosition()); } catch (Throwable ignored) {}
                 }
-                if (!vanillaCandidates.isEmpty()) com.fastharvester.CatchupManager.enqueueVanillaPositions(level, dimId, vanillaCandidates);
+                if (!vanillaCandidates.isEmpty()) CatchupManager.enqueueVanillaPositions(level, dimId, vanillaCandidates);
 
                 try {
                     Map<BlockPos, BlockEntity> blockEntities = chunk.getBlockEntities();
@@ -61,7 +60,7 @@ public class FabricFarmTicker {
                         if (!FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
                         fifCandidates.add(pos);
                     }
-                    if (!fifCandidates.isEmpty()) com.fastharvester.CatchupManager.enqueueFifPositions(level, dimId, fifCandidates);
+                    if (!fifCandidates.isEmpty()) CatchupManager.enqueueFifPositions(level, dimId, fifCandidates);
                 } catch (Throwable t) {
                     Constants.logDebug("[FIF] FastItemFrames discovery failed", t);
                 }

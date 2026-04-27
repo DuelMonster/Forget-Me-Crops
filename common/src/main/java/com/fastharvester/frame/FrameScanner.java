@@ -24,8 +24,8 @@ import java.util.Map;
 
 import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
 import com.fastharvester.util.chest.ChestUtils;
-import com.fastharvester.HarvestUtils;
-import com.fastharvester.HarvestContext;
+import com.fastharvester.harvest.HarvestUtils;
+import com.fastharvester.harvest.HarvestContext;
 import com.fastharvester.util.durability.DurabilityLogic;
 import java.util.HashMap;
 import java.util.Comparator;

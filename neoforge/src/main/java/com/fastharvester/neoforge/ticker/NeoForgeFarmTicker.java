@@ -24,7 +24,7 @@ import net.minecraft.world.phys.AABB;
 
 import java.util.List;
 
-import com.fastharvester.CatchupManager;
+import com.fastharvester.frame.CatchupManager;
 import com.fastharvester.frame.FrameDiscovery;
 import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
 

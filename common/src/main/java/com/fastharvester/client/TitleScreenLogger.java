@@ -1,8 +1,7 @@
-package com.fastharvester;
+package com.fastharvester.client;
 
-/**
- * TitleScreenLogger: small common helper to centralize title-screen logging.
- */
+import com.fastharvester.Constants;
+
 public final class TitleScreenLogger {
     private TitleScreenLogger() {}
 
