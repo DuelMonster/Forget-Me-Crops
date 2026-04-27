@@ -19,9 +19,11 @@ import net.minecraft.world.Container;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
-import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
+import com.fastharvester.platform.adapter.FIF;
 import com.fastharvester.frame.FrameRegistry;
 import com.fastharvester.frame.FrameScanner;
+import com.fastharvester.harvest.CropRegistry;
+import com.fastharvester.util.hoe.FrameHoeReplacement;
 import com.fastharvester.util.loot.LootLogic;
 import com.fastharvester.util.chest.ChestUtils;
 import com.fastharvester.util.durability.DurabilityLogic;
@@ -44,11 +46,11 @@ public class HarvestUtils {
         List<ItemStack> drops = LootLogic.getBlockDrops((net.minecraft.server.level.ServerLevel)ctx.level, pos, state, ctx.hoe);
         if (drops.isEmpty()) return;
 
-        Item seedItem = clutterSeedItemFor(block);
-        boolean seedIsCropFruit = isSeedAlsoCropFruit(seedItem);
+        Item seedItem = CropRegistry.clutterSeed(block);
+        boolean seedIsCropFruit = CropRegistry.isSeedAlsoCropFruit(seedItem);
         applyPreReplantSeedClutterPolicy(drops, seedItem, seedIsCropFruit);
 
-        ItemStack cost = replantCostItemFor(block);
+        ItemStack cost = CropRegistry.replantCost(block);
         boolean tookFromDropsForReplant = false;
         if (cost != null && !cost.isEmpty()) {
             Item replantSeedItem = cost.getItem();
@@ -71,7 +73,7 @@ public class HarvestUtils {
             if (ctx != null && ctx.skipNextDamage) { ctx.skipNextDamage = false; }
             else { DurabilityLogic.applyDamage(ctx.level, ctx.hoe, ctx.level.getRandom()); }
         } catch (Throwable ignored) {}
-        if (ctx.hoe.isEmpty()) { handleBrokenHoe(ctx, hoeBeforeDamage); }
+        if (ctx.hoe.isEmpty()) { FrameHoeReplacement.tryReplaceBrokenHoe(ctx); }
         else { syncFrameHoe(ctx); }
 
         if (cost != null && !cost.isEmpty()) {
@@ -90,27 +92,7 @@ public class HarvestUtils {
         ctx.harvestedCount++;
     }
 
-    private static ItemStack replantCostItemFor(Block block) {
-        if (block == Blocks.BEETROOTS) return new ItemStack(Items.BEETROOT_SEEDS);
-        if (block == Blocks.WHEAT) return new ItemStack(Items.WHEAT_SEEDS);
-        if (block == Blocks.CARROTS) return new ItemStack(Items.CARROT);
-        if (block == Blocks.POTATOES) return new ItemStack(Items.POTATO);
-        if (block == Blocks.NETHER_WART) return new ItemStack(Items.NETHER_WART);
-        try { if (block.getClass().getName().toLowerCase().contains("torchflower")) return new ItemStack(block.asItem()); } catch (Throwable ignored) {}
-        return ItemStack.EMPTY;
-    }
-
-    private static Item clutterSeedItemFor(Block block) {
-        if (block == Blocks.BEETROOTS) return Items.BEETROOT_SEEDS;
-        if (block == Blocks.WHEAT) return Items.WHEAT_SEEDS;
-        if (block == Blocks.CARROTS) return Items.CARROT;
-        if (block == Blocks.POTATOES) return Items.POTATO;
-        if (block == Blocks.MELON_STEM) return Items.MELON_SEEDS;
-        if (block == Blocks.PUMPKIN_STEM) return Items.PUMPKIN_SEEDS;
-        if (block == Blocks.NETHER_WART) return Items.NETHER_WART;
-        try { if (block.getClass().getName().toLowerCase().contains("torchflower")) return block.asItem(); } catch (Throwable ignored) {}
-        return null;
-    }
+    
 
     private static void applyPreReplantSeedClutterPolicy(List<ItemStack> drops, Item seedItem, boolean seedIsCropFruit) {
         if (seedItem == null) return;
@@ -135,46 +117,10 @@ public class HarvestUtils {
         }
     }
 
-    private static boolean isSeedAlsoCropFruit(Item seedItem) {
-        if (seedItem == null) return false;
-        return seedItem == Items.CARROT || seedItem == Items.POTATO || seedItem == Items.NETHER_WART
-                || seedItem instanceof BlockItem && ((BlockItem)seedItem).getBlock().getClass().getName().toLowerCase().contains("torchflower");
-    }
-
     public static void handleBrokenHoe(HarvestContext ctx, ItemStack oldHoe) {
         Constants.logDebug("[HOE] Hoe broke during harvest. Previous: {}", oldHoe);
         try { playHoeBreakEffects(ctx, oldHoe); } catch (Throwable ignored) {}
-        if (ctx.chest == null) return;
-        try {
-            FrameScanner.Anchor anchor = null;
-            try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {}
-
-            ItemStack replacement = ChestUtils.takeFirstHoe(ctx.chest);
-            if (replacement != null && !replacement.isEmpty()) {
-                try { ItemStack newHoe = replacement.copy(); newHoe.setCount(1); ctx.hoe = newHoe; try { ctx.skipNextDamage = true; } catch (Throwable ignored) {} } catch (Throwable ignored) {}
-                try { if (anchor != null) { String dimId = ctx.level.dimension().identifier().toString(); FrameRegistry.updateHoe(dimId, anchor.framePos, ctx.hoe == null ? replacement.copy() : ctx.hoe.copy()); } } catch (Throwable ignored) {}
-                try { syncFrameHoe(ctx); } catch (Throwable ignored) {}
-                try {
-                    ItemStack verified = FrameScanner.readHoeFromFrame(ctx.level, anchor == null ? null : anchor.framePos);
-                    if (verified == null || verified.isEmpty() || !(verified.getItem() instanceof HoeItem)) {
-                        try { ChestUtils.insertAll(ctx.chest, java.util.List.of(replacement)); } catch (Throwable ignored) {}
-                        try { if (anchor != null) { String dimId = ctx.level.dimension().identifier().toString(); FrameRegistry.updateHoe(dimId, anchor.framePos, net.minecraft.world.item.ItemStack.EMPTY); FrameRegistry.setCooldown(dimId, anchor.framePos, com.fastharvester.Config.chestFullCooldownTicks); } } catch (Throwable ignored) {}
-                        try { syncFrameHoe(ctx); } catch (Throwable ignored) {}
-                        ctx.chestFull = true;
-                        Constants.logDebug("[HOE] Replacement did not persist to frame; returned to chest and aborting for {}", anchor == null ? "unknown" : anchor.framePos);
-                        return;
-                    }
-                } catch (Throwable ignored) {}
-
-                Constants.logDebug("[HOE] Pulled replacement hoe from chest: {}", replacement);
-                return;
-            } else {
-                Constants.logDebug("[HOE] No replacement hoe available in chest for frame at {}", anchor == null ? "unknown" : anchor.framePos);
-                try { if (anchor != null) { String dimId = ctx.level.dimension().identifier().toString(); FrameRegistry.updateHoe(dimId, anchor.framePos, net.minecraft.world.item.ItemStack.EMPTY); FrameRegistry.setCooldown(dimId, anchor.framePos, com.fastharvester.Config.chestFullCooldownTicks); } } catch (Throwable ignored) {}
-                try { syncFrameHoe(ctx); } catch (Throwable ignored) {}
-                ctx.chestFull = true;
-            }
-        } catch (Throwable t) { Constants.logWarn("[HOE] Error attempting to replace broken hoe", t); }
+        FrameHoeReplacement.tryReplaceBrokenHoe(ctx);
     }
 
     private static void playHoeBreakEffects(HarvestContext ctx, ItemStack brokenHoe) {
@@ -198,11 +144,30 @@ public class HarvestUtils {
             if (anchor == null || ctx.level == null) return;
             BlockPos pos = anchor.framePos;
             try {
-                java.util.List<net.minecraft.world.entity.decoration.ItemFrame> frames = ctx.level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class, new net.minecraft.world.phys.AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX()+1, pos.getY()+1, pos.getZ()+1), e -> true);
-                if (!frames.isEmpty()) { net.minecraft.world.entity.decoration.ItemFrame frame = frames.get(0); frame.setRotation((frame.getRotation() + 1) & 7); return; }
-            } catch (Throwable ignored) {}
+                int cur = 0;
+                try {
+                    java.util.List<net.minecraft.world.entity.decoration.ItemFrame> frames = ctx.level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class, new net.minecraft.world.phys.AABB(pos));
+                    for (net.minecraft.world.entity.decoration.ItemFrame f : frames) {
+                        if (f.blockPosition().equals(pos)) {
+                            for (java.lang.reflect.Method m : f.getClass().getMethods()) {
+                                String name = m.getName().toLowerCase();
+                                if ((name.contains("get") || name.contains("getitem")) && name.contains("rotation") && m.getParameterCount() == 0) {
+                                    try { Object r = m.invoke(f); if (r instanceof Number) { cur = ((Number) r).intValue() & 7; } } catch (Throwable ignored) {}
+                                    break;
+                                }
+                            }
+                            try { java.lang.reflect.Field fld = f.getClass().getDeclaredField("rotation"); fld.setAccessible(true); Object v = fld.get(f); if (v instanceof Number) cur = ((Number) v).intValue() & 7; } catch (Throwable ignored) {}
+                            break;
+                        }
+                    }
+                } catch (Throwable ignored) {}
 
-            try { BlockEntity be = ctx.level.getBlockEntity(pos); if (be != null) { int current = FastItemFrameAdapterImpl.getRotation(be); FastItemFrameAdapterImpl.setRotation(be, (current + 1) & 7); } } catch (Throwable ignored) {}
+                    try { BlockEntity be = ctx.level.getBlockEntity(pos); if (be != null) { try { cur = FIF.getRotation(be); } catch (Throwable ignored) {} } } catch (Throwable ignored) {}
+
+                int next = (cur + 1) & 7;
+                long gameTime = -1L; try { gameTime = ctx.level.getGameTime(); } catch (Throwable ignored) {}
+                try { FrameRegistry.scheduleRotation(ctx.level.dimension().identifier().toString(), pos, next, gameTime); } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {}
         } catch (Throwable ignored) {}
     }
 

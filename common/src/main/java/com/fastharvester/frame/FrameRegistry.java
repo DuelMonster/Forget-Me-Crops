@@ -2,6 +2,8 @@ package com.fastharvester.frame;
 import com.fastharvester.Constants;
 import com.fastharvester.Config;
 import com.fastharvester.util.chest.ChestUtils;
+import com.fastharvester.harvest.HarvestContext;
+import com.fastharvester.util.hoe.FrameHoeReplacement;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
@@ -318,44 +320,20 @@ public class FrameRegistry {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
         if (map == null) return ready;
 
-        Map<BlockPos, net.minecraft.world.item.ItemStack> pendingReplacements = new HashMap<>();
         for (Map.Entry<BlockPos, FrameEntry> e : map.entrySet()) {
             BlockPos pos = e.getKey();
             FrameEntry fe = e.getValue();
             try {
+                if (fe == null || fe.anchor == null) continue;
                 net.minecraft.world.item.ItemStack stored = fe.anchor.hoe;
                 if (stored == null || stored.isEmpty()) {
                     try {
-                        java.util.List<net.minecraft.world.entity.decoration.ItemFrame> frames = level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class, new net.minecraft.world.phys.AABB(pos));
-                        for (net.minecraft.world.entity.decoration.ItemFrame f : frames) {
-                            if (f.blockPosition().equals(pos)) {
-                                net.minecraft.world.item.ItemStack held = f.getItem();
-                                if (held != null && !held.isEmpty() && held.getItem() instanceof net.minecraft.world.item.HoeItem) {
-                                    pendingReplacements.put(pos, held.copy());
-                                    break;
-                                }
-                            }
-                        }
-                    } catch (Throwable ignored) {}
-
-                    if (!pendingReplacements.containsKey(pos) && fe.anchor != null && fe.anchor.chest != null) {
-                        try {
-                            net.minecraft.world.item.ItemStack replacement = ChestUtils.takeFirstHoe(fe.anchor.chest);
-                            if (replacement != null && !replacement.isEmpty()) pendingReplacements.put(pos, replacement.copy());
-                        } catch (Throwable ignored) {}
+                        HarvestContext ctx = new HarvestContext(fe.anchor, level, net.minecraft.world.item.ItemStack.EMPTY, fe.anchor.chest, null);
+                        FrameHoeReplacement.tryReplaceBrokenHoe(ctx);
+                    } catch (Throwable t) {
+                        Constants.logDebug("[REG] Failed to attempt auto-replacement for " + pos, t);
                     }
                 }
-            } catch (Throwable ignored) {}
-        }
-
-        for (Map.Entry<BlockPos, net.minecraft.world.item.ItemStack> r : pendingReplacements.entrySet()) {
-            try {
-                updateHoe(dimensionId, r.getKey(), r.getValue());
-            } catch (Throwable t) {
-                Constants.logDebug("[REG] Failed to apply auto-replacement for " + r.getKey(), t);
-            }
-            try {
-                com.fastharvester.platform.Services.PLATFORM.updateFrameItem(level, r.getKey(), r.getValue());
             } catch (Throwable ignored) {}
         }
 

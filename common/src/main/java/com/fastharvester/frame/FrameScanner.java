@@ -22,10 +22,11 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Map;
 
-import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
+import com.fastharvester.platform.adapter.FIF;
 import com.fastharvester.util.chest.ChestUtils;
 import com.fastharvester.harvest.HarvestUtils;
 import com.fastharvester.harvest.HarvestContext;
+import com.fastharvester.harvest.CropRegistry;
 import com.fastharvester.util.durability.DurabilityLogic;
 import java.util.HashMap;
 import java.util.Comparator;
@@ -104,25 +105,15 @@ public class FrameScanner {
                 currentHoe = frameHoe.copy();
                 try { FrameRegistry.updateHoe(dimId, center, currentHoe.copy()); } catch (Throwable ignored) {}
             } else {
-                // Frame is empty; attempt to pull replacement from chest only if we don't already have a stored hoe
+                // Frame is empty; delegate replacement logic to FrameHoeReplacement which encapsulates chest/frame transactions.
                 if (currentHoe == null || currentHoe.isEmpty()) {
-                    ItemStack replacement = ChestUtils.takeFirstHoe(anchor.chest);
-                    if (replacement != null && !replacement.isEmpty()) {
-                        try {
-                            com.fastharvester.platform.Services.PLATFORM.updateFrameItem(level, center, replacement.copy());
-                        } catch (Throwable t) {
-                            try { Constants.logDebug("[HOE] Failed to apply replacement to frame at {}: {}", center, t.getMessage()); } catch (Throwable ignored) {}
+                    try {
+                        HarvestContext tempCtx = new HarvestContext(anchor, level, ItemStack.EMPTY, anchor.chest, null);
+                        com.fastharvester.util.hoe.FrameHoeReplacement.tryReplaceBrokenHoe(tempCtx);
+                        if (tempCtx.hoe != null && !tempCtx.hoe.isEmpty()) {
+                            currentHoe = tempCtx.hoe.copy();
                         }
-                        // Verify the replacement actually persisted on the frame before updating state
-                        ItemStack verified = readHoeFromFrame(level, center);
-                        if (verified != null && !verified.isEmpty() && verified.getItem() instanceof HoeItem) {
-                            currentHoe = verified.copy();
-                            try { FrameRegistry.updateHoe(dimId, center, currentHoe.copy()); } catch (Throwable ignored) {}
-                        } else {
-                            // Replacement didn't apply; try to put the removed hoe back into the chest
-                            try { ChestUtils.insertAll(anchor.chest, java.util.List.of(replacement)); } catch (Throwable ignored) {}
-                        }
-                    }
+                    } catch (Throwable ignored) {}
                 }
             }
         } catch (Throwable ignored) {}
@@ -331,13 +322,13 @@ public class FrameScanner {
                 BlockPos npos = pos.relative(d);
                 BlockState ns = level.getBlockState(npos);
                 Block b = ns.getBlock();
-                if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) {
+                if (com.fastharvester.harvest.CropRegistry.isCropBlock(b)) {
                     counts.merge(b, 1, Integer::sum);
                 }
             }
             if (!counts.isEmpty()) {
                 Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                Item seed = seedForBlock(chosen);
+                Item seed = CropRegistry.clutterSeed(chosen);
                 if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
                     BlockState plantState = chosen.defaultBlockState();
                     try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
@@ -358,7 +349,7 @@ public class FrameScanner {
             }
             if (!counts.isEmpty()) {
                 Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                Item seed = seedForBlock(chosen);
+                Item seed = CropRegistry.clutterSeed(chosen);
                 if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
                     BlockState plantState = chosen.defaultBlockState();
                     try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
@@ -398,13 +389,13 @@ public class FrameScanner {
                         BlockPos npos = pos.relative(d);
                         BlockState ns = level.getBlockState(npos);
                         Block b = ns.getBlock();
-                        if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) {
+                        if (com.fastharvester.harvest.CropRegistry.isCropBlock(b)) {
                             counts2.merge(b, 1, Integer::sum);
                         }
                     }
                     if (!counts2.isEmpty()) {
                         Block chosen2 = counts2.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                        Item seed2 = seedForBlock(chosen2);
+                        Item seed2 = CropRegistry.clutterSeed(chosen2);
                         if (seed2 != null && ChestUtils.removeOne(anchor.chest, seed2)) {
                             BlockState plantState2 = chosen2.defaultBlockState();
                             try { if (plantState2.getBlock() instanceof CropBlock) plantState2 = plantState2.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
@@ -416,20 +407,7 @@ public class FrameScanner {
         }
     }
 
-    private static Item seedForBlock(Block b) {
-        if (b == Blocks.WHEAT) return Items.WHEAT_SEEDS;
-        if (b == Blocks.BEETROOTS) return Items.BEETROOT_SEEDS;
-        if (b == Blocks.CARROTS) return Items.CARROT;
-        if (b == Blocks.POTATOES) return Items.POTATO;
-        if (b == Blocks.MELON_STEM) return Items.MELON_SEEDS;
-        if (b == Blocks.PUMPKIN_STEM) return Items.PUMPKIN_SEEDS;
-        try {
-            String cls = b.getClass().getName().toLowerCase();
-            if (cls.contains("torchflower")) return b.asItem();
-        } catch (Throwable ignored) {}
-        if (b == Blocks.NETHER_WART) return Items.NETHER_WART;
-        return null;
-    }
+
 
     private static List<BlockPos> bfsDiscoverFarm(BlockPos center, Level level, int rangeX, int rangeZ) {
         List<BlockPos> result = new ArrayList<>();
@@ -573,12 +551,9 @@ public class FrameScanner {
                     this.ctx.hoe = frameHoe.copy();
                     try { FrameRegistry.updateHoe(dimId, center, this.ctx.hoe.copy()); } catch (Throwable ignored) {}
                 } else if (this.ctx.hoe == null || this.ctx.hoe.isEmpty()) {
-                    ItemStack replacement = ChestUtils.takeFirstHoe(anchor.chest);
-                    if (replacement != null && !replacement.isEmpty()) {
-                        try { com.fastharvester.platform.Services.PLATFORM.updateFrameItem(level, center, replacement.copy()); } catch (Throwable ignored) {}
-                        this.ctx.hoe = replacement.copy();
-                        try { FrameRegistry.updateHoe(dimId, center, this.ctx.hoe.copy()); } catch (Throwable ignored) {}
-                    }
+                    try {
+                        com.fastharvester.util.hoe.FrameHoeReplacement.tryReplaceBrokenHoe(this.ctx);
+                    } catch (Throwable ignored) {}
                 }
             } catch (Throwable ignored) {}
             this.dimId = dimId;
@@ -861,13 +836,13 @@ public class FrameScanner {
                                     BlockPos npos = pos.relative(d);
                                     BlockState ns = level.getBlockState(npos);
                                     Block b = ns.getBlock();
-                                    if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) {
+                                    if (com.fastharvester.harvest.CropRegistry.isCropBlock(b)) {
                                         counts.merge(b, 1, Integer::sum);
                                     }
                                 }
                                 if (!counts.isEmpty()) {
                                     Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                                    Item seed = seedForBlock(chosen);
+                                    Item seed = CropRegistry.clutterSeed(chosen);
                                     if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
                                         BlockState plantState = chosen.defaultBlockState();
                                         try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
@@ -887,7 +862,7 @@ public class FrameScanner {
                                 }
                                 if (!counts.isEmpty()) {
                                     Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                                    Item seed = seedForBlock(chosen);
+                                    Item seed = CropRegistry.clutterSeed(chosen);
                                     if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
                                         BlockState plantState = chosen.defaultBlockState();
                                         try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
@@ -933,7 +908,7 @@ public class FrameScanner {
                                 }
                                 if (!counts2.isEmpty()) {
                                     Block chosen2 = counts2.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                                    Item seed2 = seedForBlock(chosen2);
+                                    Item seed2 = CropRegistry.clutterSeed(chosen2);
                                     if (seed2 != null && ChestUtils.removeOne(anchor.chest, seed2)) {
                                         BlockState plantState2 = chosen2.defaultBlockState();
                                         try { if (plantState2.getBlock() instanceof CropBlock) plantState2 = plantState2.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
@@ -1014,7 +989,7 @@ public class FrameScanner {
 
             BlockEntity be = level.getBlockEntity(pos);
             if (be != null) {
-                try { return FastItemFrameAdapterImpl.getRotation(be); } catch (Throwable ignored) {}
+                try { return FIF.getRotation(be); } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
             Constants.logDebug("[ROT] getFrameRotation failed at " + pos, t);
@@ -1036,7 +1011,7 @@ public class FrameScanner {
         try {
             BlockEntity be = level.getBlockEntity(pos);
             if (be != null) {
-                ItemStack s = FastItemFrameAdapterImpl.extractHeldItem(be);
+                ItemStack s = FIF.extractHeldItem(be);
                 if (s != null && !s.isEmpty() && s.getItem() instanceof HoeItem) return s.copy();
             }
         } catch (Throwable ignored) {}
@@ -1183,10 +1158,10 @@ public class FrameScanner {
             BlockEntity be = level.getBlockEntity(pos);
             if (be != null) {
                 try {
-                    FastItemFrameAdapterImpl.setRotation(be, newRotation);
+                    FIF.setRotation(be, newRotation);
                     try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
                     try {
-                        int rb = FastItemFrameAdapterImpl.getRotation(be);
+                        int rb = FIF.getRotation(be);
                         if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack={})", pos, newRotation & 7, rb); } catch (Throwable logEx1) {}
                     } catch (Throwable exGet) {
                         if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack=?)", pos, newRotation & 7); } catch (Throwable logEx2) {}

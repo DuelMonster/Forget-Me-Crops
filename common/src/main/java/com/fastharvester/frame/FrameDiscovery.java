@@ -2,7 +2,7 @@ package com.fastharvester.frame;
 import com.fastharvester.Constants;
 import com.fastharvester.Config;
 
-import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
+import com.fastharvester.platform.adapter.FIF;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.decoration.ItemFrame;
@@ -86,7 +86,7 @@ public class FrameDiscovery {
     public static boolean registerFIFIfValid(String dimId, ServerLevel level, BlockEntity be, BlockPos pos) {
         try {
             try { Constants.logDebug("[FIF] Inspecting potential FIF at {} in {} (be={})", pos, dimId, be == null ? "null" : be.getClass().getName()); } catch (Throwable ignored) {}
-            net.minecraft.world.item.ItemStack held = FastItemFrameAdapterImpl.extractHeldItem(be);
+            net.minecraft.world.item.ItemStack held = FIF.extractHeldItem(be);
             if (held != null && !held.isEmpty()) {
                 try { Constants.logDebug("[FIF] Held item at {}: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable ignored) {}
                 boolean isHoe = held.getItem() instanceof HoeItem;
@@ -142,7 +142,7 @@ public class FrameDiscovery {
         for (int dx = -rX; dx <= rX; dx++) for (int dz = -rZ; dz <= rZ; dz++) {
             BlockState ns = level.getBlockState(chestPos.offset(dx, 0, dz));
             net.minecraft.world.level.block.Block b = ns.getBlock();
-            if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) return true;
+            if (com.fastharvester.harvest.CropRegistry.isCropBlock(b)) return true;
         }
         return false;
     }
