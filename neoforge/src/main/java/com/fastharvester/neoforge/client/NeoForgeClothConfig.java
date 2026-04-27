@@ -16,6 +16,6 @@ public final class NeoForgeClothConfig {
      * @return created config screen
      */
     public static Screen create(Screen parent) {
-        return com.fastharvester.ConfigScreens.create(parent);
+        return com.fastharvester.neoforge.client.ConfigScreens.create(parent);
     }
 }
