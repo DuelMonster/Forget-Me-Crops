@@ -132,9 +132,10 @@ public class FrameDiscovery {
     /**
      * Return whether there are farmland crops near the given chest position.
      *
-     * @param level server level for lookup
-     * @param chestPos position to inspect around
-     * @param r search radius
+        * @param level server level for lookup
+        * @param chestPos position to inspect around
+        * @param rX search radius along the X axis
+        * @param rZ search radius along the Z axis
      * @return true if a farmland crop is nearby
      */
     public static boolean isNearbyFarmlandCrop(ServerLevel level, BlockPos chestPos, int rX, int rZ) {
