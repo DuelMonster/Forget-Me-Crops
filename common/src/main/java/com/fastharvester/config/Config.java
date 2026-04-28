@@ -184,11 +184,6 @@ public class Config {
         return String.valueOf(value);
     }
 
-    private static String unquote(String value) {
-        if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) return value.substring(1, value.length() - 1);
-        return value;
-    }
-
     private static String stringValue(Map<String, String> values, String key, String fallback) {
         return values.getOrDefault(key, fallback);
     }

@@ -411,49 +411,70 @@ public class FrameScanner {
 
     private static List<BlockPos> bfsDiscoverFarm(BlockPos center, Level level, int rangeX, int rangeZ) {
         List<BlockPos> result = new ArrayList<>();
-        Set<BlockPos> visited = new HashSet<>();
+        Set<Long> visited = new HashSet<>();
         Deque<BlockPos> q = new ArrayDeque<>();
 
-        for (int dx = -rangeX; dx <= rangeX; dx++) {
-            for (int dz = -rangeZ; dz <= rangeZ; dz++) {
-                BlockPos p = center.offset(dx, 0, dz);
-                BlockState s = level.getBlockState(p);
-                Block b = s.getBlock();
-                boolean isSeed = s.is(Blocks.MELON) || s.is(Blocks.PUMPKIN) || s.is(Blocks.MELON_STEM) || s.is(Blocks.PUMPKIN_STEM)
-                        || b instanceof CropBlock || s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH);
-                if (isSeed) {
-                    visited.add(p);
-                    q.add(p);
-                }
-            }
-        }
+        visited.add(center.asLong());
+        q.add(center);
 
-        LogUtils.logDebug("[SCAN] BFS seeded {} nodes around {} (rangeX={},rangeZ={}).", visited.size(), center, rangeX, rangeZ);
+        LogUtils.logDebug("[SCAN] BFS seeded from center {} (rangeX={},rangeZ={}).", center, rangeX, rangeZ);
 
         while (!q.isEmpty()) {
             BlockPos cur = q.poll();
+
+            int dx = Math.abs(cur.getX() - center.getX());
+            int dz = Math.abs(cur.getZ() - center.getZ());
+            if (dx > rangeX || dz > rangeZ) continue;
+
+            if (!isFarmPosition(level, cur)) continue;
+
             result.add(cur);
 
             for (Direction d : new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST}) {
                 BlockPos np = cur.relative(d);
-                if (visited.contains(np)) continue;
-                int ring = Math.max(Math.abs(np.getX() - center.getX()), Math.abs(np.getZ() - center.getZ()));
-                if (ring > Math.max(rangeX, rangeZ)) continue;
-                BlockState ns = level.getBlockState(np);
-                Block nb = ns.getBlock();
-                boolean traverse = nb instanceof CropBlock || ns.is(Blocks.FARMLAND) || ns.is(Blocks.DIRT) || ns.is(Blocks.GRASS_BLOCK)
-                        || ns.is(Blocks.MELON) || ns.is(Blocks.PUMPKIN) || ns.is(Blocks.MELON_STEM) || ns.is(Blocks.PUMPKIN_STEM)
-                        || ns.is(Blocks.SWEET_BERRY_BUSH) || ns.is(Blocks.NETHER_WART) || ns.is(Blocks.SOUL_SAND);
-                if (traverse) {
-                    visited.add(np);
-                    q.add(np);
-                }
+                long key = np.asLong();
+                if (visited.contains(key)) continue;
+                visited.add(key);
+                q.add(np);
             }
         }
 
         LogUtils.logDebug("[SCAN] BFS discovered {} connected nodes for center {}.", result.size(), center);
 
         return result;
+    }
+
+    /**
+     * Decide whether a position should be considered part of the same farm as the given anchor.
+     * This implements the "gap" detection from the original project: include empty farmland
+     * tiles only when a clear neighboring-crop consensus exists, treat soul-sand/nether-wart
+     * and melon/pumpkin clusters specially, and otherwise avoid crossing air/non-farm gaps.
+     */
+    private static boolean isFarmPosition(Level level, BlockPos pos) {
+        try {
+            BlockState state = level.getBlockState(pos);
+            Block b = state.getBlock();
+            if (CropRegistry.isCropBlock(b) || state.is(Blocks.MELON) || state.is(Blocks.PUMPKIN) || state.is(Blocks.MELON_STEM) || state.is(Blocks.PUMPKIN_STEM)) return true;
+            if (!state.isAir()) return false;
+
+            Block below = level.getBlockState(pos.below()).getBlock();
+            if (below == Blocks.FARMLAND) {
+                return com.fastharvester.harvest.CropRegistry.hasClearFarmlandCropConsensus(level, pos);
+            }
+            if (below == Blocks.SOUL_SAND) {
+                if (level.getBlockState(pos.north()).is(Blocks.NETHER_WART) || level.getBlockState(pos.south()).is(Blocks.NETHER_WART)
+                        || level.getBlockState(pos.east()).is(Blocks.NETHER_WART) || level.getBlockState(pos.west()).is(Blocks.NETHER_WART)) return true;
+            }
+
+            int melonPumpkinNeighbors = 0;
+            if (com.fastharvester.harvest.CropRegistry.isMelonPumpkinFarmBlock(level.getBlockState(pos.north()).getBlock())) melonPumpkinNeighbors++;
+            if (com.fastharvester.harvest.CropRegistry.isMelonPumpkinFarmBlock(level.getBlockState(pos.south()).getBlock())) melonPumpkinNeighbors++;
+            if (com.fastharvester.harvest.CropRegistry.isMelonPumpkinFarmBlock(level.getBlockState(pos.east()).getBlock())) melonPumpkinNeighbors++;
+            if (com.fastharvester.harvest.CropRegistry.isMelonPumpkinFarmBlock(level.getBlockState(pos.west()).getBlock())) melonPumpkinNeighbors++;
+            return melonPumpkinNeighbors >= 2;
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private static final Map<String, List<FarmScanTask>> activeScans = new HashMap<>();
