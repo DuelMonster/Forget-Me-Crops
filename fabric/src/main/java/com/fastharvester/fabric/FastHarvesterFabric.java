@@ -3,7 +3,7 @@ package com.fastharvester.fabric;
 // 🌿 Fabric bootstrap: wires up the mod on Fabric, gives a tiny wave on startup.
 // Emotional aside: it secretly hopes players have snacks while waiting for crops to grow.
 
-import com.fastharvester.Config;
+import com.fastharvester.config.Config;
 import com.fastharvester.FastHarvester;
 import com.fastharvester.fabric.ticker.FabricFarmTicker;
 import net.fabricmc.api.ModInitializer;

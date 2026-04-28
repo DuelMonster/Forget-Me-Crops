@@ -1,4 +1,4 @@
-package com.fastharvester;
+package com.fastharvester.config;
 
 import com.fastharvester.enums.RotationMode;
 import com.fastharvester.enums.SeedClutterMode;
@@ -6,9 +6,6 @@ import com.fastharvester.enums.DurabilityMode;
 
 /**
  * ConfigDescriptors: shared labels, tooltips, and defaults for config screens.
- *
- * This centralizes the human-facing strings and default/min values so
- * platform-specific builders can reuse them without duplicating literals.
  */
 public final class ConfigDescriptors {
     private ConfigDescriptors() {}

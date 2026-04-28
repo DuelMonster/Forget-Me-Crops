@@ -20,7 +20,7 @@ import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import net.minecraft.world.InteractionResult;
 import com.fastharvester.Constants;
-import com.fastharvester.Config;
+import com.fastharvester.config.Config;
 import com.fastharvester.FastHarvester;
 
 /**

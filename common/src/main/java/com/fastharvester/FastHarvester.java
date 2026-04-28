@@ -1,5 +1,7 @@
 package com.fastharvester;
 
+import com.fastharvester.config.Config;
+
 // 🚀 FastHarvester: the mod's heart. It waves a tiny flag when the mod starts and quietly hopes players enjoy the harvest.
 // Why it matters: startup rituals are emotional anchoring for mods.
 

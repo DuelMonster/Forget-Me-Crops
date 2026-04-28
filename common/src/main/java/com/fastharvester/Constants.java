@@ -5,6 +5,7 @@ package com.fastharvester;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.fastharvester.config.Config;
 
 /**
  * Constants: The VIP list for FastHarvester!

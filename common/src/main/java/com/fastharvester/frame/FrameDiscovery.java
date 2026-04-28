@@ -1,6 +1,6 @@
 package com.fastharvester.frame;
 import com.fastharvester.Constants;
-import com.fastharvester.Config;
+import com.fastharvester.config.Config;
 
 import com.fastharvester.platform.adapter.FIF;
 

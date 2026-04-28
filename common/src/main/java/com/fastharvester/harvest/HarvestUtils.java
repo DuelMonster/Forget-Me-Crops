@@ -28,6 +28,7 @@ import com.fastharvester.util.loot.LootLogic;
 import com.fastharvester.util.chest.ChestUtils;
 import com.fastharvester.util.durability.DurabilityLogic;
 import com.fastharvester.Constants;
+import com.fastharvester.config.Config;
 
 public class HarvestUtils {
     private HarvestUtils() {}
@@ -88,7 +89,7 @@ public class HarvestUtils {
             }
         }
 
-        if (com.fastharvester.Config.harvestParticles) ctx.level.levelEvent(2001, pos, Block.getId(state));
+        if (Config.harvestParticles) ctx.level.levelEvent(2001, pos, Block.getId(state));
         ctx.harvestedCount++;
     }
 
@@ -96,7 +97,7 @@ public class HarvestUtils {
 
     private static void applyPreReplantSeedClutterPolicy(List<ItemStack> drops, Item seedItem, boolean seedIsCropFruit) {
         if (seedItem == null) return;
-        if (com.fastharvester.Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.NONE) {
+        if (Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.NONE) {
             if (seedIsCropFruit) return;
             drops.removeIf(s -> s.getItem() == seedItem);
         }
@@ -104,7 +105,7 @@ public class HarvestUtils {
 
     private static void applyPostReplantSeedClutterPolicy(List<ItemStack> drops, Item seedItem, boolean seedIsCropFruit) {
         if (seedItem == null) return;
-        if (com.fastharvester.Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.REDUCED) {
+        if (Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.REDUCED) {
             if (seedIsCropFruit) return;
             for (Iterator<ItemStack> it = drops.iterator(); it.hasNext();) {
                 ItemStack s = it.next();

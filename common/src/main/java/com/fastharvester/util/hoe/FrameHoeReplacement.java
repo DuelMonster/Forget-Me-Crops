@@ -5,7 +5,7 @@ import com.fastharvester.frame.FrameRegistry;
 import com.fastharvester.frame.FrameScanner;
 import com.fastharvester.util.chest.ChestUtils;
 import com.fastharvester.Constants;
-import com.fastharvester.Config;
+import com.fastharvester.config.Config;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.HoeItem;

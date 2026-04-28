@@ -1,6 +1,6 @@
 package com.fastharvester.neoforge.config;
 
-import com.fastharvester.Config;
+import com.fastharvester.config.Config;
 import com.fastharvester.enums.DurabilityMode;
 import com.fastharvester.enums.RotationMode;
 import com.fastharvester.enums.SeedClutterMode;

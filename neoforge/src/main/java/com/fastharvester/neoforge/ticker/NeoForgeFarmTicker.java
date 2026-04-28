@@ -6,7 +6,7 @@ package com.fastharvester.neoforge.ticker;
 import com.fastharvester.frame.FrameRegistry;
 import com.fastharvester.frame.FrameScanner;
 import com.fastharvester.Constants;
-import com.fastharvester.Config;
+import com.fastharvester.config.Config;
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.level.ChunkEvent;

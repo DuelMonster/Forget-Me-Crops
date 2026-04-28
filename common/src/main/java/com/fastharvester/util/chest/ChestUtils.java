@@ -1,7 +1,7 @@
 package com.fastharvester.util.chest;
 
 import com.fastharvester.Constants;
-import com.fastharvester.Config;
+import com.fastharvester.config.Config;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.HoeItem;

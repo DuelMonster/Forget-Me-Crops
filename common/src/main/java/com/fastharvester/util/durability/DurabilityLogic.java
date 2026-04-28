@@ -1,7 +1,7 @@
 package com.fastharvester.util.durability;
 
 import com.fastharvester.enums.DurabilityMode;
-import com.fastharvester.Config;
+import com.fastharvester.config.Config;
 import com.fastharvester.Constants;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;

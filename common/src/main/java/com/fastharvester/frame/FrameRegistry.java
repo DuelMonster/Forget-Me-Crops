@@ -1,6 +1,6 @@
 package com.fastharvester.frame;
 import com.fastharvester.Constants;
-import com.fastharvester.Config;
+import com.fastharvester.config.Config;
 import com.fastharvester.util.chest.ChestUtils;
 import com.fastharvester.harvest.HarvestContext;
 import com.fastharvester.util.hoe.FrameHoeReplacement;
