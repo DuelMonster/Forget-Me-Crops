@@ -18,6 +18,7 @@ import me.shedaniel.autoconfig.ConfigHolder;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
+import java.util.Locale;
 import net.minecraft.world.InteractionResult;
 import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.config.Config;
@@ -112,7 +113,7 @@ public final class NeoForgeModInitializer {
 
             Method registerMethod = null;
             for (Method m : container.getClass().getMethods()) {
-                String name = m.getName().toLowerCase();
+                String name = m.getName().toLowerCase(Locale.ROOT);
                 if ((name.contains("extension") || name.contains("register") || name.contains("add")) && m.getParameterCount() == 2) {
                     Class<?> p0 = m.getParameterTypes()[0];
                     if (p0 == Class.class) {

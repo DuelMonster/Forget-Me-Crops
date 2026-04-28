@@ -1,6 +1,7 @@
 package com.fastharvester.platform;
 
 import com.fastharvester.util.log.LogUtils;
+import java.util.Locale;
 
 /**
  * PlatformReflective: shared reflection helpers used by platform implementations.
@@ -194,7 +195,7 @@ public final class PlatformReflective {
             // Try setter methods first
             try {
                 for (java.lang.reflect.Method m : be.getClass().getMethods()) {
-                    String name = m.getName().toLowerCase();
+                    String name = m.getName().toLowerCase(Locale.ROOT);
                     if (!(name.contains("set") || name.contains("display") || name.contains("held") || name.contains("item"))) continue;
                     if (m.getParameterCount() != 1) continue;
                     Class<?> p = m.getParameterTypes()[0];

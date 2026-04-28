@@ -4,6 +4,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.BlockItem;
+import java.util.Locale;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
@@ -20,7 +21,7 @@ public final class CropRegistry {
         if (block == Blocks.CARROTS) return new ItemStack(Items.CARROT);
         if (block == Blocks.POTATOES) return new ItemStack(Items.POTATO);
         if (block == Blocks.NETHER_WART) return new ItemStack(Items.NETHER_WART);
-        try { if (block.getClass().getName().toLowerCase().contains("torchflower")) return new ItemStack(block.asItem()); } catch (Throwable ignored) {}
+        try { if (block.getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower")) return new ItemStack(block.asItem()); } catch (Throwable ignored) {}
         return ItemStack.EMPTY;
     }
 
@@ -32,14 +33,14 @@ public final class CropRegistry {
         if (block == Blocks.MELON_STEM) return Items.MELON_SEEDS;
         if (block == Blocks.PUMPKIN_STEM) return Items.PUMPKIN_SEEDS;
         if (block == Blocks.NETHER_WART) return Items.NETHER_WART;
-        try { if (block.getClass().getName().toLowerCase().contains("torchflower")) return block.asItem(); } catch (Throwable ignored) {}
+        try { if (block.getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower")) return block.asItem(); } catch (Throwable ignored) {}
         return null;
     }
 
     public static boolean isSeedAlsoCropFruit(Item seedItem) {
         if (seedItem == null) return false;
         return seedItem == Items.CARROT || seedItem == Items.POTATO || seedItem == Items.NETHER_WART
-                || seedItem instanceof BlockItem && ((BlockItem)seedItem).getBlock().getClass().getName().toLowerCase().contains("torchflower");
+            || seedItem instanceof BlockItem && ((BlockItem)seedItem).getBlock().getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower");
     }
 
     public static boolean isCropBlock(net.minecraft.world.level.block.Block b) {

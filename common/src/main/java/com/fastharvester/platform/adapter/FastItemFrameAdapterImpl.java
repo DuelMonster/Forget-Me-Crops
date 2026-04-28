@@ -12,6 +12,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -80,7 +81,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                 if (held == null) held = extractHeldItem((BlockEntity) frame);
             } else {
                 for (Method m : frame.getClass().getMethods()) {
-                    String name = m.getName().toLowerCase();
+                    String name = m.getName().toLowerCase(Locale.ROOT);
                     if ((name.contains("getdisplayed") || name.contains("getheld") || name.contains("getitem")) && m.getParameterCount() == 0) {
                         Object res = m.invoke(frame);
                         if (res instanceof ItemStack) { held = (ItemStack) res; break; }
@@ -110,7 +111,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
             if (apiAvailable && apiClass != null) {
                 if (apiClass.isInstance(be)) return true;
             }
-            String cls = be.getClass().getName().toLowerCase();
+            String cls = be.getClass().getName().toLowerCase(Locale.ROOT);
             if (cls.contains("fastitemframes")) return true;
         } catch (Throwable ignored) {}
         return false;
@@ -233,7 +234,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                     if (apiSetItem == null && ((params.length == 1 && net.minecraft.world.item.ItemStack.class.isAssignableFrom(params[0]))
                             || (params.length == 2 && net.minecraft.world.item.ItemStack.class.isAssignableFrom(params[0])
                             && (params[1] == boolean.class || params[1] == Boolean.class)))) {
-                        String name = method.getName().toLowerCase();
+                        String name = method.getName().toLowerCase(Locale.ROOT);
                         if (name.contains("set") && name.contains("item")) {
                             apiSetItem = method;
                         }
@@ -320,7 +321,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                 } catch (Throwable ignored) {}
             }
             for (Method m : be.getClass().getMethods()) {
-                String name = m.getName().toLowerCase();
+                String name = m.getName().toLowerCase(Locale.ROOT);
                 if ((name.contains("getdisplayed") || name.contains("getheld") || name.contains("getitem")) && m.getParameterCount() == 0) {
                     try {
                         Object res = m.invoke(be);
@@ -373,7 +374,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                 } catch (Throwable ignored) {}
             }
             for (Method m : be.getClass().getMethods()) {
-                String name = m.getName().toLowerCase();
+                String name = m.getName().toLowerCase(Locale.ROOT);
                 if ((name.contains("get") || name.contains("getitem")) && name.contains("rotation") && m.getParameterCount() == 0) {
                     Object r = m.invoke(be);
                     if (r instanceof Number) return ((Number) r).intValue() & 7;
@@ -422,7 +423,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
             }
 
             for (Method m : be.getClass().getMethods()) {
-                String name = m.getName().toLowerCase();
+                String name = m.getName().toLowerCase(Locale.ROOT);
                 if (name.contains("set") && name.contains("rotation") && m.getParameterCount() == 1) {
                     Class<?> p = m.getParameterTypes()[0];
                     try {
@@ -487,7 +488,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                             BlockState state = level.getBlockState(pos);
                             try {
                                 for (Property<?> prop : state.getProperties()) {
-                                    String name = prop.getName().toLowerCase();
+                                    String name = prop.getName().toLowerCase(Locale.ROOT);
                                     if (!(name.contains("rotation") || name.contains("rot"))) continue;
                                     Collection<?> values = prop.getPossibleValues();
                                     Object chosen = null;
@@ -608,12 +609,12 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
 
             // Method-based heuristics
             for (Method m : be.getClass().getMethods()) {
-                String name = m.getName().toLowerCase();
+                String name = m.getName().toLowerCase(Locale.ROOT);
                 if (!(name.contains("set") || name.contains("display") || name.contains("held") || name.contains("item"))) continue;
                 if (m.getParameterCount() != 1) continue;
                 Class<?> p = m.getParameterTypes()[0];
                 try {
-                    if (p.isAssignableFrom(stack.getClass()) || p.getName().toLowerCase().contains("itemstack") || p == Object.class) {
+                    if (p.isAssignableFrom(stack.getClass()) || p.getName().toLowerCase(Locale.ROOT).contains("itemstack") || p == Object.class) {
                         m.setAccessible(true);
                         m.invoke(be, stack == null ? ItemStack.EMPTY : stack.copy());
                         try { be.setChanged(); } catch (Throwable ignored) {}

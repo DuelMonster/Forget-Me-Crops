@@ -4,6 +4,8 @@ plugins {
     id "fabric-loom" version "1.13-SNAPSHOT" apply false
     // see https://projects.neoforged.net/neoforged/moddevgradle for new versions
     id "net.neoforged.moddev" version "2.0.123" apply false
+    // SpotBugs plugin available for subprojects (apply false here)
+    id "com.github.spotbugs" version "5.1.3" apply false
 }
 
 allprojects {
@@ -61,5 +63,24 @@ tasks.register('packageReleases') {
         def zipFile = file("releases/${mod_version}.zip")
         ant.zip(destfile: zipFile) { fileset(dir: out) }
         println "Packaged release at: ${zipFile}"
+    }
+}
+
+// Configure PMD and SpotBugs for subprojects to allow repo-wide analysis tasks
+subprojects {
+    // Apply PMD (core Gradle plugin) and SpotBugs (third-party plugin)
+    apply plugin: 'pmd'
+    apply plugin: 'com.github.spotbugs'
+
+    pmd {
+        toolVersion = '7.0.0'
+        ignoreFailures = true
+        consoleOutput = true
+    }
+
+    spotbugs {
+        toolVersion = '4.9.0'
+        ignoreFailures = true
+        showProgress = false
     }
 }

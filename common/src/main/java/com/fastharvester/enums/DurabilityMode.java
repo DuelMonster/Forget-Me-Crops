@@ -1,5 +1,7 @@
 package com.fastharvester.enums;
 
+import java.util.Locale;
+
 /**
  * DurabilityMode: The mood ring for your hoe!
  * <p>
@@ -32,7 +34,7 @@ public enum DurabilityMode {
      */
     public static DurabilityMode fromConfigValue(String value) {
         try {
-            return valueOf(value.toUpperCase());
+            return valueOf(value.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             return NORMAL;
         }

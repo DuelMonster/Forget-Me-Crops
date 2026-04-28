@@ -11,18 +11,15 @@ import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.Container;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
+import java.util.Locale;
 import com.fastharvester.platform.adapter.FIF;
 import com.fastharvester.frame.FrameRegistry;
 import com.fastharvester.frame.FrameScanner;
-import com.fastharvester.harvest.CropRegistry;
 import com.fastharvester.util.hoe.FrameHoeReplacement;
 import com.fastharvester.util.loot.LootLogic;
 import com.fastharvester.util.chest.ChestUtils;
@@ -69,7 +66,6 @@ public class HarvestUtils {
         applyPostReplantSeedClutterPolicy(drops, seedItem, seedIsCropFruit);
         ChestUtils.insertAll(ctx.chest, drops);
 
-        ItemStack hoeBeforeDamage = ctx.hoe.copy();
         try {
             if (ctx != null && ctx.skipNextDamage) { ctx.skipNextDamage = false; }
             else { DurabilityLogic.applyDamage(ctx.level, ctx.hoe, ctx.level.getRandom()); }
@@ -150,8 +146,8 @@ public class HarvestUtils {
                     java.util.List<net.minecraft.world.entity.decoration.ItemFrame> frames = ctx.level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class, new net.minecraft.world.phys.AABB(pos));
                     for (net.minecraft.world.entity.decoration.ItemFrame f : frames) {
                         if (f.blockPosition().equals(pos)) {
-                            for (java.lang.reflect.Method m : f.getClass().getMethods()) {
-                                String name = m.getName().toLowerCase();
+                                for (java.lang.reflect.Method m : f.getClass().getMethods()) {
+                                String name = m.getName().toLowerCase(Locale.ROOT);
                                 if ((name.contains("get") || name.contains("getitem")) && name.contains("rotation") && m.getParameterCount() == 0) {
                                     try { Object r = m.invoke(f); if (r instanceof Number) { cur = ((Number) r).intValue() & 7; } } catch (Throwable ignored) {}
                                     break;

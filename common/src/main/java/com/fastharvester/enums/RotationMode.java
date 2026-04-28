@@ -1,5 +1,7 @@
 package com.fastharvester.enums;
 
+import java.util.Locale;
+
 /**
  * RotationMode: The dance card for your item frame!
  * <p>
@@ -32,7 +34,7 @@ public enum RotationMode {
      */
     public static RotationMode fromConfigValue(String value) {
         try {
-            return valueOf(value.toUpperCase());
+            return valueOf(value.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             return FOLLOW_HARVEST_SPIRAL;
         }

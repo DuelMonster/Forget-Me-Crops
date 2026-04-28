@@ -11,7 +11,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.entity.decoration.ItemFrame;
@@ -21,6 +20,7 @@ import net.minecraft.world.phys.AABB;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.Locale;
 
 import com.fastharvester.platform.adapter.FIF;
 import com.fastharvester.util.chest.ChestUtils;
@@ -971,7 +971,7 @@ public class FrameScanner {
             for (ItemFrame f : frames) {
                 if (f.blockPosition().equals(pos)) {
                     for (Method m : f.getClass().getMethods()) {
-                        String name = m.getName().toLowerCase();
+                        String name = m.getName().toLowerCase(Locale.ROOT);
                         if ((name.contains("get") || name.contains("getitem")) && name.contains("rotation") && m.getParameterCount() == 0) {
                             Object r = m.invoke(f);
                             if (r instanceof Number) return ((Number) r).intValue() & 7;
@@ -1075,7 +1075,7 @@ public class FrameScanner {
             for (ItemFrame f : frames) {
                 if (f.blockPosition().equals(pos)) {
                     for (Method m : f.getClass().getMethods()) {
-                        String name = m.getName().toLowerCase();
+                        String name = m.getName().toLowerCase(Locale.ROOT);
                         if (name.contains("set") && name.contains("rotation") && m.getParameterCount() == 1) {
                             Class<?> p = m.getParameterTypes()[0];
                             try {
@@ -1088,7 +1088,7 @@ public class FrameScanner {
                                     } catch (Throwable ex) {
                                         try {
                                             for (Method gm : f.getClass().getMethods()) {
-                                                String nm = gm.getName().toLowerCase();
+                                                String nm = gm.getName().toLowerCase(Locale.ROOT);
                                                 if ((nm.contains("get") || nm.contains("getitem")) && nm.contains("rotation") && gm.getParameterCount() == 0) {
                                                     Object r = gm.invoke(f);
                                                     if (r instanceof Number) { got = ((Number) r).intValue() & 7; break; }
@@ -1110,7 +1110,7 @@ public class FrameScanner {
                                     } catch (Throwable ex) {
                                         try {
                                             for (Method gm : f.getClass().getMethods()) {
-                                                String nm = gm.getName().toLowerCase();
+                                                String nm = gm.getName().toLowerCase(Locale.ROOT);
                                                 if ((nm.contains("get") || nm.contains("getitem")) && nm.contains("rotation") && gm.getParameterCount() == 0) {
                                                     Object r = gm.invoke(f);
                                                     if (r instanceof Number) { got = ((Number) r).intValue() & 7; break; }
@@ -1139,7 +1139,7 @@ public class FrameScanner {
                         } catch (Throwable ex) {
                             try {
                                 for (Method gm : f.getClass().getMethods()) {
-                                    String nm = gm.getName().toLowerCase();
+                                    String nm = gm.getName().toLowerCase(Locale.ROOT);
                                     if ((nm.contains("get") || nm.contains("getitem")) && nm.contains("rotation") && gm.getParameterCount() == 0) {
                                         Object r = gm.invoke(f);
                                         if (r instanceof Number) { got = ((Number) r).intValue() & 7; break; }

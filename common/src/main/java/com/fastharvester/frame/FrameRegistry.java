@@ -1,7 +1,7 @@
 package com.fastharvester.frame;
 import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.config.Config;
-import com.fastharvester.util.chest.ChestUtils;
+// ChestUtils not used here; import removed by cleanup
 import com.fastharvester.harvest.HarvestContext;
 import com.fastharvester.util.hoe.FrameHoeReplacement;
 

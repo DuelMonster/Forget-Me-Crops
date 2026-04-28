@@ -1,5 +1,7 @@
 package com.fastharvester.enums;
 
+import java.util.Locale;
+
 /**
  * SeedClutterMode: The seed hoarder's dilemma!
  * <p>
@@ -32,7 +34,7 @@ public enum SeedClutterMode {
      */
     public static SeedClutterMode fromConfigValue(String value) {
         try {
-            return valueOf(value.toUpperCase());
+            return valueOf(value.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             return REDUCED;
         }
