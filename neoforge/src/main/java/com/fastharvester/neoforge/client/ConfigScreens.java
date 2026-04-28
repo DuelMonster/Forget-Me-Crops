@@ -10,6 +10,7 @@ import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 
 /**
  * NeoForge: centralized ClothConfig builder used by the NeoForge module.
@@ -60,7 +61,15 @@ public final class ConfigScreens {
         server.addEntry(entryBuilder.startEnumSelector(Component.literal(ConfigDescriptors.DURABILITY_MODE_LABEL), DurabilityMode.class, Config.durabilityMode)
                 .setDefaultValue(ConfigDescriptors.DURABILITY_MODE_DEFAULT)
                 .setSaveConsumer(v -> Config.durabilityMode = v)
-                .setTooltip(Component.literal(ConfigDescriptors.DURABILITY_MODE_TOOLTIP))
+                .setTooltip(Component.literal("")
+                        .append(Component.literal("Modes:\n").withStyle(ChatFormatting.YELLOW))
+                        .append(Component.literal("  NORMAL").withStyle(ChatFormatting.GREEN))
+                        .append(Component.literal(" — Standard durability consumption (default)\n").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("  IGNORE_UNBREAKING").withStyle(ChatFormatting.GOLD))
+                        .append(Component.literal(" — Treat Unbreaking as absent when computing wear\n").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("  NONE").withStyle(ChatFormatting.RED))
+                        .append(Component.literal(" — Disable durability loss entirely\n").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("\n")).append(Component.literal(ConfigDescriptors.DURABILITY_MODE_TOOLTIP).withStyle(ChatFormatting.GRAY)))
                 .build());
 
         server.addEntry(entryBuilder.startBooleanToggle(Component.literal(ConfigDescriptors.MENDING_NEGATION_LABEL), Config.mendingNegation)
@@ -90,13 +99,29 @@ public final class ConfigScreens {
         server.addEntry(entryBuilder.startEnumSelector(Component.literal(ConfigDescriptors.ROTATION_MODE_LABEL), RotationMode.class, Config.rotationMode)
                 .setDefaultValue(ConfigDescriptors.ROTATION_MODE_DEFAULT)
                 .setSaveConsumer(v -> Config.rotationMode = v)
-                .setTooltip(Component.literal(ConfigDescriptors.ROTATION_MODE_TOOLTIP))
+                .setTooltip(Component.literal("")
+                        .append(Component.literal("Modes:\n").withStyle(ChatFormatting.YELLOW))
+                        .append(Component.literal("  STEP_PER_HARVEST").withStyle(ChatFormatting.AQUA))
+                        .append(Component.literal(" — Advance one rotation step per full farm harvest\n").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("  FULL_ROTATION_PER_HARVEST").withStyle(ChatFormatting.GOLD))
+                        .append(Component.literal(" — Perform a full 0..7 rotation cycle per harvest\n").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("  FOLLOW_HARVEST_SPIRAL").withStyle(ChatFormatting.GREEN))
+                        .append(Component.literal(" — Rotate to follow the spiral scan progression (default)\n").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("\n")).append(Component.literal(ConfigDescriptors.ROTATION_MODE_TOOLTIP).withStyle(ChatFormatting.GRAY)))
                 .build());
 
         server.addEntry(entryBuilder.startEnumSelector(Component.literal(ConfigDescriptors.SEED_CLUTTER_LABEL), SeedClutterMode.class, Config.seedClutterMode)
                 .setDefaultValue(ConfigDescriptors.SEED_CLUTTER_DEFAULT)
                 .setSaveConsumer(v -> Config.seedClutterMode = v)
-                .setTooltip(Component.literal(ConfigDescriptors.SEED_CLUTTER_TOOLTIP))
+                .setTooltip(Component.literal("")
+                        .append(Component.literal("Modes:\n").withStyle(ChatFormatting.YELLOW))
+                        .append(Component.literal("  NORMAL").withStyle(ChatFormatting.GREEN))
+                        .append(Component.literal(" — Default seed handling\n").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("  REDUCED").withStyle(ChatFormatting.GOLD))
+                        .append(Component.literal(" — Reduce seed clutter by conserving seeds when replanting\n").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("  NONE").withStyle(ChatFormatting.RED))
+                        .append(Component.literal(" — Disable seed-clutter rules; do not automatically manage extra seeds\n").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("\n")).append(Component.literal(ConfigDescriptors.SEED_CLUTTER_TOOLTIP).withStyle(ChatFormatting.GRAY)))
                 .build());
 
         server.addEntry(entryBuilder.startIntField(Component.literal(ConfigDescriptors.SEED_RESERVE_LABEL), Config.seedReservePerType)
