@@ -1,5 +1,5 @@
 package com.fastharvester.frame;
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.config.Config;
 
 import com.fastharvester.platform.adapter.FIF;
@@ -33,9 +33,9 @@ public class FrameDiscovery {
      */
     public static boolean registerVanillaFrameIfValid(String dimId, ServerLevel level, ItemFrame f) {
         try {
-            try { Constants.logDebug("[TICK] Frame at {} direction={}", f.blockPosition(), f.getDirection()); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[TICK] Frame at {} direction={}", f.blockPosition(), f.getDirection()); } catch (Throwable ignored) {}
             var held = f.getItem();
-            if (f.getDirection() != Direction.UP) { Constants.logDebug("[TICK] Frame {} skipped: not facing UP ({}).", f.blockPosition(), f.getDirection()); return false; }
+            if (f.getDirection() != Direction.UP) { LogUtils.logDebug("[TICK] Frame {} skipped: not facing UP ({}).", f.blockPosition(), f.getDirection()); return false; }
             BlockPos pos = f.blockPosition();
             BlockPos chestPos = pos;
             BlockEntity be = level.getBlockEntity(chestPos);
@@ -51,25 +51,25 @@ public class FrameDiscovery {
                 int rZ = Math.min(5, Math.max(1, Config.scanRangeZ));
                 boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
                 if (nearbyFarmlandCrop && !chestWaterlogged) {
-                    Constants.logDebug("[TICK] Skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
+                    LogUtils.logDebug("[TICK] Skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                     return false;
                 }
                 if (held == null || held.isEmpty()) {
-                    try { Constants.logDebug("[TICK] Discovered empty frame at {} above chest {}; registering inactive.", pos, chestPos); } catch (Throwable ignored) {}
+                    try { LogUtils.logDebug("[TICK] Discovered empty frame at {} above chest {}; registering inactive.", pos, chestPos); } catch (Throwable ignored) {}
                     FrameRegistry.registerFrame(dimId, pos, chest, ItemStack.EMPTY);
                     return true;
                 }
-                try { Constants.logDebug("[TICK] Frame {} holds item: {}", pos, held.getItem().getClass().getName()); } catch (Throwable ignored) {}
-                if (!(held.getItem() instanceof HoeItem)) { Constants.logDebug("[TICK] Frame {} skipped: held item is not a hoe.", pos); return false; }
-                Constants.logDebug("[TICK] Discovered anchor (vanilla) at {} in {}; registering active.", pos, dimId);
+                try { LogUtils.logDebug("[TICK] Frame {} holds item: {}", pos, held.getItem().getClass().getName()); } catch (Throwable ignored) {}
+                if (!(held.getItem() instanceof HoeItem)) { LogUtils.logDebug("[TICK] Frame {} skipped: held item is not a hoe.", pos); return false; }
+                LogUtils.logDebug("[TICK] Discovered anchor (vanilla) at {} in {}; registering active.", pos, dimId);
                 FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
                 return true;
             } else {
-                Constants.logDebug("[TICK] No container block-entity near frame pos {} (be={}).", f.blockPosition(), be == null ? "null" : be.getClass().getName());
+                LogUtils.logDebug("[TICK] No container block-entity near frame pos {} (be={}).", f.blockPosition(), be == null ? "null" : be.getClass().getName());
                 return false;
             }
         } catch (Throwable t) {
-            Constants.logWarn("[TICK] Per-frame processing error", t);
+            LogUtils.logWarn("[TICK] Per-frame processing error", t);
             return false;
         }
     }
@@ -85,46 +85,46 @@ public class FrameDiscovery {
      */
     public static boolean registerFIFIfValid(String dimId, ServerLevel level, BlockEntity be, BlockPos pos) {
         try {
-            try { Constants.logDebug("[FIF] Inspecting potential FIF at {} in {} (be={})", pos, dimId, be == null ? "null" : be.getClass().getName()); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[FIF] Inspecting potential FIF at {} in {} (be={})", pos, dimId, be == null ? "null" : be.getClass().getName()); } catch (Throwable ignored) {}
             net.minecraft.world.item.ItemStack held = FIF.extractHeldItem(be);
             if (held != null && !held.isEmpty()) {
-                try { Constants.logDebug("[FIF] Held item at {}: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] Held item at {}: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable ignored) {}
                 boolean isHoe = held.getItem() instanceof HoeItem;
-                try { Constants.logDebug("[FIF] Held is HoeItem: {}", isHoe); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] Held is HoeItem: {}", isHoe); } catch (Throwable ignored) {}
                 if (!isHoe) return false;
             } else {
-                try { Constants.logDebug("[FIF] No held item at {} (held == null or empty) — will register inactive if chest valid.", pos); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] No held item at {} (held == null or empty) — will register inactive if chest valid.", pos); } catch (Throwable ignored) {}
             }
             BlockPos chestPos = pos.below();
             var chestBe = level.getBlockEntity(chestPos);
-            try { Constants.logDebug("[FIF] BlockEntity at chest pos {}: {}", chestPos, chestBe == null ? "null" : chestBe.getClass().getName()); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[FIF] BlockEntity at chest pos {}: {}", chestPos, chestBe == null ? "null" : chestBe.getClass().getName()); } catch (Throwable ignored) {}
             if (!(chestBe instanceof Container)) {
-                try { Constants.logDebug("[FIF] No Container at {} — aborting FIF anchor.", chestPos); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] No Container at {} — aborting FIF anchor.", chestPos); } catch (Throwable ignored) {}
                 return false;
             }
             Container chest = (Container) chestBe;
             boolean chestWaterlogged = false;
             BlockState cs = null;
             try { cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
-            try { Constants.logDebug("[FIF] Chest waterlogged at {}: {}, blockState={}", chestPos, chestWaterlogged, cs == null ? "null" : cs.getBlock().getClass().getName()); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[FIF] Chest waterlogged at {}: {}, blockState={}", chestPos, chestWaterlogged, cs == null ? "null" : cs.getBlock().getClass().getName()); } catch (Throwable ignored) {}
             int rX = Math.min(5, Math.max(1, Config.scanRangeX));
             int rZ = Math.min(5, Math.max(1, Config.scanRangeZ));
             boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
-            try { Constants.logDebug("[FIF] nearbyFarmlandCrop={}, chestWaterlogged={}", nearbyFarmlandCrop, chestWaterlogged); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[FIF] nearbyFarmlandCrop={}, chestWaterlogged={}", nearbyFarmlandCrop, chestWaterlogged); } catch (Throwable ignored) {}
             if (nearbyFarmlandCrop && !chestWaterlogged) {
-                Constants.logDebug("[TICK] FIF anchor at {} in {} skipped: chest not waterlogged but nearby farmland crops present.", pos, dimId);
+                LogUtils.logDebug("[TICK] FIF anchor at {} in {} skipped: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                 return false;
             }
             if (held == null || held.isEmpty()) {
-                try { Constants.logDebug("[FIF] Registering inactive FIF anchor at {} above chest {}.", pos, chestPos); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] Registering inactive FIF anchor at {} above chest {}.", pos, chestPos); } catch (Throwable ignored) {}
                 FrameRegistry.registerFrame(dimId, pos, chest, ItemStack.EMPTY);
                 return true;
             }
-            Constants.logDebug("[TICK] Discovered anchor (FIF) at {} in {}; registering active.", pos, dimId);
+            LogUtils.logDebug("[TICK] Discovered anchor (FIF) at {} in {}; registering active.", pos, dimId);
             FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
             return true;
         } catch (Throwable t) {
-            Constants.logDebug("[FIF] FastItemFrames discovery failed", t);
+            LogUtils.logDebug("[FIF] FastItemFrames discovery failed", t);
             return false;
         }
     }

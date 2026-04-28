@@ -23,13 +23,13 @@ public class CropRouter {
      * @return true if routed and handled, false otherwise.
      */
     public static boolean routeCrop(Object cropType, Object cropPos, Object world) {
-        com.fastharvester.Constants.logDebug("[ROUTER] Routing crop type '{}' at {}...", cropType, cropPos);
+        com.fastharvester.util.log.LogUtils.logDebug("[ROUTER] Routing crop type '{}' at {}...", cropType, cropPos);
         if ("nether_wart".equals(cropType)) {
             return NetherWartHandler.handle(cropPos, world);
         } else if ("sweet_berry".equals(cropType)) {
             return SweetBerryHandler.handle(cropPos, world);
         } else {
-            com.fastharvester.Constants.logDebug("[ROUTER] No handler for crop type '{}'. Skipping.", cropType);
+            com.fastharvester.util.log.LogUtils.logDebug("[ROUTER] No handler for crop type '{}'. Skipping.", cropType);
             return false;
         }
     }

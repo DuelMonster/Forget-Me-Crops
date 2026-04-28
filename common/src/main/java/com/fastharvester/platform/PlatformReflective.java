@@ -1,6 +1,6 @@
 package com.fastharvester.platform;
 
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 
 /**
  * PlatformReflective: shared reflection helpers used by platform implementations.
@@ -146,11 +146,11 @@ public final class PlatformReflective {
                         }
                     }
                 } catch (Throwable t) {
-                    Constants.logDebug("[LOOT] Reflective LootContext attempt failed", t);
+                    LogUtils.logDebug("[LOOT] Reflective LootContext attempt failed", t);
                 }
             }
         } catch (Throwable t) {
-            Constants.logDebug("[LOOT] Native loot lookup failed, falling back", t);
+            LogUtils.logDebug("[LOOT] Native loot lookup failed, falling back", t);
         }
 
         // Reflection fallback: try various getDrops signatures (client or mapping differences)
@@ -225,7 +225,7 @@ public final class PlatformReflective {
                 }
             } catch (Throwable ignored) {}
         } catch (Throwable t) {
-            Constants.logDebug("[PLATFORM] reflectiveUpdateFrameItemFallback failed at {}", t);
+            LogUtils.logDebug("[PLATFORM] reflectiveUpdateFrameItemFallback failed at {}", t);
         }
         return false;
     }

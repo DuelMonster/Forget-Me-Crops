@@ -140,7 +140,7 @@ FastHarvester's frame rotation system was recently refactored to avoid races and
 ## Hoe replacement and chest interactions
 
 - Broken-hoe handling now persists replacements by updating `FrameRegistry` and calling into platform adapters to sync the frame-held item. `HarvestUtils.handleBrokenHoe(...)` attempts to load a replacement hoe from the chest, updates the registry via `FrameRegistry.updateHoe(...)`, and calls `Services.PLATFORM.updateFrameItem(...)` where supported.
-- Chest insert/remove debug messages were moved behind `Constants.logDebug(...)` to avoid noisy per-item INFO messages on busy farms.
+- Chest insert/remove debug messages were moved behind `LogUtils.logDebug(...)` to avoid noisy per-item INFO messages on busy farms.
 
 ## Tickers & Lifecycle
 

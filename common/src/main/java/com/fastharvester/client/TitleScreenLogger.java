@@ -1,6 +1,6 @@
 package com.fastharvester.client;
 
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 
 public final class TitleScreenLogger {
     private TitleScreenLogger() {}
@@ -9,7 +9,7 @@ public final class TitleScreenLogger {
         try {
             String pf = "<unknown>";
             try { pf = com.fastharvester.platform.Services.PLATFORM.getPlatformName(); } catch (Throwable ignored) {}
-            Constants.logDebug("Title screen init: platform={}", pf);
+            LogUtils.logDebug("Title screen init: platform={}", pf);
         } catch (Throwable ignored) {}
     }
 }

@@ -1,6 +1,6 @@
 package com.fastharvester.platform.adapter;
 
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.HoeItem;
@@ -144,7 +144,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                         // bind methods
                         bindApiMethods();
                         apiAvailable = true;
-                        Constants.logInfo("[FIF] Detected FastItemFrames API class: {}", apiClass.getName());
+                        LogUtils.logInfo("[FIF] Detected FastItemFrames API class: {}", apiClass.getName());
                         return;
                     } catch (ClassNotFoundException ignored) {
                         // try next candidate
@@ -178,7 +178,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                             apiClass = c;
                             bindApiMethods();
                             apiAvailable = true;
-                            Constants.logInfo("[FIF] Detected FastItemFrames API class via package probe: {}", apiClass.getName());
+                            LogUtils.logInfo("[FIF] Detected FastItemFrames API class via package probe: {}", apiClass.getName());
                             return;
                         } catch (ClassNotFoundException ignored) {
                             // try next
@@ -187,9 +187,9 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                 }
 
                 // nothing matched; keep probeAttempted=true to avoid repeated work
-                Constants.logDebug("[FIF] FastItemFrames API not found during lazy probe.");
+                LogUtils.logDebug("[FIF] FastItemFrames API not found during lazy probe.");
             } catch (Throwable t) {
-                Constants.logDebug("[FIF] API probe failure", t);
+                LogUtils.logDebug("[FIF] API probe failure", t);
             }
         }
     }
@@ -277,13 +277,13 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
         ensureApiProbed();
         if (be == null) return null;
         try {
-            try { Constants.logDebug("[FIF] extractHeldItem: probing BE {} apiAvailable={}", be.getClass().getName(), apiAvailable); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[FIF] extractHeldItem: probing BE {} apiAvailable={}", be.getClass().getName(), apiAvailable); } catch (Throwable ignored) {}
             // API-first extraction
             if (apiAvailable && apiClass != null && apiClass.isInstance(be) && apiGetDisplayedItem != null) {
                 try {
                     Object res = apiGetDisplayedItem.invoke(be);
                     if (res instanceof ItemStack) {
-                        try { Constants.logDebug("[FIF] extractHeldItem: apiGetDisplayedItem returned item via {}", apiGetDisplayedItem.getName()); } catch (Throwable ignored) {}
+                        try { LogUtils.logDebug("[FIF] extractHeldItem: apiGetDisplayedItem returned item via {}", apiGetDisplayedItem.getName()); } catch (Throwable ignored) {}
                         return ((ItemStack) res).copy();
                     }
                 } catch (Throwable ignored) {}
@@ -295,11 +295,11 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                     if (items instanceof java.util.List<?> list && !list.isEmpty()) {
                             Object first = list.get(0);
                             if (first instanceof ItemStack) {
-                                try { Constants.logDebug("[FIF] extractHeldItem: apiGetItems returned list size {}", list.size()); } catch (Throwable ignored) {}
+                                try { LogUtils.logDebug("[FIF] extractHeldItem: apiGetItems returned list size {}", list.size()); } catch (Throwable ignored) {}
                                 return ((ItemStack) first).copy();
                             }
                         } else {
-                            try { Constants.logDebug("[FIF] extractHeldItem: apiGetItems returned null/empty"); } catch (Throwable ignored) {}
+                            try { LogUtils.logDebug("[FIF] extractHeldItem: apiGetItems returned null/empty"); } catch (Throwable ignored) {}
                         }
                 } catch (Throwable ignored) {}
             }
@@ -311,11 +311,11 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                     if (v instanceof java.util.List<?> lst && !lst.isEmpty()) {
                         Object first = lst.get(0);
                         if (first instanceof ItemStack) {
-                            try { Constants.logDebug("[FIF] extractHeldItem: apiItemsField returned list size {}", lst.size()); } catch (Throwable ignored) {}
+                            try { LogUtils.logDebug("[FIF] extractHeldItem: apiItemsField returned list size {}", lst.size()); } catch (Throwable ignored) {}
                             return ((ItemStack) first).copy();
                         }
                     } else {
-                        try { Constants.logDebug("[FIF] extractHeldItem: apiItemsField returned null/empty"); } catch (Throwable ignored) {}
+                        try { LogUtils.logDebug("[FIF] extractHeldItem: apiItemsField returned null/empty"); } catch (Throwable ignored) {}
                     }
                 } catch (Throwable ignored) {}
             }
@@ -325,7 +325,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                     try {
                         Object res = m.invoke(be);
                         if (res instanceof ItemStack) {
-                            try { Constants.logDebug("[FIF] extractHeldItem: method {} returned ItemStack", m.getName()); } catch (Throwable ignored) {}
+                            try { LogUtils.logDebug("[FIF] extractHeldItem: method {} returned ItemStack", m.getName()); } catch (Throwable ignored) {}
                             return ((ItemStack) res).copy();
                         }
                     } catch (Throwable ignored) {}
@@ -338,20 +338,20 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                     fld.setAccessible(true);
                     Object v = fld.get(be);
                     if (v instanceof ItemStack) {
-                        try { Constants.logDebug("[FIF] extractHeldItem: field {} returned ItemStack", fn); } catch (Throwable ignored) {}
+                        try { LogUtils.logDebug("[FIF] extractHeldItem: field {} returned ItemStack", fn); } catch (Throwable ignored) {}
                         return ((ItemStack) v).copy();
                     }
                     if (v instanceof java.util.List<?> list && !list.isEmpty()) {
                         Object first = list.get(0);
                         if (first instanceof ItemStack) {
-                            try { Constants.logDebug("[FIF] extractHeldItem: field {} returned list size {}", fn, list.size()); } catch (Throwable ignored) {}
+                            try { LogUtils.logDebug("[FIF] extractHeldItem: field {} returned list size {}", fn, list.size()); } catch (Throwable ignored) {}
                             return ((ItemStack) first).copy();
                         }
                     }
                 } catch (Throwable ignored) {}
             }
         } catch (Throwable ignored) {}
-        try { Constants.logDebug("[FIF] extractHeldItem: no held item found for BE {}", be == null ? "null" : be.getClass().getName()); } catch (Throwable ignored) {}
+        try { LogUtils.logDebug("[FIF] extractHeldItem: no held item found for BE {}", be == null ? "null" : be.getClass().getName()); } catch (Throwable ignored) {}
         return null;
     }
 
@@ -399,7 +399,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
         ensureApiProbed();
         if (be == null) return;
         try {
-            try { Constants.logDebug("[FIF] setRotation: entry be={} requestedRot={} apiAvailable={} apiSetRotation={}", be == null ? "null" : be.getClass().getName(), newRotation & 7, apiAvailable, apiSetRotation == null ? "<none>" : apiSetRotation.getName()); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[FIF] setRotation: entry be={} requestedRot={} apiAvailable={} apiSetRotation={}", be == null ? "null" : be.getClass().getName(), newRotation & 7, apiAvailable, apiSetRotation == null ? "<none>" : apiSetRotation.getName()); } catch (Throwable ignored) {}
             // API-first setter
             if (apiAvailable && apiClass != null && apiClass.isInstance(be) && apiSetRotation != null) {
                 try {
@@ -408,14 +408,14 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                         apiSetRotation.invoke(be, newRotation);
                         try { be.setChanged(); } catch (Throwable ignored) {}
                         try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                        try { int rb = getRotation(be); Constants.logDebug("[FIF] setRotation: apiSetRotation(int) applied on {} -> requested={} readBack={}", be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
+                        try { int rb = getRotation(be); LogUtils.logDebug("[FIF] setRotation: apiSetRotation(int) applied on {} -> requested={} readBack={}", be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
                         return;
                     }
                     if (p == byte.class || p == Byte.class) {
                         apiSetRotation.invoke(be, (byte) newRotation);
                         try { be.setChanged(); } catch (Throwable ignored) {}
                         try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                        try { int rb = getRotation(be); Constants.logDebug("[FIF] setRotation: apiSetRotation(byte) applied on {} -> requested={} readBack={}", be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
+                        try { int rb = getRotation(be); LogUtils.logDebug("[FIF] setRotation: apiSetRotation(byte) applied on {} -> requested={} readBack={}", be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
                         return;
                     }
                 } catch (Throwable ignored) {}
@@ -430,14 +430,14 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                             m.invoke(be, newRotation);
                             try { be.setChanged(); } catch (Throwable ignored) {}
                             try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                            try { int rb = getRotation(be); Constants.logDebug("[FIF] setRotation: reflected method {}(int) applied on {} -> requested={} readBack={}", m.getName(), be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
+                            try { int rb = getRotation(be); LogUtils.logDebug("[FIF] setRotation: reflected method {}(int) applied on {} -> requested={} readBack={}", m.getName(), be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
                             return;
                         }
                         if (p == byte.class || p == Byte.class) {
                             m.invoke(be, (byte) newRotation);
                             try { be.setChanged(); } catch (Throwable ignored) {}
                             try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                            try { int rb = getRotation(be); Constants.logDebug("[FIF] setRotation: reflected method {}(byte) applied on {} -> requested={} readBack={}", m.getName(), be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
+                            try { int rb = getRotation(be); LogUtils.logDebug("[FIF] setRotation: reflected method {}(byte) applied on {} -> requested={} readBack={}", m.getName(), be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
                             return;
                         }
                     } catch (Throwable ignored) {}
@@ -450,7 +450,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                 fld.setInt(be, newRotation & 7);
                 try { be.setChanged(); } catch (Throwable ignored) {}
                 try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                try { int rb = getRotation(be); Constants.logDebug("[FIF] setRotation: wrote 'rotation' field on {} -> requested={} readBack={}", be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
+                try { int rb = getRotation(be); LogUtils.logDebug("[FIF] setRotation: wrote 'rotation' field on {} -> requested={} readBack={}", be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
                 return;
             } catch (Throwable ignored) {}
 
@@ -501,7 +501,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                                         level.setBlock(pos, ns, 3);
                                         try { be.setChanged(); } catch (Throwable ignored) {}
                                         try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                                        try { Constants.logDebug("[FIF] setRotation via block-state property {} -> {} on {}", prop.getName(), chosen, be.getClass().getName()); } catch (Throwable ignored) {}
+                                        try { LogUtils.logDebug("[FIF] setRotation via block-state property {} -> {} on {}", prop.getName(), chosen, be.getClass().getName()); } catch (Throwable ignored) {}
                                         return;
                                     } else {
                                         List<?> list = new java.util.ArrayList<>(values);
@@ -513,7 +513,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                                             level.setBlock(pos, ns, 3);
                                             try { be.setChanged(); } catch (Throwable ignored) {}
                                             try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                                            try { Constants.logDebug("[FIF] setRotation via block-state property {} -> {} (index {}) on {}", prop.getName(), pick, idx, be.getClass().getName()); } catch (Throwable ignored) {}
+                                            try { LogUtils.logDebug("[FIF] setRotation via block-state property {} -> {} (index {}) on {}", prop.getName(), pick, idx, be.getClass().getName()); } catch (Throwable ignored) {}
                                             return;
                                         }
                                     }
@@ -523,14 +523,14 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                     } catch (Throwable ignored) {}
                 }
             } catch (Throwable t) {
-                try { Constants.logDebug("[FIF] setRotation block-state fallback failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] setRotation block-state fallback failed: {}", t.getMessage()); } catch (Throwable ignored) {}
             }
         } catch (Throwable ignored) {}
     }
 
     private static void invokeApiMarkUpdatedIfPresent(BlockEntity be) {
-        if (apiMarkUpdated == null || be == null) {
-            try { Constants.logDebug("[FIF] invokeApiMarkUpdatedIfPresent: no apiMarkUpdated or be=null (apiMarkUpdated={} be={})", apiMarkUpdated, be == null ? "null" : be.getClass().getName()); } catch (Throwable ignored) {}
+            if (apiMarkUpdated == null || be == null) {
+            try { LogUtils.logDebug("[FIF] invokeApiMarkUpdatedIfPresent: no apiMarkUpdated or be=null (apiMarkUpdated={} be={})", apiMarkUpdated, be == null ? "null" : be.getClass().getName()); } catch (Throwable ignored) {}
             return;
         }
         try {
@@ -550,17 +550,17 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
 
             if (levelObj != null) {
                 try {
-                    try { Constants.logDebug("[FIF] invokeApiMarkUpdatedIfPresent: invoking apiMarkUpdated on {} with level {}", be.getClass().getName(), levelObj == null ? "null" : levelObj.getClass().getName()); } catch (Throwable ignored) {}
-                    apiMarkUpdated.invoke(be, levelObj);
-                    try { Constants.logDebug("[FIF] invokeApiMarkUpdatedIfPresent: apiMarkUpdated invoked successfully for {}", be.getClass().getName()); } catch (Throwable ignored) {}
+                    try { LogUtils.logDebug("[FIF] invokeApiMarkUpdatedIfPresent: invoking apiMarkUpdated on {} with level {}", be.getClass().getName(), levelObj == null ? "null" : levelObj.getClass().getName()); } catch (Throwable ignored) {}
+                        apiMarkUpdated.invoke(be, levelObj);
+                        try { LogUtils.logDebug("[FIF] invokeApiMarkUpdatedIfPresent: apiMarkUpdated invoked successfully for {}", be.getClass().getName()); } catch (Throwable ignored) {}
                 } catch (Throwable t) {
-                    try { Constants.logDebug("[FIF] invokeApiMarkUpdatedIfPresent invocation failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+                        try { LogUtils.logDebug("[FIF] invokeApiMarkUpdatedIfPresent invocation failed: {}", t.getMessage()); } catch (Throwable ignored) {}
                 }
             } else {
-                try { Constants.logDebug("[FIF] invokeApiMarkUpdatedIfPresent: could not resolve level object for BE {}", be.getClass().getName()); } catch (Throwable ignored) {}
+                    try { LogUtils.logDebug("[FIF] invokeApiMarkUpdatedIfPresent: could not resolve level object for BE {}", be.getClass().getName()); } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
-            try { Constants.logDebug("[FIF] invokeApiMarkUpdatedIfPresent failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] invokeApiMarkUpdatedIfPresent failed: {}", t.getMessage()); } catch (Throwable ignored) {}
         }
     }
 
@@ -573,7 +573,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
         ensureApiProbed();
         if (be == null) return false;
         try {
-            try { Constants.logDebug("[FIF] writeItemToBE: attempting write to BE {} with item={} damage={}", be.getClass().getName(), stack == null ? "<null>" : stack.getItem(), stack == null ? -1 : stack.getDamageValue()); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[FIF] writeItemToBE: attempting write to BE {} with item={} damage={}", be.getClass().getName(), stack == null ? "<null>" : stack.getItem(), stack == null ? -1 : stack.getDamageValue()); } catch (Throwable ignored) {}
 
             // API-first
             if (apiAvailable && apiClass != null && apiClass.isInstance(be)) {
@@ -583,10 +583,10 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                         apiSetItem.invoke(be, stack == null ? ItemStack.EMPTY : stack.copy());
                         try { be.setChanged(); } catch (Throwable ignored) {}
                         try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                        try { Constants.logDebug("[FIF] writeItemToBE: wrote via apiSetItem on {}", be.getClass().getName()); } catch (Throwable ignored) {}
+                        try { LogUtils.logDebug("[FIF] writeItemToBE: wrote via apiSetItem on {}", be.getClass().getName()); } catch (Throwable ignored) {}
                         return true;
                     } catch (Throwable t) {
-                        try { Constants.logDebug("[FIF] writeItemToBE: apiSetItem invocation failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+                        try { LogUtils.logDebug("[FIF] writeItemToBE: apiSetItem invocation failed: {}", t.getMessage()); } catch (Throwable ignored) {}
                     }
                 }
                 if (apiSetStack != null) {
@@ -597,11 +597,11 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                             apiSetStack.invoke(be, Integer.valueOf(0), stack == null ? ItemStack.EMPTY : stack.copy());
                             try { be.setChanged(); } catch (Throwable ignored) {}
                             try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                            try { Constants.logDebug("[FIF] writeItemToBE: wrote via apiSetStack(index,stack) on {}", be.getClass().getName()); } catch (Throwable ignored) {}
+                            try { LogUtils.logDebug("[FIF] writeItemToBE: wrote via apiSetStack(index,stack) on {}", be.getClass().getName()); } catch (Throwable ignored) {}
                             return true;
                         }
                     } catch (Throwable t) {
-                        try { Constants.logDebug("[FIF] writeItemToBE: apiSetStack invocation failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+                        try { LogUtils.logDebug("[FIF] writeItemToBE: apiSetStack invocation failed: {}", t.getMessage()); } catch (Throwable ignored) {}
                     }
                 }
             }
@@ -618,11 +618,11 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                         m.invoke(be, stack == null ? ItemStack.EMPTY : stack.copy());
                         try { be.setChanged(); } catch (Throwable ignored) {}
                         try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                        try { Constants.logDebug("[FIF] writeItemToBE: wrote via method {} on {}", m.getName(), be.getClass().getName()); } catch (Throwable ignored) {}
+                        try { LogUtils.logDebug("[FIF] writeItemToBE: wrote via method {} on {}", m.getName(), be.getClass().getName()); } catch (Throwable ignored) {}
                         return true;
                     }
                 } catch (Throwable t) {
-                    try { Constants.logDebug("[FIF] writeItemToBE: method {} failed: {}", m.getName(), t.getMessage()); } catch (Throwable ignored) {}
+                    try { LogUtils.logDebug("[FIF] writeItemToBE: method {} failed: {}", m.getName(), t.getMessage()); } catch (Throwable ignored) {}
                 }
             }
 
@@ -637,7 +637,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                         fld.set(be, stack == null ? ItemStack.EMPTY : stack.copy());
                         try { be.setChanged(); } catch (Throwable ignored) {}
                         try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                        try { Constants.logDebug("[FIF] writeItemToBE: wrote via field {} on {}", fn, be.getClass().getName()); } catch (Throwable ignored) {}
+                        try { LogUtils.logDebug("[FIF] writeItemToBE: wrote via field {} on {}", fn, be.getClass().getName()); } catch (Throwable ignored) {}
                         return true;
                     }
                     Object v = fld.get(be);
@@ -650,17 +650,17 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                             fld.set(be, mutable);
                             try { be.setChanged(); } catch (Throwable ignored) {}
                             try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                            try { Constants.logDebug("[FIF] writeItemToBE: wrote into list field {} on {}", fn, be.getClass().getName()); } catch (Throwable ignored) {}
+                            try { LogUtils.logDebug("[FIF] writeItemToBE: wrote into list field {} on {}", fn, be.getClass().getName()); } catch (Throwable ignored) {}
                             return true;
                         } catch (Throwable t) {
-                            try { Constants.logDebug("[FIF] writeItemToBE: failed to write list field {}: {}", fn, t.getMessage()); } catch (Throwable ignored) {}
+                            try { LogUtils.logDebug("[FIF] writeItemToBE: failed to write list field {}: {}", fn, t.getMessage()); } catch (Throwable ignored) {}
                         }
                     }
                 } catch (Throwable ignored) {}
             }
-            try { Constants.logDebug("[FIF] writeItemToBE: no suitable setter/field found on {}", be.getClass().getName()); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[FIF] writeItemToBE: no suitable setter/field found on {}", be.getClass().getName()); } catch (Throwable ignored) {}
         } catch (Throwable t) {
-            try { Constants.logDebug("[FIF] writeItemToBE: unexpected failure: {}", t.getMessage()); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[FIF] writeItemToBE: unexpected failure: {}", t.getMessage()); } catch (Throwable ignored) {}
         }
         return false;
     }

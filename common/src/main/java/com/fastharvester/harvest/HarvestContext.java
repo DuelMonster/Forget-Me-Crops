@@ -3,7 +3,7 @@ package com.fastharvester.harvest;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 
 public class HarvestContext {
     public final Object anchor;
@@ -25,10 +25,10 @@ public class HarvestContext {
         this.config = config;
         this.harvestedCount = 0;
         this.blocksScanned = 0;
-        Constants.logDebug("[CTX] Created new HarvestContext: anchor={}, level={}, hoe={}, chest={}, config={}", anchor, level, hoe, chest, config);
+        LogUtils.logDebug("[CTX] Created new HarvestContext: anchor={}, level={}, hoe={}, chest={}, config={}", anchor, level, hoe, chest, config);
     }
 
-    public void incrementHarvested() { harvestedCount++; Constants.logDebug("[CTX] Crops harvested incremented: {}", harvestedCount); }
-    public void incrementBlocksScanned() { blocksScanned++; Constants.logDebug("[CTX] Blocks scanned incremented: {}", blocksScanned); }
-    public void logSummary() { Constants.logDebug("[CTX] Harvest summary: harvestedCount={}, blocksScanned={}", harvestedCount, blocksScanned); }
+    public void incrementHarvested() { harvestedCount++; LogUtils.logDebug("[CTX] Crops harvested incremented: {}", harvestedCount); }
+    public void incrementBlocksScanned() { blocksScanned++; LogUtils.logDebug("[CTX] Blocks scanned incremented: {}", blocksScanned); }
+    public void logSummary() { LogUtils.logDebug("[CTX] Harvest summary: harvestedCount={}, blocksScanned={}", harvestedCount, blocksScanned); }
 }

@@ -7,7 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.phys.AABB;
 
@@ -35,14 +35,14 @@ public class FabricPlatformHelper implements IPlatformHelper {
     public void updateFrameItem(Level level, BlockPos pos, ItemStack stack) {
         if (level == null || pos == null) return;
         try {
-            try { Constants.logDebug("[PLATFORM] updateFrameItem called: pos={} incomingItem={} damage={}", pos, stack == null ? "<null>" : stack.getItem(), stack == null ? -1 : stack.getDamageValue()); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[PLATFORM] updateFrameItem called: pos={} incomingItem={} damage={}", pos, stack == null ? "<null>" : stack.getItem(), stack == null ? -1 : stack.getDamageValue()); } catch (Throwable ignored) {}
             try {
                 java.util.List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class,
                         new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1), e -> true);
                 if (!frames.isEmpty()) {
                     ItemFrame frame = frames.get(0);
                     frame.setItem(stack == null ? ItemStack.EMPTY : stack.copy());
-                    try { Constants.logDebug("[PLATFORM] updateFrameItem: wrote to vanilla ItemFrame: item={} damage={}", stack == null ? "<null>" : stack.getItem(), stack == null ? -1 : stack.getDamageValue()); } catch (Throwable ignored) {}
+                    try { LogUtils.logDebug("[PLATFORM] updateFrameItem: wrote to vanilla ItemFrame: item={} damage={}", stack == null ? "<null>" : stack.getItem(), stack == null ? -1 : stack.getDamageValue()); } catch (Throwable ignored) {}
                     return;
                 }
             } catch (Throwable ignored) {}
@@ -52,16 +52,16 @@ public class FabricPlatformHelper implements IPlatformHelper {
             try {
                 boolean wrote = com.fastharvester.platform.adapter.FastItemFrameAdapterImpl.writeItemToBE(be, stack == null ? ItemStack.EMPTY : stack.copy());
                 if (wrote) {
-                    try { Constants.logDebug("[PLATFORM] updateFrameItem: adapter wrote item to BE {} at {}", be.getClass().getName(), pos); } catch (Throwable ignored) {}
+                    try { LogUtils.logDebug("[PLATFORM] updateFrameItem: adapter wrote item to BE {} at {}", be.getClass().getName(), pos); } catch (Throwable ignored) {}
                     try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
                     return;
                 }
-            } catch (Throwable t) { try { Constants.logDebug("[PLATFORM] updateFrameItem: adapter writeItemToBE failed: {}", t.getMessage()); } catch (Throwable ignored) {} }
+            } catch (Throwable t) { try { LogUtils.logDebug("[PLATFORM] updateFrameItem: adapter writeItemToBE failed: {}", t.getMessage()); } catch (Throwable ignored) {} }
 
             try {
                 boolean wrote = com.fastharvester.platform.PlatformReflective.reflectiveUpdateFrameItemFallback(level, pos, be, stack == null ? ItemStack.EMPTY : stack.copy());
                 if (wrote) return;
             } catch (Throwable ignored) {}
-        } catch (Throwable t) { Constants.logDebug("[PLATFORM] updateFrameItem failed at " + pos, t); }
+        } catch (Throwable t) { LogUtils.logDebug("[PLATFORM] updateFrameItem failed at " + pos, t); }
     }
 }

@@ -2,7 +2,7 @@ package com.fastharvester.util.durability;
 
 import com.fastharvester.enums.DurabilityMode;
 import com.fastharvester.config.Config;
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import java.util.Map;
@@ -59,7 +59,7 @@ public class DurabilityLogic {
                 }
             }
         } catch (Throwable t) {
-            Constants.logDebug("[DURABILITY] Could not read enchantments", t);
+            LogUtils.logDebug("[DURABILITY] Could not read enchantments", t);
         }
 
         boolean hasMending = mendingLevel > 0;
@@ -85,20 +85,20 @@ public class DurabilityLogic {
                 }
             }
 
-            try { Constants.logDebug("[DURABILITY] applyDamage pre: item={} currentDamage={} max={} unbreaking={} mending={} willApply={}", hoe.getItem(), current, max, unbreakingLevel, mendingLevel, applyDamage); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[DURABILITY] applyDamage pre: item={} currentDamage={} max={} unbreaking={} mending={} willApply={}", hoe.getItem(), current, max, unbreakingLevel, mendingLevel, applyDamage); } catch (Throwable ignored) {}
 
             if (!applyDamage) return;
 
             int next = current + 1;
             if (next >= max) {
-                try { Constants.logDebug("[DURABILITY] applyDamage: next >= max -> destroying stack"); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[DURABILITY] applyDamage: next >= max -> destroying stack"); } catch (Throwable ignored) {}
                 hoe.setCount(0);
             } else {
                 hoe.setDamageValue(next);
-                try { Constants.logDebug("[DURABILITY] applyDamage post: newDamage={} (was={})", next, current); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[DURABILITY] applyDamage post: newDamage={} (was={})", next, current); } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
-            Constants.logWarn("[DURABILITY] Failed to apply damage to hoe", t);
+            LogUtils.logWarn("[DURABILITY] Failed to apply damage to hoe", t);
         }
     }
 }

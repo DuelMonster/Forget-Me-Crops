@@ -1,6 +1,6 @@
 package com.fastharvester.frame;
 
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.decoration.ItemFrame;
@@ -28,14 +28,14 @@ public final class CatchupManager {
         if (positions == null || positions.isEmpty() || dimId == null) return;
         Queue<BlockPos> q = vanillaQueues.computeIfAbsent(dimId, k -> new ConcurrentLinkedQueue<>());
         q.addAll(positions);
-        try { Constants.logDebug("[CATCHUP] Enqueued {} vanilla positions for {} (queue size={})", positions.size(), dimId, q.size()); } catch (Throwable ignored) {}
+        try { LogUtils.logDebug("[CATCHUP] Enqueued {} vanilla positions for {} (queue size={})", positions.size(), dimId, q.size()); } catch (Throwable ignored) {}
     }
 
     public static void enqueueFifPositions(ServerLevel level, String dimId, List<BlockPos> positions) {
         if (positions == null || positions.isEmpty() || dimId == null) return;
         Queue<BlockPos> q = fifQueues.computeIfAbsent(dimId, k -> new ConcurrentLinkedQueue<>());
         q.addAll(positions);
-        try { Constants.logDebug("[CATCHUP] Enqueued {} FIF positions for {} (queue size={})", positions.size(), dimId, q.size()); } catch (Throwable ignored) {}
+        try { LogUtils.logDebug("[CATCHUP] Enqueued {} FIF positions for {} (queue size={})", positions.size(), dimId, q.size()); } catch (Throwable ignored) {}
     }
 
     public static void queueLoadedFrames(ServerLevel level, String dimId) {
@@ -46,9 +46,9 @@ public final class CatchupManager {
             if (frames == null || frames.isEmpty()) return;
             Queue<BlockPos> q = vanillaQueues.computeIfAbsent(dimId, k -> new ConcurrentLinkedQueue<>());
             for (ItemFrame f : frames) { try { q.add(f.blockPosition()); } catch (Throwable ignored) {} }
-            try { Constants.logDebug("[CATCHUP] queueLoadedFrames added {} frames for {} (queueSize={})", frames.size(), dimId, q.size()); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[CATCHUP] queueLoadedFrames added {} frames for {} (queueSize={})", frames.size(), dimId, q.size()); } catch (Throwable ignored) {}
         } catch (Throwable t) {
-            Constants.logDebug("[CATCHUP] queueLoadedFrames failed", t);
+            LogUtils.logDebug("[CATCHUP] queueLoadedFrames failed", t);
         }
     }
 
@@ -68,7 +68,7 @@ public final class CatchupManager {
                             try { FrameDiscovery.registerVanillaFrameIfValid(dimId, level, f); } catch (Throwable ignored) {}
                         }
                     }
-                } catch (Throwable t) { Constants.logDebug("[CATCHUP] Failed to process vanilla pos {}", t); }
+                } catch (Throwable t) { LogUtils.logDebug("[CATCHUP] Failed to process vanilla pos {}", t); }
                 processed++;
                 continue;
             }
@@ -78,7 +78,7 @@ public final class CatchupManager {
                 try {
                     BlockEntity be = level.getBlockEntity(p);
                     if (be != null) { try { FrameDiscovery.registerFIFIfValid(dimId, level, be, p); } catch (Throwable ignored) {} }
-                } catch (Throwable t) { Constants.logDebug("[CATCHUP] Failed to process FIF pos {}", t); }
+                } catch (Throwable t) { LogUtils.logDebug("[CATCHUP] Failed to process FIF pos {}", t); }
                 processed++;
                 continue;
             }
@@ -86,6 +86,6 @@ public final class CatchupManager {
             // nothing left to process
             break;
         }
-        try { Constants.logDebug("[CATCHUP] processBatch({}, {}) processed {} entries", dimId, maxToProcess, processed); } catch (Throwable ignored) {}
+        try { LogUtils.logDebug("[CATCHUP] processBatch({}, {}) processed {} entries", dimId, maxToProcess, processed); } catch (Throwable ignored) {}
     }
 }

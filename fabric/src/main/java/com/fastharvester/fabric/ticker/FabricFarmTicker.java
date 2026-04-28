@@ -4,7 +4,7 @@ package com.fastharvester.fabric.ticker;
 // Emotional aside: it measures time and whispers encouragement.
 
 import com.fastharvester.config.Config;
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.frame.FrameRegistry;
 import com.fastharvester.frame.FrameScanner;
 
@@ -34,7 +34,7 @@ public class FabricFarmTicker {
     public static void init() {
         ServerChunkEvents.CHUNK_LOAD.register((ServerLevel level, LevelChunk chunk) -> {
             try {
-                Constants.logDebug("[TICK] Chunk-load event for chunk {} in {}", chunk.getPos(), level.dimension().identifier().toString());
+                LogUtils.logDebug("[TICK] Chunk-load event for chunk {} in {}", chunk.getPos(), level.dimension().identifier().toString());
                 String dimId = level.dimension().identifier().toString();
                 int minX = chunk.getPos().getMinBlockX();
                 int minZ = chunk.getPos().getMinBlockZ();
@@ -43,7 +43,7 @@ public class FabricFarmTicker {
                 AABB box = new AABB(minX, 0, minZ, maxX + 1, 256, maxZ + 1);
 
                 List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box);
-                Constants.logDebug("[TICK] Found {} item frames in chunk {} (deferring validation).", frames.size(), chunk.getPos());
+                LogUtils.logDebug("[TICK] Found {} item frames in chunk {} (deferring validation).", frames.size(), chunk.getPos());
                 java.util.List<BlockPos> vanillaCandidates = new java.util.ArrayList<>();
                 for (ItemFrame f : frames) {
                     try { vanillaCandidates.add(f.blockPosition()); } catch (Throwable ignored) {}
@@ -61,12 +61,12 @@ public class FabricFarmTicker {
                         fifCandidates.add(pos);
                     }
                     if (!fifCandidates.isEmpty()) CatchupManager.enqueueFifPositions(level, dimId, fifCandidates);
-                } catch (Throwable t) {
-                    Constants.logDebug("[FIF] FastItemFrames discovery failed", t);
+                    } catch (Throwable t) {
+                    LogUtils.logDebug("[FIF] FastItemFrames discovery failed", t);
                 }
 
             } catch (Throwable t) {
-                Constants.logWarn("[TICK] Chunk-load discovery error", t);
+                LogUtils.logWarn("[TICK] Chunk-load discovery error", t);
             }
         });
 
@@ -93,12 +93,12 @@ public class FabricFarmTicker {
                     }
                 } catch (Throwable ignored) {}
             } catch (Throwable t) {
-                Constants.logWarn("[TICK] Chunk-unload cleanup error", t);
+                LogUtils.logWarn("[TICK] Chunk-unload cleanup error", t);
             }
         });
 
         ServerLifecycleEvents.SERVER_STOPPING.register((MinecraftServer server) -> {
-            try { Constants.logInfo("[TICK] Server stopping — clearing FrameRegistry."); FrameRegistry.clearAll(); } catch (Throwable t) { Constants.logWarn("[TICK] Failed to clear FrameRegistry on server stop", t); }
+            try { LogUtils.logInfo("[TICK] Server stopping — clearing FrameRegistry."); FrameRegistry.clearAll(); } catch (Throwable t) { LogUtils.logWarn("[TICK] Failed to clear FrameRegistry on server stop", t); }
         });
 
         ServerTickEvents.END_SERVER_TICK.register((MinecraftServer server) -> {
@@ -108,7 +108,7 @@ public class FabricFarmTicker {
                     int rem = rediscoveryCountdown.getOrDefault(dimId, Config.frameRediscoveryInterval);
                     rem--;
                     if (rem <= 0) {
-                        Constants.logDebug("[TICK] Running rediscovery pass for {}", dimId);
+                        LogUtils.logDebug("[TICK] Running rediscovery pass for {}", dimId);
                         CatchupManager.queueLoadedFrames(level, dimId);
                         rem = Config.frameRediscoveryInterval;
                     }
@@ -117,20 +117,20 @@ public class FabricFarmTicker {
                     CatchupManager.processBatch(level, dimId, CATCHUP_TICKS);
                     var ready = FrameRegistry.tickAndCollectReady(dimId, level);
                     if (!ready.isEmpty()) {
-                        Constants.logDebug("[TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
+                        LogUtils.logDebug("[TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
                         FrameScanner scanner = new FrameScanner();
                         for (var anchor : ready) {
                             try {
                                 if (Config.maxSpiralDurationTicks <= 1) {
-                                    try { scanner.scanFarm(anchor, level); } catch (Throwable t) { Constants.logWarn("[TICK] Scan failed for " + anchor, t); }
+                                    try { scanner.scanFarm(anchor, level); } catch (Throwable t) { LogUtils.logWarn("[TICK] Scan failed for " + anchor, t); }
                                 } else { FrameScanner.submitScan(dimId, anchor, level); }
-                            } catch (Throwable t) { Constants.logWarn("[TICK] Failed to submit/execute scan for " + anchor, t); }
+                            } catch (Throwable t) { LogUtils.logWarn("[TICK] Failed to submit/execute scan for " + anchor, t); }
                         }
                     }
                     FrameScanner.tickScans(dimId, level);
                     tickSnapshotLogged = true;
                 }
-            } catch (Throwable t) { Constants.logWarn("[TICK] Unexpected ticker error", t); }
+            } catch (Throwable t) { LogUtils.logWarn("[TICK] Unexpected ticker error", t); }
         });
     }
 }

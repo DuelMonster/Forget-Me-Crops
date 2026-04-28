@@ -4,7 +4,7 @@ import com.fastharvester.harvest.HarvestContext;
 import com.fastharvester.frame.FrameRegistry;
 import com.fastharvester.frame.FrameScanner;
 import com.fastharvester.util.chest.ChestUtils;
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.config.Config;
 
 import net.minecraft.world.item.ItemStack;
@@ -46,19 +46,19 @@ public final class FrameHoeReplacement {
                         try { if (anchor != null) { String dimId = ctx.level.dimension().identifier().toString(); FrameRegistry.updateHoe(dimId, anchor.framePos, ItemStack.EMPTY); FrameRegistry.setCooldown(dimId, anchor.framePos, Config.chestFullCooldownTicks); } } catch (Throwable ignored) {}
                         try { com.fastharvester.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, ItemStack.EMPTY); } catch (Throwable ignored) {}
                         ctx.chestFull = true;
-                        Constants.logDebug("[HOE] Replacement did not persist to frame; returned to chest and aborting for {}", anchor == null ? "unknown" : anchor.framePos);
+                        LogUtils.logDebug("[HOE] Replacement did not persist to frame; returned to chest and aborting for {}", anchor == null ? "unknown" : anchor.framePos);
                         return;
                     }
                 } catch (Throwable ignored) {}
 
-                Constants.logDebug("[HOE] Pulled replacement hoe from chest: {}", replacement);
+                LogUtils.logDebug("[HOE] Pulled replacement hoe from chest: {}", replacement);
                 return;
             } else {
-                Constants.logDebug("[HOE] No replacement hoe available in chest for frame at {}", anchor == null ? "unknown" : anchor.framePos);
+                LogUtils.logDebug("[HOE] No replacement hoe available in chest for frame at {}", anchor == null ? "unknown" : anchor.framePos);
                 try { if (anchor != null) { String dimId = ctx.level.dimension().identifier().toString(); FrameRegistry.updateHoe(dimId, anchor.framePos, ItemStack.EMPTY); FrameRegistry.setCooldown(dimId, anchor.framePos, Config.chestFullCooldownTicks); } } catch (Throwable ignored) {}
                 try { com.fastharvester.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, ItemStack.EMPTY); } catch (Throwable ignored) {}
                 ctx.chestFull = true;
             }
-        } catch (Throwable t) { Constants.logWarn("[HOE] Error attempting to replace broken hoe", t); }
+        } catch (Throwable t) { LogUtils.logWarn("[HOE] Error attempting to replace broken hoe", t); }
     }
 }

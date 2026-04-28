@@ -1,5 +1,5 @@
 package com.fastharvester.frame;
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.config.Config;
 
 import net.minecraft.core.BlockPos;
@@ -84,9 +84,9 @@ public class FrameScanner {
      * @return true if any crops were harvested
      */
     public boolean scanFarm(Anchor anchor, Level level) {
-        Constants.logDebug("[SCAN] Starting farm scan from anchor: {}", anchor);
+        LogUtils.logDebug("[SCAN] Starting farm scan from anchor: {}", anchor);
         if (anchor == null || anchor.chest == null || level == null) {
-            Constants.logWarn("[SCAN] Anchor or environment missing, aborting scan.");
+            LogUtils.logWarn("[SCAN] Anchor or environment missing, aborting scan.");
             return false;
         }
 
@@ -119,7 +119,7 @@ public class FrameScanner {
         } catch (Throwable ignored) {}
 
         if (currentHoe == null || currentHoe.isEmpty()) {
-            Constants.logDebug("[SCAN] No hoe available for anchor {}; aborting scan.", anchor);
+            LogUtils.logDebug("[SCAN] No hoe available for anchor {}; aborting scan.", anchor);
             return false;
         }
 
@@ -160,7 +160,7 @@ public class FrameScanner {
             try {
                 ItemStack liveHoe = readHoeFromFrame(level, center);
                 if (liveHoe == null || liveHoe.isEmpty()) {
-                    try { Constants.logDebug("[SCAN] Hoe removed from frame at {} during scan; aborting.", center); } catch (Throwable ignored) {}
+                    try { LogUtils.logDebug("[SCAN] Hoe removed from frame at {} during scan; aborting.", center); } catch (Throwable ignored) {}
                     ctx.logSummary();
                     return cropsFound > 0;
                 }
@@ -216,7 +216,7 @@ public class FrameScanner {
                     }
                 }
             } catch (Throwable t) {
-                Constants.logDebug("[SCAN] Exception while scanning " + pos, t);
+                LogUtils.logDebug("[SCAN] Exception while scanning " + pos, t);
             }
 
             if (harvested) anyHarvested = true;
@@ -245,7 +245,7 @@ public class FrameScanner {
             setFrameRotation(level, center, newRot);
         }
 
-        Constants.logDebug("[SCAN] Scan complete. Blocks scanned: {}, crops found: {}.", blocksScanned, cropsFound);
+        LogUtils.logDebug("[SCAN] Scan complete. Blocks scanned: {}, crops found: {}.", blocksScanned, cropsFound);
         return cropsFound > 0;
     }
 
@@ -428,7 +428,7 @@ public class FrameScanner {
             }
         }
 
-        Constants.logDebug("[SCAN] BFS seeded {} nodes around {} (rangeX={},rangeZ={}).", visited.size(), center, rangeX, rangeZ);
+        LogUtils.logDebug("[SCAN] BFS seeded {} nodes around {} (rangeX={},rangeZ={}).", visited.size(), center, rangeX, rangeZ);
 
         while (!q.isEmpty()) {
             BlockPos cur = q.poll();
@@ -451,7 +451,7 @@ public class FrameScanner {
             }
         }
 
-        Constants.logDebug("[SCAN] BFS discovered {} connected nodes for center {}.", result.size(), center);
+        LogUtils.logDebug("[SCAN] BFS discovered {} connected nodes for center {}.", result.size(), center);
 
         return result;
     }
@@ -471,15 +471,15 @@ public class FrameScanner {
             List<FarmScanTask> list = activeScans.computeIfAbsent(dimId, k -> new ArrayList<>());
             for (FarmScanTask t : list) {
                 if (t != null && t.anchor != null && t.anchor.framePos != null && anchor.framePos != null && t.anchor.framePos.equals(anchor.framePos)) {
-                    Constants.logDebug("[SCAN] Scan already active for {}, skipping schedule.", anchor);
+                    LogUtils.logDebug("[SCAN] Scan already active for {}, skipping schedule.", anchor);
                     return;
                 }
             }
             FarmScanTask task = new FarmScanTask(anchor, level, dimId);
             list.add(task);
-            Constants.logDebug("[SCAN] Scheduled scan task for {} in {} (will span up to {} ticks)", anchor, dimId, Config.maxSpiralDurationTicks);
+            LogUtils.logDebug("[SCAN] Scheduled scan task for {} in {} (will span up to {} ticks)", anchor, dimId, Config.maxSpiralDurationTicks);
         } catch (Throwable t) {
-            Constants.logWarn("[SCAN] Failed to schedule scan task for " + anchor, t);
+            LogUtils.logWarn("[SCAN] Failed to schedule scan task for " + anchor, t);
         }
     }
 
@@ -500,10 +500,10 @@ public class FrameScanner {
                 boolean finished = task.tick();
                     if (finished) {
                     it.remove();
-                    Constants.logDebug("[SCAN] Finished scan task for {} in {}", task.anchor, dimId);
+                    LogUtils.logDebug("[SCAN] Finished scan task for {} in {}", task.anchor, dimId);
                 }
             } catch (Throwable t) {
-                Constants.logWarn("[SCAN] Scan task failed for " + task.anchor, t);
+                LogUtils.logWarn("[SCAN] Scan task failed for " + task.anchor, t);
                 it.remove();
             }
         }
@@ -643,7 +643,7 @@ public class FrameScanner {
                 for (int j = 0; j < list.size(); j++) indexToPosInRing.put(list.get(j), j);
             }
             this.numberOfTicksNeeded = (int) Math.ceil((double) this.totalPositions / (double) this.positionsPerTick);
-            Constants.logDebug("[SCAN] Created FarmScanTask center={} totalPositions={} positionsPerTick={} computedMaxRing={} ticksNeeded={}", center, totalPositions, positionsPerTick, computedMaxRing, numberOfTicksNeeded);
+            LogUtils.logDebug("[SCAN] Created FarmScanTask center={} totalPositions={} positionsPerTick={} computedMaxRing={} ticksNeeded={}", center, totalPositions, positionsPerTick, computedMaxRing, numberOfTicksNeeded);
         }
 
         boolean tick() {
@@ -659,7 +659,7 @@ public class FrameScanner {
             }
 
             if (!hasMature) {
-                try { Constants.logDebug("[SCAN] No mature crops found for {} — skipping spiral", center); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[SCAN] No mature crops found for {} — skipping spiral", center); } catch (Throwable ignored) {}
                 ctx.logSummary();
                 return true;
             }
@@ -671,12 +671,12 @@ public class FrameScanner {
                     if (shouldApply) {
                         if (!fullAnimationSequence.isEmpty() && fullAnimationIndex < fullAnimationSequence.size()) {
                             int next = fullAnimationSequence.get(fullAnimationIndex);
-                            try { Constants.logDebug("[ROT] Animation step (apply) for {} tick={} next={} idx={} remaining={}", center, tickCounter, next, fullAnimationIndex, animationStepsRemaining); } catch (Throwable ignored) {}
+                            try { LogUtils.logDebug("[ROT] Animation step (apply) for {} tick={} next={} idx={} remaining={}", center, tickCounter, next, fullAnimationIndex, animationStepsRemaining); } catch (Throwable ignored) {}
                             setFrameRotation(level, center, next, true);
                             fullAnimationIndex++;
                             animationStepsRemaining--;
                         } else {
-                            if (Config.debugLogging) try { Constants.logDebug("[ROT] No animation sequence available for {} (idx={} size={})", center, fullAnimationIndex, fullAnimationSequence.size()); } catch (Throwable ignored) {}
+                            if (Config.debugLogging) try { LogUtils.logDebug("[ROT] No animation sequence available for {} (idx={} size={})", center, fullAnimationIndex, fullAnimationSequence.size()); } catch (Throwable ignored) {}
                         }
                     }
                 } catch (Throwable ignored) {}
@@ -687,7 +687,7 @@ public class FrameScanner {
                 fullAnimationScheduled = false;
                 try { fullAnimationSequence.clear(); } catch (Throwable ignored) {}
                 fullAnimationIndex = 0;
-                try { Constants.logDebug("[ROT] Full animation complete for {} — cleared sequence", center); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[ROT] Full animation complete for {} — cleared sequence", center); } catch (Throwable ignored) {}
             }
 
             int endIndex = Math.min(totalPositions - 1, currentIndex + positionsPerTick - 1);
@@ -774,7 +774,7 @@ public class FrameScanner {
                             }
                         }
                     } catch (Throwable t) {
-                        Constants.logDebug("[SCAN] Exception while scanning " + center, t);
+                        LogUtils.logDebug("[SCAN] Exception while scanning " + center, t);
                     }
 
                     if (ctx.chestFull) {
@@ -800,7 +800,7 @@ public class FrameScanner {
                                     fullAnimationIndex = 0;
                                     animationStepsRemaining = fullAnimationSequence.size();
                                     animationInterval = Math.max(1, (int) Math.ceil((double) numberOfTicksNeeded / (double) fullAnimationSequence.size()));
-                                    try { Constants.logDebug("[ROT] Prepared full animation sequence for {} start={} seq={}", center, start, fullAnimationSequence); } catch (Throwable ignored) {}
+                                    try { LogUtils.logDebug("[ROT] Prepared full animation sequence for {} start={} seq={}", center, start, fullAnimationSequence); } catch (Throwable ignored) {}
                                 } catch (Throwable ignored) {
                                     animationStepsRemaining = 8;
                                     animationInterval = Math.max(1, (int) Math.ceil((double) numberOfTicksNeeded / 8.0));
@@ -992,7 +992,7 @@ public class FrameScanner {
                 try { return FIF.getRotation(be); } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
-            Constants.logDebug("[ROT] getFrameRotation failed at " + pos, t);
+            LogUtils.logDebug("[ROT] getFrameRotation failed at " + pos, t);
         }
         return 0;
     }
@@ -1033,17 +1033,17 @@ public class FrameScanner {
         if (bypassCooldown) {
             try { FrameRegistry.tryRotation(dimId, pos, gameTime); } catch (Throwable ignored) {}
             try {
-                try { Constants.logDebug("[ROT] Direct apply (bypass) for {} -> {} (gametime={})", pos, newRotation & 7, gameTime); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[ROT] Direct apply (bypass) for {} -> {} (gametime={})", pos, newRotation & 7, gameTime); } catch (Throwable ignored) {}
                 applyScheduledRotation(level, pos, newRotation);
             } catch (Throwable t) {
-                Constants.logDebug("[ROT] applyScheduledRotation failed at " + pos, t);
+                LogUtils.logDebug("[ROT] applyScheduledRotation failed at " + pos, t);
             }
             return;
         }
 
             try {
             if (!FrameRegistry.tryRotation(dimId, pos, gameTime)) {
-                if (Config.debugLogging) try { Constants.logDebug("[ROT] Skipped rotation for {} due to cooldown (gametime={})", pos, gameTime); } catch (Throwable ignored) {}
+                if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Skipped rotation for {} due to cooldown (gametime={})", pos, gameTime); } catch (Throwable ignored) {}
                 return;
             }
         } catch (Throwable ignored) {}
@@ -1051,16 +1051,16 @@ public class FrameScanner {
             try {
             int cur = getFrameRotation(level, pos) & 7;
             if (cur == (newRotation & 7)) {
-                if (Config.debugLogging) try { Constants.logDebug("[ROT] No-op rotation for {} (already {})", pos, cur); } catch (Throwable ignored) {}
+                if (Config.debugLogging) try { LogUtils.logDebug("[ROT] No-op rotation for {} (already {})", pos, cur); } catch (Throwable ignored) {}
                 return;
             }
         } catch (Throwable ignored) {}
-
+        
         try {
-            try { Constants.logDebug("[ROT] Request scheduleRotation for {} -> {} (gametime={})", pos, newRotation & 7, gameTime); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[ROT] Request scheduleRotation for {} -> {} (gametime={})", pos, newRotation & 7, gameTime); } catch (Throwable ignored) {}
             FrameRegistry.scheduleRotation(dimId, pos, newRotation, gameTime);
         } catch (Throwable t) {
-            Constants.logDebug("[ROT] Failed to schedule rotation for " + pos, t);
+            LogUtils.logDebug("[ROT] Failed to schedule rotation for " + pos, t);
         }
     }
 
@@ -1069,7 +1069,7 @@ public class FrameScanner {
         try {
             long gameTime = -1L;
             try { gameTime = level != null ? level.getGameTime() : -1L; } catch (Throwable ignored) {}
-            try { Constants.logDebug("[ROT] applyScheduledRotation pos={} newRot={} mode={} gametime={}", pos, newRotation, Config.rotationMode, gameTime); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[ROT] applyScheduledRotation pos={} newRot={} mode={} gametime={}", pos, newRotation, Config.rotationMode, gameTime); } catch (Throwable ignored) {}
 
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(pos));
             for (ItemFrame f : frames) {
@@ -1081,7 +1081,7 @@ public class FrameScanner {
                             try {
                                 if (p == int.class || p == Integer.class) {
                                     m.invoke(f, newRotation);
-                                    if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
+                                    if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
                                     int got = -999;
                                     try {
                                         got = f.getRotation();
@@ -1097,13 +1097,13 @@ public class FrameScanner {
                                         } catch (Throwable ex2) {}
                                     }
                                     if (Config.debugLogging) {
-                                        try { Constants.logDebug("[ROT] ItemFrame readback at {} => {}", pos, got); } catch (Throwable ex3) {}
+                                        try { LogUtils.logDebug("[ROT] ItemFrame readback at {} => {}", pos, got); } catch (Throwable ex3) {}
                                     }
                                     return;
                                 }
                                 if (p == byte.class || p == Byte.class) {
                                     m.invoke(f, (byte) newRotation);
-                                    if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
+                                    if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
                                     int got = -999;
                                     try {
                                         got = f.getRotation();
@@ -1119,12 +1119,12 @@ public class FrameScanner {
                                         } catch (Throwable ex2) {}
                                     }
                                     if (Config.debugLogging) {
-                                        try { Constants.logDebug("[ROT] ItemFrame readback at {} => {}", pos, got); } catch (Throwable ex3) {}
+                                        try { LogUtils.logDebug("[ROT] ItemFrame readback at {} => {}", pos, got); } catch (Throwable ex3) {}
                                     }
                                     return;
                                 }
                             } catch (Throwable t) {
-                                if (Config.debugLogging) try { Constants.logDebug("[ROT] Failed to invoke setter " + m.getName() + " on ItemFrame " + pos, t); } catch (Throwable ignored) {}
+                                if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Failed to invoke setter " + m.getName() + " on ItemFrame " + pos, t); } catch (Throwable ignored) {}
                             }
                         }
                     }
@@ -1132,7 +1132,7 @@ public class FrameScanner {
                         Field fld = f.getClass().getDeclaredField("rotation");
                         fld.setAccessible(true);
                         fld.setInt(f, newRotation & 7);
-                        if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation via field on ItemFrame at {} => {}", pos, newRotation & 7); } catch (Throwable ignored) {}
+                        if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Applied rotation via field on ItemFrame at {} => {}", pos, newRotation & 7); } catch (Throwable ignored) {}
                         int got = -999;
                         try {
                             got = f.getRotation();
@@ -1148,7 +1148,7 @@ public class FrameScanner {
                             } catch (Throwable ex2) {}
                         }
                         if (Config.debugLogging) {
-                            try { Constants.logDebug("[ROT] ItemFrame readback at {} => {}", pos, got); } catch (Throwable ex3) {}
+                            try { LogUtils.logDebug("[ROT] ItemFrame readback at {} => {}", pos, got); } catch (Throwable ex3) {}
                         }
                         return;
                     } catch (Throwable ignoredField) {}
@@ -1162,17 +1162,17 @@ public class FrameScanner {
                     try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
                     try {
                         int rb = FIF.getRotation(be);
-                        if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack={})", pos, newRotation & 7, rb); } catch (Throwable logEx1) {}
+                        if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack={})", pos, newRotation & 7, rb); } catch (Throwable logEx1) {}
                     } catch (Throwable exGet) {
-                        if (Config.debugLogging) try { Constants.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack=?)", pos, newRotation & 7); } catch (Throwable logEx2) {}
+                        if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack=?)", pos, newRotation & 7); } catch (Throwable logEx2) {}
                     }
                     return;
                 } catch (Throwable t) {
-                    if (Config.debugLogging) try { Constants.logDebug("[ROT] Failed to apply rotation on FIF block-entity at " + pos, t); } catch (Throwable ignored) {}
+                    if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Failed to apply rotation on FIF block-entity at " + pos, t); } catch (Throwable ignored) {}
                 }
             }
         } catch (Throwable t) {
-            Constants.logDebug("[ROT] applyScheduledRotation failed at " + pos, t);
+            LogUtils.logDebug("[ROT] applyScheduledRotation failed at " + pos, t);
         }
     }
 }

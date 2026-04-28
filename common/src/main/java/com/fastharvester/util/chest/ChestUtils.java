@@ -1,6 +1,6 @@
 package com.fastharvester.util.chest;
 
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.config.Config;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -52,7 +52,7 @@ public class ChestUtils {
                         ItemStack newSlot = slot.copy();
                         newSlot.setCount(slot.getCount() + move);
                         chest.setItem(i, newSlot);
-                        try { Constants.logDebug("[CHEST] insertAll: merged {} x{} into slot {} (slotnow={})", remaining.getItem(), move, i, newSlot.getCount()); } catch (Throwable ignored) {}
+                        try { LogUtils.logDebug("[CHEST] insertAll: merged {} x{} into slot {} (slotnow={})", remaining.getItem(), move, i, newSlot.getCount()); } catch (Throwable ignored) {}
                         remaining.setCount(remaining.getCount() - move);
                         changed = true;
                         if (remaining.isEmpty()) break;
@@ -64,7 +64,7 @@ public class ChestUtils {
                     ItemStack slot = chest.getItem(i);
                     if (slot.isEmpty()) {
                         chest.setItem(i, remaining.copy());
-                        try { Constants.logDebug("[CHEST] insertAll: placed {} x{} into empty slot {}", remaining.getItem(), remaining.getCount(), i); } catch (Throwable ignored) {}
+                        try { LogUtils.logDebug("[CHEST] insertAll: placed {} x{} into empty slot {}", remaining.getItem(), remaining.getCount(), i); } catch (Throwable ignored) {}
                         remaining.setCount(0);
                         changed = true;
                         break;
@@ -89,7 +89,7 @@ public class ChestUtils {
         if (isSeedItem(item)) {
             int existing = countItem(chest, item);
             if (existing <= Config.seedReservePerType) {
-                try { Constants.logDebug("[CHEST] removeOne: refusing to remove {} because existing {} <= reserve {}", item, existing, Config.seedReservePerType); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[CHEST] removeOne: refusing to remove {} because existing {} <= reserve {}", item, existing, Config.seedReservePerType); } catch (Throwable ignored) {}
                 return false;
             }
         }
@@ -107,11 +107,11 @@ public class ChestUtils {
                 if (chest instanceof BlockEntity be) {
                     try { be.setChanged(); } catch (Throwable ignored) {}
                 }
-                try { Constants.logDebug("[CHEST] removeOne: removed one {} from chest (slot {}) - remaining total {}", item, i, countItem(chest, item)); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[CHEST] removeOne: removed one {} from chest (slot {}) - remaining total {}", item, i, countItem(chest, item)); } catch (Throwable ignored) {}
                 return true;
             }
         }
-        try { Constants.logDebug("[CHEST] removeOne: no {} found in chest", item); } catch (Throwable ignored) {}
+        try { LogUtils.logDebug("[CHEST] removeOne: no {} found in chest", item); } catch (Throwable ignored) {}
         return false;
     }
 
@@ -128,7 +128,7 @@ public class ChestUtils {
             if (slot != null && !slot.isEmpty() && slot.getItem() instanceof HoeItem) {
                 ItemStack taken = slot.copy();
                 taken.setCount(1);
-                try { Constants.logDebug("[CHEST] takeFirstHoe: found hoe in slot {} -> item={} damage={} countInSlot={}", i, taken.getItem(), taken.getDamageValue(), slot.getCount()); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[CHEST] takeFirstHoe: found hoe in slot {} -> item={} damage={} countInSlot={}", i, taken.getItem(), taken.getDamageValue(), slot.getCount()); } catch (Throwable ignored) {}
                 if (slot.getCount() > 1) {
                     ItemStack remaining = slot.copy();
                     remaining.setCount(slot.getCount() - 1);

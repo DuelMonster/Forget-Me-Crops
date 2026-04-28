@@ -19,7 +19,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import net.minecraft.world.InteractionResult;
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.config.Config;
 import com.fastharvester.FastHarvester;
 
@@ -44,7 +44,7 @@ public final class NeoForgeModInitializer {
         try {
             AutoConfig.register(FastHarvesterAutoConfig.class, Toml4jConfigSerializer::new);
             ConfigHolder<FastHarvesterAutoConfig> holder = AutoConfig.getConfigHolder(FastHarvesterAutoConfig.class);
-            Constants.logInfo("AutoConfig registered, holder={}", holder != null);
+            LogUtils.logInfo("AutoConfig registered, holder={}", holder != null);
 
             holder.registerLoadListener((h, d) -> {
                 Config.applyServerSettings(d.tickInterval, d.frameRediscoveryInterval, d.scanRangeX, d.scanRangeZ,
@@ -65,7 +65,7 @@ public final class NeoForgeModInitializer {
                 return InteractionResult.SUCCESS;
             });
         } catch (Throwable t) {
-            Constants.logDebug("AutoConfig/ClothConfig not available at runtime", t);
+            LogUtils.logDebug("AutoConfig/ClothConfig not available at runtime", t);
         }
 
         boolean isClient = true;
@@ -84,11 +84,11 @@ public final class NeoForgeModInitializer {
                 Class<?> screenClass = loader.loadClass("net.minecraft.client.gui.screens.Screen");
                 neoForgeCreate[0] = neoCfg.getMethod("create", screenClass);
             } catch (Throwable t2) {
-                Constants.logDebug("Could not resolve NeoForgeClothConfig.create on loader", t2);
+                LogUtils.logDebug("Could not resolve NeoForgeClothConfig.create on loader", t2);
             }
 
             Object factory = Proxy.newProxyInstance(loader, new Class<?>[]{factoryClass}, (proxy, method, args) -> {
-                    Constants.logInfo("IConfigScreenFactory invoked: {} with args={}", method.getName(), Arrays.toString(args));
+                LogUtils.logInfo("IConfigScreenFactory invoked: {} with args={}", method.getName(), Arrays.toString(args));
                 if ("createScreen".equals(method.getName()) && neoForgeCreate[0] != null) {
                     for (Object a : args) {
                         if (a == null) continue;
@@ -96,10 +96,10 @@ public final class NeoForgeModInitializer {
                         while (argClass != null) {
                             if ("net.minecraft.client.gui.screens.Screen".equals(argClass.getName())) {
                                 try {
-                                    Constants.logInfo("Creating ClothConfig screen for FastHarvester (parent loader={})", a.getClass().getName());
+                                    LogUtils.logInfo("Creating ClothConfig screen for FastHarvester (parent loader={})", a.getClass().getName());
                                     return neoForgeCreate[0].invoke(null, a);
                                 } catch (Throwable t3) {
-                                    Constants.logDebug("Invocation of NeoForgeClothConfig.create failed", t3);
+                                    LogUtils.logDebug("Invocation of NeoForgeClothConfig.create failed", t3);
                                     return null;
                                 }
                             }
@@ -123,30 +123,30 @@ public final class NeoForgeModInitializer {
             }
 
             if (registerMethod != null) {
-                Constants.logInfo("Invoking {} on ModContainer {} with factoryClass={}, factoryClassLoader={}",
+                LogUtils.logInfo("Invoking {} on ModContainer {} with factoryClass={}, factoryClassLoader=",
                     registerMethod.getName(), container.getClass().getName(), factoryClass.getName(), factory.getClass().getClassLoader());
                 Class<?> secondParam = registerMethod.getParameterTypes()[1];
                 Object secondArg;
                 if (secondParam == java.util.function.Supplier.class) {
                     java.util.function.Supplier<?> supplier = () -> factory;
                     secondArg = supplier;
-                    Constants.logDebug("Using Supplier wrapper for factory (Supplier overload detected)");
+                    LogUtils.logDebug("Using Supplier wrapper for factory (Supplier overload detected)");
                 } else {
                     secondArg = factory;
                 }
                 registerMethod.invoke(container, factoryClass, secondArg);
-                Constants.logInfo("Registered NeoForge IConfigScreenFactory via {}", registerMethod.getName());
-                Constants.logDebug("Registered factory types: {}", Arrays.toString(factory.getClass().getInterfaces()));
+                LogUtils.logInfo("Registered NeoForge IConfigScreenFactory via {}", registerMethod.getName());
+                LogUtils.logDebug("Registered factory types: {}", Arrays.toString(factory.getClass().getInterfaces()));
             } else {
-                Constants.logDebug("Could not find ModContainer registration method; listing methods for debugging...");
+                LogUtils.logDebug("Could not find ModContainer registration method; listing methods for debugging...");
                 for (Method m : container.getClass().getMethods()) {
-                    Constants.logDebug("ModContainer method: {} {}", m.getName(), Arrays.toString(m.getParameterTypes()));
+                    LogUtils.logDebug("ModContainer method: {} {}", m.getName(), Arrays.toString(m.getParameterTypes()));
                 }
             }
         } catch (Throwable t) {
-            Constants.logDebug("Reflective config-screen registration failed", t);
+            LogUtils.logDebug("Reflective config-screen registration failed", t);
         } else {
-            Constants.logDebug("Skipping NeoForge config-screen registration on non-client environment");
+            LogUtils.logDebug("Skipping NeoForge config-screen registration on non-client environment");
         }
     }
 
@@ -163,7 +163,7 @@ public final class NeoForgeModInitializer {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        Constants.logInfo("{} v{} loaded for NeoForge", com.fastharvester.ModCommon.MOD_NAME, com.fastharvester.ModCommon.MOD_VERSION);
+        LogUtils.logInfo("{} v{} loaded for NeoForge", com.fastharvester.ModCommon.MOD_NAME, com.fastharvester.ModCommon.MOD_VERSION);
         FastHarvester.init();
     }
 }

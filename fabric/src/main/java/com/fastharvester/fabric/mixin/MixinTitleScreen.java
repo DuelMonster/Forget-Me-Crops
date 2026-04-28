@@ -2,7 +2,7 @@ package com.fastharvester.fabric.mixin;
 
 // 🎨 Fabric title mixin: adds a little mod flair to the title screen, like a digital sticker.
 // Emotional note: proud and slightly show-offy.
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,6 +23,6 @@ public class MixinTitleScreen {
     @Inject(at = @At("HEAD"), method = "init()V")
     private void init(CallbackInfo info) {
         com.fastharvester.client.TitleScreenLogger.logPlatform();
-        Constants.logDebug("MC Version: {}", Minecraft.getInstance().getVersionType());
+        LogUtils.logDebug("MC Version: {}", Minecraft.getInstance().getVersionType());
     }
 }

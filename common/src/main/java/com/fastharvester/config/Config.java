@@ -1,7 +1,7 @@
 package com.fastharvester.config;
 
 import com.fastharvester.enums.*;
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,7 +41,7 @@ public class Config {
             loadClient();
             logEffectiveConfig();
         } catch (Exception e) {
-            Constants.logError("Failed to load config", e);
+            LogUtils.logError("Failed to load config", e);
         }
     }
 
@@ -51,7 +51,7 @@ public class Config {
             writeToml(SERVER_CONFIG_PATH, serverConfigValues(), serverHeader());
             writeToml(CLIENT_CONFIG_PATH, clientConfigValues(), clientHeader());
         } catch (Exception e) {
-            Constants.logError("Failed to save config", e);
+            LogUtils.logError("Failed to save config", e);
         }
     }
 
@@ -80,7 +80,7 @@ public class Config {
 
     public static void logEffectiveConfig() {
         if (debugLogging) {
-            Constants.logInfo("Debug config enabled: tickInterval={}, scanRangeX={}, scanRangeZ={}, rotationMode={}, seedClutterMode={}, seedReservePerType={}, harvestParticles=()", tickInterval, scanRangeX, scanRangeZ, rotationMode, seedClutterMode, seedReservePerType, harvestParticles);
+            LogUtils.logInfo("Debug config enabled: tickInterval={}, scanRangeX={}, scanRangeZ={}, rotationMode={}, seedClutterMode={}, seedReservePerType={}, harvestParticles=()", tickInterval, scanRangeX, scanRangeZ, rotationMode, seedClutterMode, seedReservePerType, harvestParticles);
         }
     }
 
@@ -198,7 +198,7 @@ public class Config {
         if (rawValue == null) return fallback;
         if ("true".equalsIgnoreCase(rawValue)) return true;
         if ("false".equalsIgnoreCase(rawValue)) return false;
-        Constants.logWarn("Ignoring invalid boolean for {} in {}: {}", key, configFileForKey(key), rawValue);
+        LogUtils.logWarn("Ignoring invalid boolean for {} in {}: {}", key, configFileForKey(key), rawValue);
         return fallback;
     }
 
@@ -218,7 +218,7 @@ public class Config {
             if (v < minValue) return fallback;
             return v;
         } catch (NumberFormatException ignored) {}
-        Constants.logWarn("Ignoring invalid integer for {} in {}: {}", key, configFileForKey(key), rawValue);
+        LogUtils.logWarn("Ignoring invalid integer for {} in {}: {}", key, configFileForKey(key), rawValue);
         return fallback;
     }
 

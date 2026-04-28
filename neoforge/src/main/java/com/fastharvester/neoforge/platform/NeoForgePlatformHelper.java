@@ -8,7 +8,7 @@ import net.minecraft.world.phys.AABB;
 import com.fastharvester.platform.services.IPlatformHelper;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLLoader;
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 public class NeoForgePlatformHelper implements IPlatformHelper {
@@ -56,18 +56,18 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
             try {
                 boolean wrote = com.fastharvester.platform.adapter.FastItemFrameAdapterImpl.writeItemToBE(be, stack == null ? ItemStack.EMPTY : stack.copy());
                 if (wrote) {
-                    try { Constants.logDebug("[PLATFORM] updateFrameItem: adapter wrote item to BE {} at {}", be.getClass().getName(), pos); } catch (Throwable ignored) {}
+                    try { LogUtils.logDebug("[PLATFORM] updateFrameItem: adapter wrote item to BE {} at {}", be.getClass().getName(), pos); } catch (Throwable ignored) {}
                     try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
                     return;
                 }
-            } catch (Throwable t) { try { Constants.logDebug("[PLATFORM] updateFrameItem: adapter writeItemToBE failed: {}", t.getMessage()); } catch (Throwable ignored) {} }
+            } catch (Throwable t) { try { LogUtils.logDebug("[PLATFORM] updateFrameItem: adapter writeItemToBE failed: {}", t.getMessage()); } catch (Throwable ignored) {} }
 
             try {
                 boolean wrote = com.fastharvester.platform.PlatformReflective.reflectiveUpdateFrameItemFallback(level, pos, be, stack == null ? ItemStack.EMPTY : stack.copy());
                 if (wrote) return;
             } catch (Throwable ignored) {}
         } catch (Throwable t) {
-            Constants.logDebug("[PLATFORM] updateFrameItem failed at " + pos, t);
+            LogUtils.logDebug("[PLATFORM] updateFrameItem failed at " + pos, t);
         }
     }
 }

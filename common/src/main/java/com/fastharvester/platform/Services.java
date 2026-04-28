@@ -1,6 +1,6 @@
 package com.fastharvester.platform;
 
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.platform.services.IPlatformHelper;
 import java.util.ServiceLoader;
 
@@ -37,7 +37,7 @@ public class Services {
         final T loadedService = ServiceLoader.load(clazz)
                 .findFirst()
                 .orElseThrow(() -> new NullPointerException("Failed to load service for " + clazz.getName()));
-        Constants.logDebug("Loaded {} for service {}", loadedService, clazz);
+        LogUtils.logDebug("Loaded {} for service {}", loadedService, clazz);
         return loadedService;
     }
 }

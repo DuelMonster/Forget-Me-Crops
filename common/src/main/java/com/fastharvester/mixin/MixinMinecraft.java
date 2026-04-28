@@ -3,7 +3,7 @@ package com.fastharvester.mixin;
 // ✨ MixinMinecraft: sneaks tiny integrations into Minecraft classes. Quietly mischievous.
 // Why it matters: sometimes you need a gentle nudge into game behavior.
 
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -30,7 +30,7 @@ public class MixinMinecraft {
      */
     @Inject(at = @At("TAIL"), method = "<init>")
     private void init(CallbackInfo info) {
-        Constants.logDebug("This line is printed by an example mod common mixin!");
-        Constants.logDebug("MC Version: {}", Minecraft.getInstance().getVersionType());
+        LogUtils.logDebug("This line is printed by an example mod common mixin!");
+        LogUtils.logDebug("MC Version: {}", Minecraft.getInstance().getVersionType());
     }
 }

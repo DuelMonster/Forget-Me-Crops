@@ -1,5 +1,5 @@
 package com.fastharvester.frame;
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.config.Config;
 import com.fastharvester.util.chest.ChestUtils;
 import com.fastharvester.harvest.HarvestContext;
@@ -63,16 +63,16 @@ public class FrameRegistry {
         if (existing == null) {
             map.put(framePos, new FrameEntry(anchor));
             if (anchor.hoe != null && !anchor.hoe.isEmpty()) {
-                Constants.logDebug("[REG] Registered active frame at {} in {}.", framePos, dimensionId);
+                LogUtils.logDebug("[REG] Registered active frame at {} in {}.", framePos, dimensionId);
             } else {
-                Constants.logDebug("[REG] Registered inactive frame at {} in {}.", framePos, dimensionId);
+                LogUtils.logDebug("[REG] Registered inactive frame at {} in {}.", framePos, dimensionId);
             }
         } else {
             // boolean wasActive = existing.active;
             if (hoe != null && !hoe.isEmpty()) existing.active = true;
             existing.lastSeenMs = System.currentTimeMillis();
             existing.ticksUntilNextRun = Math.min(existing.ticksUntilNextRun, Config.tickInterval);
-            Constants.logDebug("[REG] Refreshed frame at {} in {}. active={}", framePos, dimensionId, existing.active);
+            LogUtils.logDebug("[REG] Refreshed frame at {} in {}. active={}", framePos, dimensionId, existing.active);
         }
         try {
             long chunkKey = computeChunkKey(framePos);
@@ -90,7 +90,7 @@ public class FrameRegistry {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
         if (map == null) return;
         if (map.remove(framePos) != null) {
-            Constants.logDebug("[REG] Unregistered frame at {} in {}.", framePos, dimensionId);
+            LogUtils.logDebug("[REG] Unregistered frame at {} in {}.", framePos, dimensionId);
         }
     }
 
@@ -179,7 +179,7 @@ public class FrameRegistry {
         if (fe == null) return;
         fe.ticksUntilNextRun = Math.max(0, ticks);
         fe.active = true;
-        Constants.logDebug("[REG] Set cooldown for {} in {}: {} ticks", framePos, dimensionId, ticks);
+        LogUtils.logDebug("[REG] Set cooldown for {} in {}: {} ticks", framePos, dimensionId, ticks);
     }
 
     /**
@@ -207,9 +207,9 @@ public class FrameRegistry {
         replacement.lastRotationGameTime = old.lastRotationGameTime;
         map.put(framePos, replacement);
         if (!old.active && replacement.active) {
-            Constants.logDebug("[REG] Activated frame at {} in {} via replacement.", framePos, dimensionId);
+            LogUtils.logDebug("[REG] Activated frame at {} in {} via replacement.", framePos, dimensionId);
         } else {
-            Constants.logDebug("[REG] Updated hoe for {} in {}.", framePos, dimensionId);
+            LogUtils.logDebug("[REG] Updated hoe for {} in {}.", framePos, dimensionId);
         }
     }
 
@@ -245,11 +245,11 @@ public class FrameRegistry {
             if (fe != null) {
                 // If a full rotation animation is active for this frame, skip scheduling
                 if (fe.animating) {
-                    try { Constants.logDebug("[ROT] scheduleRotation SKIP (animating) for {} in {} -> {} (gametime={})", framePos, dimensionId, rotation & 7, requestGameTime); } catch (Throwable ignored) {}
+                    try { LogUtils.logDebug("[ROT] scheduleRotation SKIP (animating) for {} in {} -> {} (gametime={})", framePos, dimensionId, rotation & 7, requestGameTime); } catch (Throwable ignored) {}
                     return;
                 }
                 fe.lastRotationGameTime = requestGameTime;
-                try { Constants.logDebug("[ROT] scheduleRotation queued for {} in {} -> {} (gametime={})", framePos, dimensionId, rotation & 7, requestGameTime); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[ROT] scheduleRotation queued for {} in {} -> {} (gametime={})", framePos, dimensionId, rotation & 7, requestGameTime); } catch (Throwable ignored) {}
             }
         }
         Map<BlockPos, Integer> map = PENDING_ROTATIONS.computeIfAbsent(dimensionId, k -> new HashMap<>());
@@ -265,15 +265,15 @@ public class FrameRegistry {
         FrameEntry fe = map.get(framePos);
         if (fe == null) return;
         fe.animating = animating;
-        try { Constants.logDebug("[ROT] setAnimating {} for {} in {}", animating, framePos, dimensionId); } catch (Throwable ignored) {}
+        try { LogUtils.logDebug("[ROT] setAnimating {} for {} in {}", animating, framePos, dimensionId); } catch (Throwable ignored) {}
         if (animating) {
             // remove any pending scheduled rotation for this frame to avoid conflicts
             Map<BlockPos, Integer> pending = PENDING_ROTATIONS.get(dimensionId);
-            if (pending != null) {
+                if (pending != null) {
                 Integer prev = pending.remove(framePos);
-                try { Constants.logDebug("[ROT] Removed pending rotation for {} in {} -> {}", framePos, dimensionId, prev); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[ROT] Removed pending rotation for {} in {} -> {}", framePos, dimensionId, prev); } catch (Throwable ignored) {}
             } else {
-                try { Constants.logDebug("[ROT] No pending rotations map for {} in {}", framePos, dimensionId); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[ROT] No pending rotations map for {} in {}", framePos, dimensionId); } catch (Throwable ignored) {}
             }
         }
     }
@@ -282,7 +282,7 @@ public class FrameRegistry {
     public static synchronized void clearAll() {
         framesByDimension.clear();
         CHUNK_INDEX.clear();
-        Constants.logDebug("[REG] Cleared all frame registry data.");
+        LogUtils.logDebug("[REG] Cleared all frame registry data.");
     }
 
     /**
@@ -304,7 +304,7 @@ public class FrameRegistry {
             }
         }
 
-        Constants.logDebug("[REG] Cleared {} anchors and {} chunk entries for dimension {}.", removedAnchors, removedKeys.size(), dimensionId);
+        LogUtils.logDebug("[REG] Cleared {} anchors and {} chunk entries for dimension {}.", removedAnchors, removedKeys.size(), dimensionId);
     }
 
     /**
@@ -331,7 +331,7 @@ public class FrameRegistry {
                         HarvestContext ctx = new HarvestContext(fe.anchor, level, net.minecraft.world.item.ItemStack.EMPTY, fe.anchor.chest, null);
                         FrameHoeReplacement.tryReplaceBrokenHoe(ctx);
                     } catch (Throwable t) {
-                        Constants.logDebug("[REG] Failed to attempt auto-replacement for " + pos, t);
+                        LogUtils.logDebug("[REG] Failed to attempt auto-replacement for " + pos, t);
                     }
                 }
             } catch (Throwable ignored) {}
@@ -349,17 +349,17 @@ public class FrameRegistry {
         try {
             Map<BlockPos, Integer> pending = PENDING_ROTATIONS.remove(dimensionId);
             if (pending != null && !pending.isEmpty()) {
-                try { Constants.logDebug("[ROT] Flushing {} pending rotations for {}", pending.size(), dimensionId); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[ROT] Flushing {} pending rotations for {}", pending.size(), dimensionId); } catch (Throwable ignored) {}
                 for (Map.Entry<BlockPos, Integer> p : pending.entrySet()) {
                         try {
                             FrameEntry fe = map.get(p.getKey());
                             if (fe != null && fe.animating) {
-                                try { Constants.logDebug("[ROT] Skipping pending rotation for {} because animating=true", p.getKey()); } catch (Throwable ignored) {}
+                                try { LogUtils.logDebug("[ROT] Skipping pending rotation for {} because animating=true", p.getKey()); } catch (Throwable ignored) {}
                                 continue;
                             }
                             FrameScanner.applyScheduledRotation(level, p.getKey(), p.getValue());
                         } catch (Throwable t) {
-                            Constants.logDebug("[ROT] Failed to apply scheduled rotation for " + p.getKey(), t);
+                            LogUtils.logDebug("[ROT] Failed to apply scheduled rotation for " + p.getKey(), t);
                         }
                     }
             }

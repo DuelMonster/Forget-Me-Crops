@@ -1,6 +1,7 @@
 package com.fastharvester;
 
 import com.fastharvester.config.Config;
+import com.fastharvester.util.log.LogUtils;
 
 // 🚀 FastHarvester: the mod's heart. It waves a tiny flag when the mod starts and quietly hopes players enjoy the harvest.
 // Why it matters: startup rituals are emotional anchoring for mods.
@@ -35,12 +36,12 @@ public class FastHarvester {
         // (If you forget, the crops will know. And they will judge you.)
 
         // --- Guaranteed debug log for mod initialization ---
-        Constants.logInfo("Mod initialization started! If you see this, the core logic is alive and kicking.");
+        LogUtils.logInfo("Mod initialization started! If you see this, the core logic is alive and kicking.");
         // Defer FastItemFrames adapter probe to first use to avoid heavy classloading during init
         if (CONFIG != null && Config.debugLogging) {
-            Constants.logDebug("Debug logging is ENABLED! Prepare for a flood of farming facts.");
+            LogUtils.logDebug("Debug logging is ENABLED! Prepare for a flood of farming facts.");
         } else {
-            Constants.logInfo("Debug logging is OFF. For more details, set debugLogging=true in your config.");
+            LogUtils.logInfo("Debug logging is OFF. For more details, set debugLogging=true in your config.");
         }
     }
 }

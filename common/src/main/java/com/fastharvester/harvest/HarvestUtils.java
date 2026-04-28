@@ -27,7 +27,7 @@ import com.fastharvester.util.hoe.FrameHoeReplacement;
 import com.fastharvester.util.loot.LootLogic;
 import com.fastharvester.util.chest.ChestUtils;
 import com.fastharvester.util.durability.DurabilityLogic;
-import com.fastharvester.Constants;
+import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.config.Config;
 
 public class HarvestUtils {
@@ -60,7 +60,7 @@ public class HarvestUtils {
                 if (s != null && !s.isEmpty() && s.getItem() == replantSeedItem) {
                     if (s.getCount() > 1) { s.setCount(s.getCount() - 1); } else { it.remove(); }
                     tookFromDropsForReplant = true;
-                    try { Constants.logDebug("[HARVEST] Took seed from drops for replant: {} at {}", replantSeedItem, pos); } catch (Throwable ignored) {}
+                    try { LogUtils.logDebug("[HARVEST] Took seed from drops for replant: {} at {}", replantSeedItem, pos); } catch (Throwable ignored) {}
                     break;
                 }
             }
@@ -119,7 +119,7 @@ public class HarvestUtils {
     }
 
     public static void handleBrokenHoe(HarvestContext ctx, ItemStack oldHoe) {
-        Constants.logDebug("[HOE] Hoe broke during harvest. Previous: {}", oldHoe);
+        LogUtils.logDebug("[HOE] Hoe broke during harvest. Previous: {}", oldHoe);
         try { playHoeBreakEffects(ctx, oldHoe); } catch (Throwable ignored) {}
         FrameHoeReplacement.tryReplaceBrokenHoe(ctx);
     }
@@ -173,7 +173,7 @@ public class HarvestUtils {
     }
 
     private static void syncFrameHoe(HarvestContext ctx) {
-        Constants.logDebug("[HOE] syncFrameHoe called. Current hoe: {}", ctx.hoe);
+        LogUtils.logDebug("[HOE] syncFrameHoe called. Current hoe: {}", ctx.hoe);
         try { FrameScanner.Anchor anchor = null; try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {} if (anchor != null && ctx.level != null) { com.fastharvester.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor.framePos, ctx.hoe == null ? net.minecraft.world.item.ItemStack.EMPTY : ctx.hoe.copy()); } } catch (Throwable ignored) {}
     }
 }

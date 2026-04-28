@@ -6,6 +6,7 @@ package com.fastharvester;
 import com.fastharvester.platform.Services;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Items;
+import com.fastharvester.util.log.LogUtils;
 
 /**
  * CommonClass: The friendly neighborhood example for shared logic!
@@ -27,12 +28,12 @@ public class CommonClass {
      * Logs some fun facts about the environment and diamonds, because who doesn't love diamonds?
      */
     public static void init() {
-        Constants.logDebug("Hello from Common init on {}! We are currently in a {} environment!", Services.PLATFORM.getPlatformName(), Services.PLATFORM.getEnvironmentName());
-        Constants.logDebug("The ID for diamonds is {}", BuiltInRegistries.ITEM.getKey(Items.DIAMOND));
+        LogUtils.logDebug("Hello from Common init on {}! We are currently in a {} environment!", Services.PLATFORM.getPlatformName(), Services.PLATFORM.getEnvironmentName());
+        LogUtils.logDebug("The ID for diamonds is {}", BuiltInRegistries.ITEM.getKey(Items.DIAMOND));
 
         // ServiceLoader magic: lets us call platform-specific code from common code. It's like having a secret agent for every loader.
         if (Services.PLATFORM.isModLoaded("FastHarvester")) {
-            Constants.logDebug("Hello to FastHarvester");
+            LogUtils.logDebug("Hello to FastHarvester");
         }
     }
 }
