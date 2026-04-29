@@ -414,10 +414,26 @@ public class FrameScanner {
         Set<Long> visited = new HashSet<>();
         Deque<BlockPos> q = new ArrayDeque<>();
 
-        visited.add(center.asLong());
-        q.add(center);
+        // Seed the BFS from the frame center and its immediate neighbours.
+        // Frames are often positioned above chests/blocks; starting from a 3x3
+        // area around the frame increases the chance we begin on an actual
+        // farm tile (air above farmland or crop) instead of a non-farm block
+        // such as the frame's supporting block. This prevents the BFS from
+        // immediately returning empty and falling back to the full-box scan.
+        int seedsAdded = 0;
+        for (int sx = -1; sx <= 1; sx++) {
+            for (int sz = -1; sz <= 1; sz++) {
+                BlockPos seed = center.offset(sx, 0, sz);
+                long key = seed.asLong();
+                if (!visited.contains(key)) {
+                    visited.add(key);
+                    q.add(seed);
+                    seedsAdded++;
+                }
+            }
+        }
 
-        LogUtils.logDebug("[SCAN] BFS seeded from center {} (rangeX={},rangeZ={}).", center, rangeX, rangeZ);
+        LogUtils.logDebug("[SCAN] BFS seeded from center {} with {} seeds (rangeX={},rangeZ={}).", center, seedsAdded, rangeX, rangeZ);
 
         while (!q.isEmpty()) {
             BlockPos cur = q.poll();
