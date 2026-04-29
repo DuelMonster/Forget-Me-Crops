@@ -157,13 +157,6 @@ tasks.named('runClient') {
                 logger.lifecycle("[FastHarvester] Removed related mod jar: ${stale.name}")
             }
         }
-        ['fastharvester.json', 'fastharvester-server.toml', 'fastharvester-client.toml'].each { fileName ->
-            def cfg = file("runs/client/config/${fileName}")
-            if (cfg.exists()) {
-                cfg.delete()
-                logger.lifecycle("[FastHarvester] Deleted runs/client/config/${fileName} — defaults will be regenerated.")
-            }
-        }
     }
 }
 

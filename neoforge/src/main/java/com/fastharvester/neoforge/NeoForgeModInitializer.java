@@ -8,13 +8,10 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.event.config.ModConfigEvent;
-import com.fastharvester.neoforge.config.FastHarvesterNeoForgeConfig;
+// ModConfigEvent handlers removed; NeoForge uses shared Config load/save.
+// NeoForge now uses the shared `Config` class and Fabric-style toml filenames.
 import com.fastharvester.neoforge.ticker.NeoForgeFarmTicker;
-import com.fastharvester.neoforge.config.FastHarvesterAutoConfig;
-import me.shedaniel.autoconfig.AutoConfig;
-import me.shedaniel.autoconfig.serializer.Toml4jConfigSerializer;
-import me.shedaniel.autoconfig.ConfigHolder;
+// AutoConfig is not used for NeoForge to avoid duplicate config sources.
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
@@ -33,41 +30,12 @@ public final class NeoForgeModInitializer {
 
     @SuppressWarnings("null")
     public NeoForgeModInitializer(IEventBus modEventBus, ModContainer container) {
-        // Register config spec
-        container.registerConfig(ModConfig.Type.COMMON, FastHarvesterNeoForgeConfig.SPEC);
-
-        // Register config listeners
-        modEventBus.addListener(this::onConfigLoading);
-        modEventBus.addListener(this::onConfigReloading);
+        // Use the shared `Config` files (fastharvester-client.toml / fastharvester-server.toml)
+        // to remain consistent with the Fabric module. Avoid registering an
+        // additional NeoForge ModConfigSpec to prevent duplicate/conflicting
+        // configuration sources that make runtime changes non-deterministic.
         modEventBus.addListener(this::commonSetup);
         NeoForgeFarmTicker.init(net.neoforged.neoforge.common.NeoForge.EVENT_BUS);
-
-        try {
-            AutoConfig.register(FastHarvesterAutoConfig.class, Toml4jConfigSerializer::new);
-            ConfigHolder<FastHarvesterAutoConfig> holder = AutoConfig.getConfigHolder(FastHarvesterAutoConfig.class);
-            LogUtils.logInfo("AutoConfig registered, holder={}", holder != null);
-
-            holder.registerLoadListener((h, d) -> {
-                Config.applyServerSettings(d.tickInterval, d.frameRediscoveryInterval, d.scanRangeX, d.scanRangeZ,
-                    d.durabilityMode, d.mendingNegation, d.debugLogging,
-                    d.chestFullCooldownTicks, d.maxSpiralDurationTicks,
-                    d.rotationMode, d.seedClutterMode, d.seedReservePerType);
-                Config.applyClientSettings(d.harvestParticles);
-                return InteractionResult.SUCCESS;
-            });
-
-            holder.registerSaveListener((h, d) -> {
-                Config.applyServerSettings(d.tickInterval, d.frameRediscoveryInterval, d.scanRangeX, d.scanRangeZ,
-                    d.durabilityMode, d.mendingNegation, d.debugLogging,
-                    d.chestFullCooldownTicks, d.maxSpiralDurationTicks,
-                    d.rotationMode, d.seedClutterMode, d.seedReservePerType);
-                Config.applyClientSettings(d.harvestParticles);
-                Config.save();
-                return InteractionResult.SUCCESS;
-            });
-        } catch (Throwable t) {
-            LogUtils.logDebug("AutoConfig/ClothConfig not available at runtime", t);
-        }
 
         boolean isClient = true;
         try {
@@ -151,20 +119,9 @@ public final class NeoForgeModInitializer {
         }
     }
 
-    private void onConfigLoading(ModConfigEvent.Loading event) {
-        if (event.getConfig().getSpec() == FastHarvesterNeoForgeConfig.SPEC) {
-            FastHarvesterNeoForgeConfig.update();
-        }
-    }
-
-    private void onConfigReloading(ModConfigEvent.Reloading event) {
-        if (event.getConfig().getSpec() == FastHarvesterNeoForgeConfig.SPEC) {
-            FastHarvesterNeoForgeConfig.update();
-        }
-    }
-
     private void commonSetup(FMLCommonSetupEvent event) {
         LogUtils.logInfo("{} v{} loaded for NeoForge", com.fastharvester.ModCommon.MOD_NAME, com.fastharvester.ModCommon.MOD_VERSION);
+        try { Config.load(); } catch (Throwable t) { LogUtils.logWarn("Failed to load shared config", t); }
         FastHarvester.init();
     }
 }
