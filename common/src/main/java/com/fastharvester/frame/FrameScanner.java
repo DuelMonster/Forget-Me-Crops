@@ -92,10 +92,43 @@ public class FrameScanner {
 
         int blocksScanned = 0;
         int cropsFound = 0;
+        BlockPos center = anchor.framePos;
+        String dimId = "";
+        try { dimId = level.dimension().identifier().toString(); } catch (Throwable ignored) {}
+
+        // Quick anchor validity check: ensure the item-frame (or FIF block-entity) still exists
+        try {
+            boolean framePresent = false;
+            java.util.List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(center));
+            for (ItemFrame f : frames) { if (f.blockPosition().equals(center)) { framePresent = true; break; } }
+            BlockEntity be = level.getBlockEntity(center);
+                // Targeted diagnostic for problematic FIF anchor
+                try {
+                    if (center.equals(new BlockPos(-10, 56, 20))) {
+                        boolean beIsFIF = be != null && FIF.isFastItemFrameBlockEntity(be);
+                        LogUtils.logDebug("[DIAG] scanFarm presence check for {}: framesFound={}, beClass={}, isFIF={}", center, frames.size(), be == null ? "null" : be.getClass().getName(), beIsFIF);
+                    }
+                } catch (Throwable ignored) {}
+            if (!framePresent && (be == null || !FIF.isFastItemFrameBlockEntity(be))) {
+                try { LogUtils.logWarn("[SCAN] Anchor frame missing at {} in {}; unregistering and aborting scan.", center, dimId); } catch (Throwable ignored) {}
+                try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                return false;
+            }
+            if (anchor.chest instanceof BlockEntity chestBe) {
+                BlockPos chestPos = chestBe.getBlockPos();
+                BlockEntity current = level.getBlockEntity(chestPos);
+                if (current != chestBe || !(current instanceof Container)) {
+                    try { LogUtils.logWarn("[SCAN] Anchor chest missing/changed at {} for {}; unregistering and aborting scan.", chestPos, center); } catch (Throwable ignored) {}
+                    try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                    return false;
+                }
+            }
+        } catch (Throwable t) {
+            LogUtils.logDebug("[SCAN] Anchor presence check failed for " + center, t);
+        }
+
         int rangeX = Math.max(1, Config.scanRangeX);
         int rangeZ = Math.max(1, Config.scanRangeZ);
-        BlockPos center = anchor.framePos;
-        String dimId = level.dimension().identifier().toString();
 
         ItemStack currentHoe = anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy();
         try {
@@ -155,6 +188,30 @@ public class FrameScanner {
                 case STEP_PER_HARVEST -> {
                 }
             }
+
+            // Re-check anchor presence and chest integrity before attempting to harvest.
+            try {
+                boolean framePresent = false;
+                java.util.List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(center));
+                for (ItemFrame f : frames) { if (f.blockPosition().equals(center)) { framePresent = true; break; } }
+                BlockEntity be = level.getBlockEntity(center);
+                if (!framePresent && (be == null || !FIF.isFastItemFrameBlockEntity(be))) {
+                    try { LogUtils.logWarn("[SCAN] Anchor frame removed at {} during scan; unregistering and aborting.", center); } catch (Throwable ignored) {}
+                    try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                    ctx.logSummary();
+                    return cropsFound > 0;
+                }
+                if (anchor.chest instanceof BlockEntity chestBe) {
+                    BlockPos chestPos = chestBe.getBlockPos();
+                    BlockEntity current = level.getBlockEntity(chestPos);
+                    if (current != chestBe || !(current instanceof Container)) {
+                        try { LogUtils.logWarn("[SCAN] Anchor chest removed or changed at {} during scan; unregistering and aborting.", chestPos); } catch (Throwable ignored) {}
+                        try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                        ctx.logSummary();
+                        return cropsFound > 0;
+                    }
+                }
+            } catch (Throwable t) { LogUtils.logDebug("[SCAN] anchor re-check failed during scan", t); }
 
             // Before attempting to harvest, ensure a hoe is physically present on the frame.
             try {
@@ -701,6 +758,53 @@ public class FrameScanner {
                 return true;
             }
 
+            // Validate anchor presence and chest integrity at the start of this tick
+            try {
+                boolean framePresent = false;
+                java.util.List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(center));
+                for (ItemFrame f : frames) { if (f.blockPosition().equals(center)) { framePresent = true; break; } }
+                BlockEntity be = level.getBlockEntity(center);
+                // Targeted diagnostic for problematic FIF anchor during scheduled scan
+                try {
+                    if (center.equals(new BlockPos(-10, 56, 20))) {
+                        boolean beIsFIF = be != null && FIF.isFastItemFrameBlockEntity(be);
+                        LogUtils.logDebug("[DIAG] scheduled tick presence check for {}: framesFound={}, beClass={}, isFIF={}", center, frames.size(), be == null ? "null" : be.getClass().getName(), beIsFIF);
+                        ItemStack live = readHoeFromFrame(level, center);
+                        LogUtils.logDebug("[DIAG] scheduled tick readHoeFromFrame for {}: liveHoeEmpty={}", center, live == null || live.isEmpty());
+                    }
+                } catch (Throwable ignored) {}
+                if (!framePresent && (be == null || !FIF.isFastItemFrameBlockEntity(be))) {
+                    try { LogUtils.logWarn("[SCAN] Anchor frame missing at {} during scheduled scan; unregistering.", center); } catch (Throwable ignored) {}
+                    try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                    ctx.logSummary();
+                    return true;
+                }
+                if (anchor.chest instanceof BlockEntity chestBe) {
+                    BlockPos chestPos = chestBe.getBlockPos();
+                    BlockEntity current = level.getBlockEntity(chestPos);
+                    if (current != chestBe || !(current instanceof Container)) {
+                        try { LogUtils.logWarn("[SCAN] Anchor chest missing/changed at {} during scheduled scan; unregistering.", chestPos); } catch (Throwable ignored) {}
+                        try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                        ctx.logSummary();
+                        return true;
+                    }
+                }
+
+                // Ensure a hoe is present on the frame at tick start; abort the scan if removed.
+                try {
+                    ItemStack liveHoe = readHoeFromFrame(level, center);
+                    if (liveHoe == null || liveHoe.isEmpty()) {
+                        try { LogUtils.logDebug("[SCAN] Hoe removed from frame at {} during scheduled scan; aborting.", center); } catch (Throwable ignored) {}
+                        ctx.logSummary();
+                        return true;
+                    }
+                    try { ctx.hoe = liveHoe.copy(); } catch (Throwable ignored) {}
+                    try { FrameRegistry.updateHoe(dimId, center, ctx.hoe.copy()); } catch (Throwable ignored) {}
+                } catch (Throwable ignored) {}
+            } catch (Throwable t) {
+                LogUtils.logDebug("[SCAN] Anchor re-check failed for " + center, t);
+            }
+
             tickCounter++;
             if (animationStepsRemaining > 0) {
                 try {
@@ -750,6 +854,17 @@ public class FrameScanner {
                     try {
                         BlockState state = level.getBlockState(pos);
                         ctx.incrementBlocksScanned();
+
+                        // Temporary detailed debug: log per-position block/maturity and chest-space checks
+                        try {
+                            boolean isCropDbg = state.getBlock() instanceof CropBlock || state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH);
+                            int ageDbg = -1;
+                            try { ageDbg = state.getValue(CropBlock.AGE); } catch (Throwable ignored) {}
+                            int thresholdDbg = (state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH)) ? 3 : 7;
+                            boolean chestSpaceDbg = false;
+                            try { chestSpaceDbg = ChestUtils.hasSpace(ctx.chest); } catch (Throwable ignored) {}
+                            try { LogUtils.logDebug("[SCAN-DBG] pos={} block={} isCrop={} age={} threshold={} chestHasSpace={} beforeHarvest={}", pos, state.getBlock().getClass().getName(), isCropDbg, ageDbg, thresholdDbg, chestSpaceDbg, beforeHarvest); } catch (Throwable ignored) {}
+                        } catch (Throwable ignored) {}
 
                         Block block = state.getBlock();
                         boolean harvested = false;
@@ -1210,6 +1325,19 @@ public class FrameScanner {
             }
         } catch (Throwable t) {
             LogUtils.logDebug("[ROT] applyScheduledRotation failed at " + pos, t);
+        }
+    }
+
+    /**
+     * Clear any in-progress/queued scan tasks. Used when worlds unload to avoid
+     * carrying stale FarmScanTask objects across server restarts.
+     */
+    public static synchronized void clearAllScans() {
+        try {
+            activeScans.clear();
+            LogUtils.logDebug("[SCAN] Cleared all active scan tasks.");
+        } catch (Throwable t) {
+            LogUtils.logWarn("[SCAN] Failed to clear active scans", t);
         }
     }
 }

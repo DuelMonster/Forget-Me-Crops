@@ -61,18 +61,21 @@ public class FrameRegistry {
         FrameScanner.Anchor anchor = new FrameScanner.Anchor(chest, framePos, hoe == null ? ItemStack.EMPTY : hoe.copy());
         FrameEntry existing = map.get(framePos);
         if (existing == null) {
-            map.put(framePos, new FrameEntry(anchor));
-            if (anchor.hoe != null && !anchor.hoe.isEmpty()) {
-                LogUtils.logDebug("[REG] Registered active frame at {} in {}.", framePos, dimensionId);
-            } else {
-                LogUtils.logDebug("[REG] Registered inactive frame at {} in {}.", framePos, dimensionId);
-            }
+            FrameEntry fe = new FrameEntry(anchor);
+            map.put(framePos, fe);
+                String hoeDesc = anchor.hoe == null || anchor.hoe.isEmpty() ? "<empty>" : anchor.hoe.getItem().toString() + " x" + anchor.hoe.getCount();
+                int chestId = anchor.chest == null ? 0 : System.identityHashCode(anchor.chest);
+                LogUtils.logTrace("[REG] Registered {} frame at {} in {}. hoe={} chestId={} lastSeenMs={}",
+                    (anchor.hoe != null && !anchor.hoe.isEmpty()) ? "active" : "inactive",
+                    framePos, dimensionId, hoeDesc, chestId, fe.lastSeenMs);
         } else {
-            // boolean wasActive = existing.active;
             if (hoe != null && !hoe.isEmpty()) existing.active = true;
             existing.lastSeenMs = System.currentTimeMillis();
             existing.ticksUntilNextRun = Math.min(existing.ticksUntilNextRun, Config.tickInterval);
-            LogUtils.logDebug("[REG] Refreshed frame at {} in {}. active={}", framePos, dimensionId, existing.active);
+            String hoeDesc = hoe == null || hoe.isEmpty() ? "<empty>" : hoe.getItem().toString() + " x" + hoe.getCount();
+            int chestId = existing.anchor.chest == null ? 0 : System.identityHashCode(existing.anchor.chest);
+                LogUtils.logTrace("[REG] Refreshed frame at {} in {}. active={} hoe={} chestId={} lastSeenMs={}",
+                    framePos, dimensionId, existing.active, hoeDesc, chestId, existing.lastSeenMs);
         }
         try {
             long chunkKey = computeChunkKey(framePos);
@@ -89,8 +92,11 @@ public class FrameRegistry {
     public static synchronized void unregisterFrame(String dimensionId, BlockPos framePos) {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
         if (map == null) return;
-        if (map.remove(framePos) != null) {
-            LogUtils.logDebug("[REG] Unregistered frame at {} in {}.", framePos, dimensionId);
+        FrameEntry removed = map.remove(framePos);
+        if (removed != null) {
+            String hoeDesc = removed.anchor.hoe == null || removed.anchor.hoe.isEmpty() ? "<empty>" : removed.anchor.hoe.getItem().toString() + " x" + removed.anchor.hoe.getCount();
+            int chestId = removed.anchor.chest == null ? 0 : System.identityHashCode(removed.anchor.chest);
+            LogUtils.logTrace("[REG] Unregistered frame at {} in {}. hoe={} chestId={} lastSeenMs={}", framePos, dimensionId, hoeDesc, chestId, removed.lastSeenMs);
         }
     }
 
@@ -179,7 +185,7 @@ public class FrameRegistry {
         if (fe == null) return;
         fe.ticksUntilNextRun = Math.max(0, ticks);
         fe.active = true;
-        LogUtils.logDebug("[REG] Set cooldown for {} in {}: {} ticks", framePos, dimensionId, ticks);
+        LogUtils.logTrace("[REG] Set cooldown for {} in {}: {} ticks", framePos, dimensionId, ticks);
     }
 
     /**
@@ -206,10 +212,13 @@ public class FrameRegistry {
         replacement.lastSeenMs = old.lastSeenMs;
         replacement.lastRotationGameTime = old.lastRotationGameTime;
         map.put(framePos, replacement);
+        String oldHoeDesc = old.anchor.hoe == null || old.anchor.hoe.isEmpty() ? "<empty>" : old.anchor.hoe.getItem().toString() + " x" + old.anchor.hoe.getCount();
+        String newHoeDesc = hoe == null || hoe.isEmpty() ? "<empty>" : hoe.getItem().toString() + " x" + hoe.getCount();
+        int chestId = old.anchor.chest == null ? 0 : System.identityHashCode(old.anchor.chest);
         if (!old.active && replacement.active) {
-            LogUtils.logDebug("[REG] Activated frame at {} in {} via replacement.", framePos, dimensionId);
+            LogUtils.logTrace("[REG] Activated frame at {} in {} via replacement. oldHoe={} newHoe={} chestId={}", framePos, dimensionId, oldHoeDesc, newHoeDesc, chestId);
         } else {
-            LogUtils.logDebug("[REG] Updated hoe for {} in {}.", framePos, dimensionId);
+            LogUtils.logTrace("[REG] Updated hoe for {} in {}. oldHoe={} newHoe={} chestId={}", framePos, dimensionId, oldHoeDesc, newHoeDesc, chestId);
         }
     }
 
@@ -265,15 +274,15 @@ public class FrameRegistry {
         FrameEntry fe = map.get(framePos);
         if (fe == null) return;
         fe.animating = animating;
-        try { LogUtils.logDebug("[ROT] setAnimating {} for {} in {}", animating, framePos, dimensionId); } catch (Throwable ignored) {}
+        try { LogUtils.logTrace("[ROT] setAnimating {} for {} in {}", animating, framePos, dimensionId); } catch (Throwable ignored) {}
         if (animating) {
             // remove any pending scheduled rotation for this frame to avoid conflicts
             Map<BlockPos, Integer> pending = PENDING_ROTATIONS.get(dimensionId);
                 if (pending != null) {
                 Integer prev = pending.remove(framePos);
-                try { LogUtils.logDebug("[ROT] Removed pending rotation for {} in {} -> {}", framePos, dimensionId, prev); } catch (Throwable ignored) {}
+                try { LogUtils.logTrace("[ROT] Removed pending rotation for {} in {} -> {}", framePos, dimensionId, prev); } catch (Throwable ignored) {}
             } else {
-                try { LogUtils.logDebug("[ROT] No pending rotations map for {} in {}", framePos, dimensionId); } catch (Throwable ignored) {}
+                try { LogUtils.logTrace("[ROT] No pending rotations map for {} in {}", framePos, dimensionId); } catch (Throwable ignored) {}
             }
         }
     }
@@ -282,7 +291,7 @@ public class FrameRegistry {
     public static synchronized void clearAll() {
         framesByDimension.clear();
         CHUNK_INDEX.clear();
-        LogUtils.logDebug("[REG] Cleared all frame registry data.");
+        LogUtils.logTrace("[REG] Cleared all frame registry data.");
     }
 
     /**
@@ -304,7 +313,7 @@ public class FrameRegistry {
             }
         }
 
-        LogUtils.logDebug("[REG] Cleared {} anchors and {} chunk entries for dimension {}.", removedAnchors, removedKeys.size(), dimensionId);
+        LogUtils.logTrace("[REG] Cleared {} anchors and {} chunk entries for dimension {}.", removedAnchors, removedKeys.size(), dimensionId);
     }
 
     /**
@@ -331,7 +340,7 @@ public class FrameRegistry {
                         HarvestContext ctx = new HarvestContext(fe.anchor, level, net.minecraft.world.item.ItemStack.EMPTY, fe.anchor.chest, null);
                         FrameHoeReplacement.tryReplaceBrokenHoe(ctx);
                     } catch (Throwable t) {
-                        LogUtils.logDebug("[REG] Failed to attempt auto-replacement for " + pos, t);
+                        LogUtils.logTrace("[REG] Failed to attempt auto-replacement for " + pos, t);
                     }
                 }
             } catch (Throwable ignored) {}
@@ -341,30 +350,35 @@ public class FrameRegistry {
             if (!fe.active) continue;
             fe.ticksUntilNextRun--;
             if (fe.ticksUntilNextRun <= 0) {
+                int prevTicks = fe.ticksUntilNextRun;
                 fe.ticksUntilNextRun = Config.tickInterval;
+                String hoeDesc = fe.anchor.hoe == null || fe.anchor.hoe.isEmpty() ? "<empty>" : fe.anchor.hoe.getItem().toString() + " x" + fe.anchor.hoe.getCount();
+                int chestId = fe.anchor.chest == null ? 0 : System.identityHashCode(fe.anchor.chest);
+                try { LogUtils.logTrace("[REG] Anchor ready: {} in {}. hoe={} chestId={} lastSeenMs={} prevTicks={}", fe.anchor.framePos, dimensionId, hoeDesc, chestId, fe.lastSeenMs, prevTicks); } catch (Throwable ignored) {}
                 ready.add(fe.anchor);
             }
         }
 
         try {
             Map<BlockPos, Integer> pending = PENDING_ROTATIONS.remove(dimensionId);
-            if (pending != null && !pending.isEmpty()) {
-                try { LogUtils.logDebug("[ROT] Flushing {} pending rotations for {}", pending.size(), dimensionId); } catch (Throwable ignored) {}
+                if (pending != null && !pending.isEmpty()) {
+                try { LogUtils.logTrace("[ROT] Flushing {} pending rotations for {}", pending.size(), dimensionId); } catch (Throwable ignored) {}
                 for (Map.Entry<BlockPos, Integer> p : pending.entrySet()) {
                         try {
                             FrameEntry fe = map.get(p.getKey());
                             if (fe != null && fe.animating) {
-                                try { LogUtils.logDebug("[ROT] Skipping pending rotation for {} because animating=true", p.getKey()); } catch (Throwable ignored) {}
+                                try { LogUtils.logTrace("[ROT] Skipping pending rotation for {} because animating=true", p.getKey()); } catch (Throwable ignored) {}
                                 continue;
                             }
                             FrameScanner.applyScheduledRotation(level, p.getKey(), p.getValue());
                         } catch (Throwable t) {
-                            LogUtils.logDebug("[ROT] Failed to apply scheduled rotation for " + p.getKey(), t);
+                            LogUtils.logTrace("[ROT] Failed to apply scheduled rotation for " + p.getKey(), t);
                         }
                     }
             }
         } catch (Throwable ignored) {}
 
+        try { LogUtils.logDebug("[REG] Collected {} anchors ready in {}", ready.size(), dimensionId); } catch (Throwable ignored) {}
         return ready;
     }
 

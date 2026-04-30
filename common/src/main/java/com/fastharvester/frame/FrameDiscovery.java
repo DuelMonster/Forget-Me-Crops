@@ -3,6 +3,8 @@ import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.config.Config;
 
 import com.fastharvester.platform.adapter.FIF;
+import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.decoration.ItemFrame;
@@ -36,6 +38,7 @@ public class FrameDiscovery {
             var held = f.getItem();
             if (f.getDirection() != Direction.UP) { LogUtils.logDebug("[TICK] Frame {} skipped: not facing UP ({}).", f.blockPosition(), f.getDirection()); return false; }
             BlockPos pos = f.blockPosition();
+            try { LogUtils.logInfo("[TICK] registerVanillaFrameIfValid: pos={} dir={} held={} count={}", pos, f.getDirection(), (held == null || held.isEmpty()) ? "empty" : held.getItem().getClass().getName(), held == null ? 0 : held.getCount()); } catch (Throwable ignored) {}
             BlockPos chestPos = pos;
             BlockEntity be = level.getBlockEntity(chestPos);
             if (!(be instanceof Container)) {
@@ -49,6 +52,7 @@ public class FrameDiscovery {
                 int rX = Math.min(5, Math.max(1, Config.scanRangeX));
                 int rZ = Math.min(5, Math.max(1, Config.scanRangeZ));
                 boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
+                try { LogUtils.logInfo("[TICK] Chest check pos={} be={} waterlogged={} rX={} rZ={} nearbyFarmlandCrop={}", chestPos, be == null ? "null" : be.getClass().getName(), chestWaterlogged, rX, rZ, nearbyFarmlandCrop); } catch (Throwable ignored) {}
                 if (nearbyFarmlandCrop && !chestWaterlogged) {
                     LogUtils.logDebug("[TICK] Skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                     return false;
@@ -58,7 +62,7 @@ public class FrameDiscovery {
                     FrameRegistry.registerFrame(dimId, pos, chest, ItemStack.EMPTY);
                     return true;
                 }
-                try { LogUtils.logDebug("[TICK] Frame {} holds item: {}", pos, held.getItem().getClass().getName()); } catch (Throwable ignored) {}
+                try { LogUtils.logInfo("[TICK] Frame {} holds item: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable ignored) {}
                 if (!(held.getItem() instanceof HoeItem)) { LogUtils.logDebug("[TICK] Frame {} skipped: held item is not a hoe.", pos); return false; }
                 LogUtils.logDebug("[TICK] Discovered anchor (vanilla) at {} in {}; registering active.", pos, dimId);
                 FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
@@ -84,7 +88,27 @@ public class FrameDiscovery {
      */
     public static boolean registerFIFIfValid(String dimId, ServerLevel level, BlockEntity be, BlockPos pos) {
         try {
-            try { LogUtils.logDebug("[FIF] Inspecting potential FIF at {} in {} (be={})", pos, dimId, be == null ? "null" : be.getClass().getName()); } catch (Throwable ignored) {}
+            try { LogUtils.logInfo("[FIF] Inspecting potential FIF at {} in {} (be={})", pos, dimId, be == null ? "null" : be.getClass().getName()); } catch (Throwable ignored) {}
+            // Diagnostic snapshot: game time, system time, block-entity identity and chunk-loaded state
+            try {
+                long gameTime = -1L;
+                try { gameTime = level.getGameTime(); } catch (Throwable ignored) {}
+                long sysTime = System.currentTimeMillis();
+                BlockEntity levelBe = null;
+                try { levelBe = level.getBlockEntity(pos); } catch (Throwable ignored) {}
+                boolean beEquals = levelBe == be;
+                int beHash = be == null ? -1 : System.identityHashCode(be);
+                int levelBeHash = levelBe == null ? -1 : System.identityHashCode(levelBe);
+                boolean chunkLoadedViaAdapter = false;
+                try {
+                    int cx = pos.getX() >> 4;
+                    int cz = pos.getZ() >> 4;
+                    for (LevelChunk lc : FastItemFrameAdapterImpl.getLoadedChunks(level)) {
+                        if (lc != null && lc.getPos() != null && lc.getPos().x == cx && lc.getPos().z == cz) { chunkLoadedViaAdapter = true; break; }
+                    }
+                } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] DIAG register snapshot pos={} gametime={} systime={} beParamClass={} beParamHash={} levelBeClass={} levelBeHash={} beEquals={} chunkLoadedAdapter={}", pos, gameTime, sysTime, be == null ? "null" : be.getClass().getName(), beHash, levelBe == null ? "null" : levelBe.getClass().getName(), levelBeHash, beEquals, chunkLoadedViaAdapter); } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {}
             net.minecraft.world.item.ItemStack held = FIF.extractHeldItem(be);
             if (held != null && !held.isEmpty()) {
                 try { LogUtils.logDebug("[FIF] Held item at {}: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable ignored) {}
@@ -109,7 +133,7 @@ public class FrameDiscovery {
             int rX = Math.min(5, Math.max(1, Config.scanRangeX));
             int rZ = Math.min(5, Math.max(1, Config.scanRangeZ));
             boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
-            try { LogUtils.logDebug("[FIF] nearbyFarmlandCrop={}, chestWaterlogged={}", nearbyFarmlandCrop, chestWaterlogged); } catch (Throwable ignored) {}
+            try { LogUtils.logInfo("[FIF] chestPos={} be={} rX={} rZ={} nearbyFarmlandCrop={} chestWaterlogged={}", chestPos, chestBe == null ? "null" : chestBe.getClass().getName(), rX, rZ, nearbyFarmlandCrop, chestWaterlogged); } catch (Throwable ignored) {}
             if (nearbyFarmlandCrop && !chestWaterlogged) {
                 LogUtils.logDebug("[TICK] FIF anchor at {} in {} skipped: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                 return false;
