@@ -57,8 +57,16 @@ public class NeoForgeFarmTicker {
 
     private static void onLevelUnload(LevelEvent.Unload event) {
         try {
-            LogUtils.logInfo("[TICK] world unload — clearing entire FrameRegistry.");
+            LogUtils.logInfo("[TICK] world unload — clearing entire FrameRegistry and active scans.");
             FrameRegistry.clearAll();
+            try { com.fastharvester.frame.FrameScanner.clearAllScans(); } catch (Throwable ignored) {}
+            try {
+                var levelAccessor = event.getLevel();
+                if (levelAccessor instanceof ServerLevel level) {
+                    String dimId = level.dimension().identifier().toString();
+                    rediscoveryCountdown.remove(dimId);
+                }
+            } catch (Throwable ignored) {}
         } catch (Throwable t) {
             LogUtils.logWarn("[TICK] Failed to handle level unload", t);
         }
@@ -112,7 +120,7 @@ public class NeoForgeFarmTicker {
 
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box);
             String dimId = level.dimension().identifier().toString();
-            LogUtils.logDebug("[TICK] NeoForge found {} item frames in chunk {}.", frames.size(), lc.getPos());
+            LogUtils.logTrace("[TICK] NeoForge found {} item frames in chunk {}.", frames.size(), lc.getPos());
                 for (ItemFrame f : frames) {
                 try {
                     FrameDiscovery.registerVanillaFrameIfValid(dimId, level, f);
@@ -146,19 +154,20 @@ public class NeoForgeFarmTicker {
                     int rem = rediscoveryCountdown.getOrDefault(dimId, Config.frameRediscoveryInterval);
                     rem--;
                     if (rem <= 0) {
-                        LogUtils.logDebug("[TICK] NeoForge rediscovery pass for {}", dimId);
-                        CatchupManager.queueLoadedFrames(level, dimId);
-                        rem = Config.frameRediscoveryInterval;
-                    }
+                            LogUtils.logTrace("[TICK] NeoForge rediscovery pass for {}", dimId);
+                            CatchupManager.queueLoadedFrames(level, dimId);
+                            rem = Config.frameRediscoveryInterval;
+                        }
                     rediscoveryCountdown.put(dimId, rem);
                 if (!tickSnapshotLogged) {
+                    LogUtils.logTrace("[TICK] NeoForge initial snapshot queueLoadedFrames for {}", dimId);
                     CatchupManager.queueLoadedFrames(level, dimId);
                 }
                 CatchupManager.processBatch(level, dimId, CATCHUP_TICKS);
 
                 var ready = FrameRegistry.tickAndCollectReady(dimId, level);
                     if (!ready.isEmpty()) {
-                    LogUtils.logDebug("[TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
+                    LogUtils.logDebug("[TICK] {} anchors ready in {}", ready.size(), dimId);
                     FrameScanner scanner = new FrameScanner();
                     for (var anchor : ready) {
                         try {

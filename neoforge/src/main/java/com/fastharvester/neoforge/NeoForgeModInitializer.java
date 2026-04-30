@@ -122,6 +122,9 @@ public final class NeoForgeModInitializer {
     private void commonSetup(FMLCommonSetupEvent event) {
         LogUtils.logInfo("{} v{} loaded for NeoForge", com.fastharvester.ModCommon.MOD_NAME, com.fastharvester.ModCommon.MOD_VERSION);
         try { Config.load(); } catch (Throwable t) { LogUtils.logWarn("Failed to load shared config", t); }
+        // Apply programmatic logger-level changes if debugLogging is enabled so
+        // debug traces are visible without requiring users to edit backend configs.
+        try { LogUtils.applyConfiguredLogging(); } catch (Throwable t) { LogUtils.logDebug("applyConfiguredLogging failed", t); }
         FastHarvester.init();
     }
 }
