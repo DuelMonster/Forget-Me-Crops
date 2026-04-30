@@ -21,6 +21,8 @@ public class FastHarvesterFabric implements ModInitializer {
     @Override
     public void onInitialize() {
         Config.load();
+        // Ensure programmatic debug-level setting is applied before core init
+        try { com.fastharvester.util.log.LogUtils.applyConfiguredLogging(); } catch (Throwable t) { /* best-effort */ }
         FastHarvester.init();
         // Start the Fabric farm ticker (discovers anchors and schedules scans)
         FabricFarmTicker.init();

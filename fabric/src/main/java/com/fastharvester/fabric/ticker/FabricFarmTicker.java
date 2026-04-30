@@ -34,7 +34,7 @@ public class FabricFarmTicker {
     public static void init() {
         ServerChunkEvents.CHUNK_LOAD.register((ServerLevel level, LevelChunk chunk) -> {
             try {
-                LogUtils.logDebug("[TICK] Chunk-load event for chunk {} in {}", chunk.getPos(), level.dimension().identifier().toString());
+                LogUtils.logTrace("[TICK] Chunk-load event for chunk {} in {}", chunk.getPos(), level.dimension().identifier().toString());
                 String dimId = level.dimension().identifier().toString();
                 int minX = chunk.getPos().getMinBlockX();
                 int minZ = chunk.getPos().getMinBlockZ();
@@ -43,7 +43,7 @@ public class FabricFarmTicker {
                 AABB box = new AABB(minX, 0, minZ, maxX + 1, 256, maxZ + 1);
 
                 List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box);
-                LogUtils.logDebug("[TICK] Found {} item frames in chunk {} (deferring validation).", frames.size(), chunk.getPos());
+                LogUtils.logTrace("[TICK] Found {} item frames in chunk {} (deferring validation).", frames.size(), chunk.getPos());
                 java.util.List<BlockPos> vanillaCandidates = new java.util.ArrayList<>();
                 for (ItemFrame f : frames) {
                     try { vanillaCandidates.add(f.blockPosition()); } catch (Throwable ignored) {}
@@ -62,7 +62,7 @@ public class FabricFarmTicker {
                     }
                     if (!fifCandidates.isEmpty()) CatchupManager.enqueueFifPositions(level, dimId, fifCandidates);
                     } catch (Throwable t) {
-                    LogUtils.logDebug("[FIF] FastItemFrames discovery failed", t);
+                    LogUtils.logTrace("[FIF] FastItemFrames discovery failed", t);
                 }
 
             } catch (Throwable t) {
@@ -108,7 +108,7 @@ public class FabricFarmTicker {
                     int rem = rediscoveryCountdown.getOrDefault(dimId, Config.frameRediscoveryInterval);
                     rem--;
                     if (rem <= 0) {
-                        LogUtils.logDebug("[TICK] Running rediscovery pass for {}", dimId);
+                        LogUtils.logTrace("[TICK] Running rediscovery pass for {}", dimId);
                         CatchupManager.queueLoadedFrames(level, dimId);
                         rem = Config.frameRediscoveryInterval;
                     }
@@ -117,7 +117,7 @@ public class FabricFarmTicker {
                     CatchupManager.processBatch(level, dimId, CATCHUP_TICKS);
                     var ready = FrameRegistry.tickAndCollectReady(dimId, level);
                     if (!ready.isEmpty()) {
-                        LogUtils.logDebug("[TICK] {} anchors ready in {}: {}", ready.size(), dimId, ready);
+                        LogUtils.logDebug("[TICK] {} anchors ready in {}", ready.size(), dimId);
                         FrameScanner scanner = new FrameScanner();
                         for (var anchor : ready) {
                             try {
