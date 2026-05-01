@@ -77,10 +77,10 @@ public class HarvestUtils {
             if (tookFromDropsForReplant) {
                 BlockState replanted = null;
                 try { replanted = getReplantState.apply(state); } catch (Throwable ignore) {}
-                if (replanted != null) { try { if (replanted.getBlock() instanceof CropBlock) replanted = replanted.setValue(CropBlock.AGE, 1); } catch (Throwable ignored) {} ctx.level.setBlock(pos, replanted, 3); }
+                if (replanted != null) { try { if (replanted.getBlock() instanceof CropBlock) replanted = FrameScanner.setAgeSafe(replanted, 1); } catch (Throwable ignored) {} ctx.level.setBlock(pos, replanted, 3); }
             } else {
                 boolean taken = ChestUtils.removeOne(ctx.chest, cost.getItem());
-                if (taken) { BlockState replanted = null; try { replanted = getReplantState.apply(state); } catch (Throwable ignore) {} if (replanted != null) { try { if (replanted.getBlock() instanceof CropBlock) replanted = replanted.setValue(CropBlock.AGE, 1); } catch (Throwable ignored) {} ctx.level.setBlock(pos, replanted, 3); } }
+                if (taken) { BlockState replanted = null; try { replanted = getReplantState.apply(state); } catch (Throwable ignore) {} if (replanted != null) { try { if (replanted.getBlock() instanceof CropBlock) replanted = FrameScanner.setAgeSafe(replanted, 1); } catch (Throwable ignored) {} ctx.level.setBlock(pos, replanted, 3); } }
                 else { try { ctx.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3); } catch (Throwable ignored) {} }
             }
         }

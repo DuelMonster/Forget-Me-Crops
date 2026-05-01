@@ -5,7 +5,6 @@ package com.fastharvester.neoforge;
 
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.bus.api.IEventBus;
 // ModConfigEvent handlers removed; NeoForge uses shared Config load/save.
@@ -16,7 +15,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.Locale;
-import net.minecraft.world.InteractionResult;
 import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.config.Config;
 import com.fastharvester.FastHarvester;

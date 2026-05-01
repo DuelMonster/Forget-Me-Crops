@@ -11,6 +11,7 @@ import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -52,8 +53,14 @@ public class FrameDiscovery {
                 int rX = Math.min(5, Math.max(1, Config.scanRangeX));
                 int rZ = Math.min(5, Math.max(1, Config.scanRangeZ));
                 boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
-                try { LogUtils.logInfo("[TICK] Chest check pos={} be={} waterlogged={} rX={} rZ={} nearbyFarmlandCrop={}", chestPos, be == null ? "null" : be.getClass().getName(), chestWaterlogged, rX, rZ, nearbyFarmlandCrop); } catch (Throwable ignored) {}
-                if (nearbyFarmlandCrop && !chestWaterlogged) {
+                boolean isNetherWartFarm = false;
+                try {
+                    for (int dx = -rX; dx <= rX && !isNetherWartFarm; dx++) for (int dz = -rZ; dz <= rZ && !isNetherWartFarm; dz++) {
+                        if (level.getBlockState(chestPos.offset(dx, 0, dz)).is(Blocks.NETHER_WART)) { isNetherWartFarm = true; break; }
+                    }
+                } catch (Throwable ignored) {}
+                try { LogUtils.logInfo("[TICK] Chest check pos={} be={} waterlogged={} rX={} rZ={} nearbyFarmlandCrop={} isNetherWartFarm={}", chestPos, be == null ? "null" : be.getClass().getName(), chestWaterlogged, rX, rZ, nearbyFarmlandCrop, isNetherWartFarm); } catch (Throwable ignored) {}
+                if (nearbyFarmlandCrop && !chestWaterlogged && !isNetherWartFarm) {
                     LogUtils.logDebug("[TICK] Skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                     return false;
                 }
@@ -133,8 +140,14 @@ public class FrameDiscovery {
             int rX = Math.min(5, Math.max(1, Config.scanRangeX));
             int rZ = Math.min(5, Math.max(1, Config.scanRangeZ));
             boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
-            try { LogUtils.logInfo("[FIF] chestPos={} be={} rX={} rZ={} nearbyFarmlandCrop={} chestWaterlogged={}", chestPos, chestBe == null ? "null" : chestBe.getClass().getName(), rX, rZ, nearbyFarmlandCrop, chestWaterlogged); } catch (Throwable ignored) {}
-            if (nearbyFarmlandCrop && !chestWaterlogged) {
+            boolean isNetherWartFarm = false;
+            try {
+                for (int dx = -rX; dx <= rX && !isNetherWartFarm; dx++) for (int dz = -rZ; dz <= rZ && !isNetherWartFarm; dz++) {
+                    if (level.getBlockState(chestPos.offset(dx, 0, dz)).is(Blocks.NETHER_WART)) { isNetherWartFarm = true; break; }
+                }
+            } catch (Throwable ignored) {}
+            try { LogUtils.logInfo("[FIF] chestPos={} be={} rX={} rZ={} nearbyFarmlandCrop={} chestWaterlogged={} isNetherWartFarm={}", chestPos, chestBe == null ? "null" : chestBe.getClass().getName(), rX, rZ, nearbyFarmlandCrop, chestWaterlogged, isNetherWartFarm); } catch (Throwable ignored) {}
+            if (nearbyFarmlandCrop && !chestWaterlogged && !isNetherWartFarm) {
                 LogUtils.logDebug("[TICK] FIF anchor at {} in {} skipped: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                 return false;
             }

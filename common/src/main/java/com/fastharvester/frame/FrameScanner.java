@@ -10,6 +10,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.HoeItem;
@@ -249,22 +251,19 @@ public class FrameScanner {
                     boolean isCrop = block instanceof CropBlock || state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH);
                     if (isCrop) {
                         int threshold = (state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH)) ? 3 : 7;
-                        boolean mature = false;
-                        try {
-                            int age = state.getValue(CropBlock.AGE);
-                            mature = age >= threshold;
-                        } catch (Throwable t) {
-                            mature = false;
-                        }
+                        int age = getAgeSafe(state);
+                        boolean mature = age >= threshold;
                         if (mature) {
                             HarvestUtils.harvestCrop(ctx, pos, state,
                                     s -> {
-                                        try { int a = s.getValue(CropBlock.AGE); if (s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH)) return a >= 3; return a >= 7; } catch (Throwable tt) { return false; }
+                                        int a = getAgeSafe(s);
+                                        if (a < 0) return false;
+                                        return (s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH)) ? a >= 3 : a >= 7;
                                     },
                                     s -> {
                                         try {
-                                            if (s.is(Blocks.SWEET_BERRY_BUSH)) return s.setValue(CropBlock.AGE, 1);
-                                            return s.setValue(CropBlock.AGE, 0);
+                                            if (s.is(Blocks.SWEET_BERRY_BUSH)) return setAgeSafe(s, 1);
+                                            return setAgeSafe(s, 0);
                                         } catch (Throwable tt) { return null; }
                                     });
                             harvested = ctx.harvestedCount > 0;
@@ -380,7 +379,9 @@ public class FrameScanner {
                 BlockState ns = level.getBlockState(npos);
                 Block b = ns.getBlock();
                 if (com.fastharvester.harvest.CropRegistry.isCropBlock(b)) {
-                    counts.merge(b, 1, Integer::sum);
+                    Integer prev = counts.get(b);
+                    if (prev == null) counts.put(b, 1);
+                    else counts.put(b, prev + 1);
                 }
             }
             if (!counts.isEmpty()) {
@@ -388,7 +389,7 @@ public class FrameScanner {
                 Item seed = CropRegistry.clutterSeed(chosen);
                 if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
                     BlockState plantState = chosen.defaultBlockState();
-                    try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
+                    try { if (plantState.getBlock() instanceof CropBlock) plantState = setAgeSafe(plantState, 0); } catch (Throwable t) {}
                     level.setBlock(pos, plantState, 3);
                 }
             }
@@ -396,20 +397,22 @@ public class FrameScanner {
 
         if (below != null && below.getBlock() == Blocks.SOUL_SAND && cur.isAir()) {
             Map<Block, Integer> counts = new HashMap<>();
-            for (Direction d : dirs) {
-                BlockPos npos = pos.relative(d);
-                BlockState ns = level.getBlockState(npos);
-                Block b = ns.getBlock();
-                if (b == Blocks.NETHER_WART) {
-                    counts.merge(b, 1, Integer::sum);
+                for (Direction d : dirs) {
+                    BlockPos npos = pos.relative(d);
+                    BlockState ns = level.getBlockState(npos);
+                    Block b = ns.getBlock();
+                    if (b == Blocks.NETHER_WART) {
+                        Integer prev = counts.get(b);
+                        if (prev == null) counts.put(b, 1);
+                        else counts.put(b, prev + 1);
+                    }
                 }
-            }
             if (!counts.isEmpty()) {
                 Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
                 Item seed = CropRegistry.clutterSeed(chosen);
                 if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
                     BlockState plantState = chosen.defaultBlockState();
-                    try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
+                    try { if (plantState.getBlock() instanceof CropBlock) plantState = setAgeSafe(plantState, 0); } catch (Throwable t) {}
                     level.setBlock(pos, plantState, 3);
                 }
             }
@@ -447,7 +450,9 @@ public class FrameScanner {
                         BlockState ns = level.getBlockState(npos);
                         Block b = ns.getBlock();
                         if (com.fastharvester.harvest.CropRegistry.isCropBlock(b)) {
-                            counts2.merge(b, 1, Integer::sum);
+                            Integer prev = counts2.get(b);
+                            if (prev == null) counts2.put(b, 1);
+                            else counts2.put(b, prev + 1);
                         }
                     }
                     if (!counts2.isEmpty()) {
@@ -455,7 +460,7 @@ public class FrameScanner {
                         Item seed2 = CropRegistry.clutterSeed(chosen2);
                         if (seed2 != null && ChestUtils.removeOne(anchor.chest, seed2)) {
                             BlockState plantState2 = chosen2.defaultBlockState();
-                            try { if (plantState2.getBlock() instanceof CropBlock) plantState2 = plantState2.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
+                            try { if (plantState2.getBlock() instanceof CropBlock) plantState2 = setAgeSafe(plantState2, 0); } catch (Throwable t) {}
                             level.setBlock(pos, plantState2, 3);
                         }
                     }
@@ -548,6 +553,43 @@ public class FrameScanner {
         } catch (Throwable t) {
             return false;
         }
+    }
+
+    public static int getAgeSafe(BlockState state) {
+        if (state == null) return -1;
+        try {
+            return state.getValue(CropBlock.AGE);
+        } catch (Throwable ignored) {}
+        try {
+            for (Property<?> prop : state.getProperties()) {
+                try {
+                    if (prop instanceof IntegerProperty && "age".equalsIgnoreCase(prop.getName())) {
+                        IntegerProperty ip = (IntegerProperty) prop;
+                        return state.getValue(ip);
+                    }
+                } catch (Throwable ignored) {}
+            }
+        } catch (Throwable ignored) {}
+        return -1;
+    }
+
+    public static BlockState setAgeSafe(BlockState state, int age) {
+        if (state == null) return null;
+        try {
+            return state.setValue(CropBlock.AGE, age);
+        } catch (Throwable ignored) {}
+        try {
+            for (Property<?> prop : state.getProperties()) {
+                try {
+                    if (prop instanceof IntegerProperty && "age".equalsIgnoreCase(prop.getName())) {
+                        IntegerProperty ip = (IntegerProperty) prop;
+                        BlockState ns = state.setValue((Property<Integer>) ip, Integer.valueOf(age));
+                        return ns;
+                    }
+                } catch (Throwable ignored) {}
+            }
+        } catch (Throwable ignored) {}
+        return null;
     }
 
     private static final Map<String, List<FarmScanTask>> activeScans = new HashMap<>();
@@ -717,7 +759,8 @@ public class FrameScanner {
                         boolean isCrop = s.getBlock() instanceof CropBlock || s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH);
                         if (isCrop) {
                             int threshold = (s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH)) ? 3 : 7;
-                            try { int age = s.getValue(CropBlock.AGE); if (age >= threshold) { foundMature = true; break; } } catch (Throwable ignored) {}
+                            int age = getAgeSafe(s);
+                            if (age >= threshold) { foundMature = true; break; }
                         }
                     }
                 } catch (Throwable ignored) {}
@@ -858,8 +901,7 @@ public class FrameScanner {
                         // Temporary detailed debug: log per-position block/maturity and chest-space checks
                         try {
                             boolean isCropDbg = state.getBlock() instanceof CropBlock || state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH);
-                            int ageDbg = -1;
-                            try { ageDbg = state.getValue(CropBlock.AGE); } catch (Throwable ignored) {}
+                            int ageDbg = getAgeSafe(state);
                             int thresholdDbg = (state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH)) ? 3 : 7;
                             boolean chestSpaceDbg = false;
                             try { chestSpaceDbg = ChestUtils.hasSpace(ctx.chest); } catch (Throwable ignored) {}
@@ -888,17 +930,19 @@ public class FrameScanner {
                             boolean isCrop = block instanceof CropBlock || state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH);
                             if (isCrop) {
                                 int threshold = (state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH)) ? 3 : 7;
-                                boolean mature = false;
-                                try { int age = state.getValue(CropBlock.AGE); mature = age >= threshold; } catch (Throwable ignored) { mature = false; }
+                                int age = getAgeSafe(state);
+                                boolean mature = age >= threshold;
                                 if (mature) {
                                     HarvestUtils.harvestCrop(ctx, pos, state,
                                             s -> {
-                                                try { int a = s.getValue(CropBlock.AGE); if (s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH)) return a >= 3; return a >= 7; } catch (Throwable tt) { return false; }
+                                                int a = getAgeSafe(s);
+                                                if (a < 0) return false;
+                                                return (s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH)) ? a >= 3 : a >= 7;
                                             },
                                             s -> {
                                                 try {
-                                                    if (s.is(Blocks.SWEET_BERRY_BUSH)) return s.setValue(CropBlock.AGE, 1);
-                                                    return s.setValue(CropBlock.AGE, 0);
+                                                    if (s.is(Blocks.SWEET_BERRY_BUSH)) return setAgeSafe(s, 1);
+                                                    return setAgeSafe(s, 0);
                                                 } catch (Throwable tt) { return null; }
                                             });
                                     harvested = ctx.harvestedCount > beforeHarvest;
@@ -989,15 +1033,17 @@ public class FrameScanner {
                                     BlockState ns = level.getBlockState(npos);
                                     Block b = ns.getBlock();
                                     if (com.fastharvester.harvest.CropRegistry.isCropBlock(b)) {
-                                        counts.merge(b, 1, Integer::sum);
-                                    }
+                                                Integer prev = counts.get(b);
+                                                if (prev == null) counts.put(b, 1);
+                                                else counts.put(b, prev + 1);
+                                            }
                                 }
                                 if (!counts.isEmpty()) {
                                     Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
                                     Item seed = CropRegistry.clutterSeed(chosen);
                                     if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
                                         BlockState plantState = chosen.defaultBlockState();
-                                        try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
+                                        try { if (plantState.getBlock() instanceof CropBlock) plantState = setAgeSafe(plantState, 0); } catch (Throwable t) {}
                                         level.setBlock(pos, plantState, 3);
                                     }
                                 }
@@ -1010,15 +1056,19 @@ public class FrameScanner {
                                     BlockPos npos = pos.relative(d);
                                     BlockState ns = level.getBlockState(npos);
                                     Block b = ns.getBlock();
-                                    if (b == Blocks.NETHER_WART) counts.merge(b, 1, Integer::sum);
+                                    if (b == Blocks.NETHER_WART) {
+                                        Integer prev = counts.get(b);
+                                        if (prev == null) counts.put(b, 1);
+                                        else counts.put(b, prev + 1);
+                                    }
                                 }
                                 if (!counts.isEmpty()) {
                                     Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
                                     Item seed = CropRegistry.clutterSeed(chosen);
                                     if (seed != null && ChestUtils.removeOne(anchor.chest, seed)) {
                                         BlockState plantState = chosen.defaultBlockState();
-                                        try { if (plantState.getBlock() instanceof CropBlock) plantState = plantState.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
-                                        level.setBlock(pos, plantState, 3);
+                                            try { if (plantState.getBlock() instanceof CropBlock) plantState = setAgeSafe(plantState, 0); } catch (Throwable t) {}
+                                            level.setBlock(pos, plantState, 3);
                                     }
                                 }
                             }
@@ -1055,7 +1105,9 @@ public class FrameScanner {
                                     BlockState ns = level.getBlockState(npos);
                                     Block b = ns.getBlock();
                                     if (b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM) {
-                                        counts2.merge(b, 1, Integer::sum);
+                                        Integer prev = counts2.get(b);
+                                        if (prev == null) counts2.put(b, 1);
+                                        else counts2.put(b, prev + 1);
                                     }
                                 }
                                 if (!counts2.isEmpty()) {
@@ -1063,7 +1115,7 @@ public class FrameScanner {
                                     Item seed2 = CropRegistry.clutterSeed(chosen2);
                                     if (seed2 != null && ChestUtils.removeOne(anchor.chest, seed2)) {
                                         BlockState plantState2 = chosen2.defaultBlockState();
-                                        try { if (plantState2.getBlock() instanceof CropBlock) plantState2 = plantState2.setValue(CropBlock.AGE, 0); } catch (Throwable t) {}
+                                        try { if (plantState2.getBlock() instanceof CropBlock) plantState2 = setAgeSafe(plantState2, 0); } catch (Throwable t) {}
                                         level.setBlock(pos, plantState2, 3);
                                     }
                                 }
