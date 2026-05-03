@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 0.11.0
+
+- Refactor `FrameScanner` to deduplicate anchor validation, planting consensus logic, and shared spiral generation paths.
+- Extract `FarmScanTask` and `SpiralStep` from `FrameScanner` into top-level package-private classes in `com.fastharvester.frame`.
+
+## 0.10.0
+
+- fix `FrameScanner` null-safety and crop-age handling, and remove unused imports.
+- Fix NeoForge replant and crop maturity handling.
+- Optimization: remove dead code, streamline map lookups, and clean up imports.
+
 ## 0.9.0
 
 - Implement seed-clutter policies: `NONE` removes supported seed drops before insertion (except crop-fruit), `NORMAL` consumes one seed per harvest from drops and inserts remaining seeds, `REDUCED` consumes one seed and halves remaining seed drops before insertion; `seedReservePerType` prevents chest removals that would drop below the configured reserve. Docs updated to reflect behavior.
