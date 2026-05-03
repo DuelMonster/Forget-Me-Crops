@@ -101,30 +101,15 @@ public class FrameScanner {
 
         // Quick anchor validity check: ensure the item-frame (or FIF block-entity) still exists
         try {
-            boolean framePresent = false;
-            java.util.List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(center));
-            for (ItemFrame f : frames) { if (f.blockPosition().equals(center)) { framePresent = true; break; } }
-            BlockEntity be = level.getBlockEntity(center);
-                // Targeted diagnostic for problematic FIF anchor
-                try {
-                    if (center.equals(new BlockPos(-10, 56, 20))) {
-                        boolean beIsFIF = be != null && FIF.isFastItemFrameBlockEntity(be);
-                        LogUtils.logDebug("[DIAG] scanFarm presence check for {}: framesFound={}, beClass={}, isFIF={}", center, frames.size(), be == null ? "null" : be.getClass().getName(), beIsFIF);
-                    }
-                } catch (Throwable ignored) {}
-            if (!framePresent && (be == null || !FIF.isFastItemFrameBlockEntity(be))) {
+            if (!isFrameStillPresent(level, center)) {
                 try { LogUtils.logWarn("[SCAN] Anchor frame missing at {} in {}; unregistering and aborting scan.", center, dimId); } catch (Throwable ignored) {}
                 try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
                 return false;
             }
-            if (anchor.chest instanceof BlockEntity chestBe) {
-                BlockPos chestPos = chestBe.getBlockPos();
-                BlockEntity current = level.getBlockEntity(chestPos);
-                if (current != chestBe || !(current instanceof Container)) {
-                    try { LogUtils.logWarn("[SCAN] Anchor chest missing/changed at {} for {}; unregistering and aborting scan.", chestPos, center); } catch (Throwable ignored) {}
-                    try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
-                    return false;
-                }
+            if (!isChestStillValid(level, anchor)) {
+                try { LogUtils.logWarn("[SCAN] Anchor chest missing/changed for {}; unregistering and aborting scan.", center); } catch (Throwable ignored) {}
+                try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                return false;
             }
         } catch (Throwable t) {
             LogUtils.logDebug("[SCAN] Anchor presence check failed for " + center, t);
@@ -315,10 +300,6 @@ public class FrameScanner {
         }
     }
 
-    // private static List<SpiralStep> generateSpiral(BlockPos center, int range) {
-    //     return generateSpiral(center, range, range);
-    // }
-
     private static List<SpiralStep> generateSpiral(BlockPos center, int rangeX, int rangeZ) {
         List<SpiralStep> spiral = new ArrayList<>();
         int x = 0, z = 0;
@@ -367,6 +348,39 @@ public class FrameScanner {
         };
     }
 
+    /** Returns true if the item-frame entity or a FIF block-entity still exists at pos. */
+    private static boolean isFrameStillPresent(Level level, BlockPos pos) {
+        try {
+            java.util.List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(pos));
+            for (ItemFrame f : frames) { if (f.blockPosition().equals(pos)) return true; }
+            BlockEntity be = level.getBlockEntity(pos);
+            return be != null && FIF.isFastItemFrameBlockEntity(be);
+        } catch (Throwable t) { return false; }
+    }
+
+    /** Returns true if the anchor's chest block-entity is still the same container that was registered. */
+    private static boolean isChestStillValid(Level level, Anchor anchor) {
+        if (!(anchor.chest instanceof BlockEntity chestBe)) return true;
+        BlockPos chestPos = chestBe.getBlockPos();
+        BlockEntity current = level.getBlockEntity(chestPos);
+        return current == chestBe && current instanceof Container;
+    }
+
+    /**
+     * Pick the dominant block from a neighbor-count map, consume one seed from the chest, and place it at pos.
+     * Returns true if a block was placed.
+     */
+    private static boolean tryPlantConsensus(Map<Block, Integer> counts, Anchor anchor, Level level, BlockPos pos) {
+        if (counts.isEmpty()) return false;
+        Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
+        Item seed = CropRegistry.clutterSeed(chosen);
+        if (seed == null || !ChestUtils.removeOne(anchor.chest, seed, false)) return false;
+        BlockState plantState = chosen.defaultBlockState();
+        try { if (plantState.getBlock() instanceof CropBlock) plantState = setAgeSafe(plantState, 0); } catch (Throwable ignored) {}
+        level.setBlock(pos, plantState, 3);
+        return true;
+    }
+
     private static void tryAutoPlantAndTill(Anchor anchor, HarvestContext ctx, BlockPos pos, Level level) {
         BlockState cur = level.getBlockState(pos);
         BlockPos belowPos = pos.below();
@@ -376,91 +390,40 @@ public class FrameScanner {
         if (below != null && below.getBlock() == Blocks.FARMLAND && cur.isAir()) {
             Map<Block, Integer> counts = new HashMap<>();
             for (Direction d : dirs) {
-                BlockPos npos = pos.relative(d);
-                BlockState ns = level.getBlockState(npos);
-                Block b = ns.getBlock();
-                Block rep = CropRegistry.canonicalCropBlock(b);
-                if (rep != null && CropRegistry.isCropBlock(rep)) {
-                    Integer prev = counts.get(rep);
-                    if (prev == null) counts.put(rep, 1);
-                    else counts.put(rep, prev + 1);
-                }
+                Block rep = CropRegistry.canonicalCropBlock(level.getBlockState(pos.relative(d)).getBlock());
+                if (rep != null && CropRegistry.isCropBlock(rep)) counts.merge(rep, 1, Integer::sum);
             }
-            if (!counts.isEmpty()) {
-                Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                Item seed = CropRegistry.clutterSeed(chosen);
-                if (seed != null && ChestUtils.removeOne(anchor.chest, seed, false)) {
-                    BlockState plantState = chosen.defaultBlockState();
-                    try { if (plantState.getBlock() instanceof CropBlock) plantState = setAgeSafe(plantState, 0); } catch (Throwable t) {}
-                    level.setBlock(pos, plantState, 3);
-                }
-            }
+            tryPlantConsensus(counts, anchor, level, pos);
         }
 
         if (below != null && below.getBlock() == Blocks.SOUL_SAND && cur.isAir()) {
             Map<Block, Integer> counts = new HashMap<>();
-                for (Direction d : dirs) {
-                    BlockPos npos = pos.relative(d);
-                    BlockState ns = level.getBlockState(npos);
-                    Block b = ns.getBlock();
-                    if (b == Blocks.NETHER_WART) {
-                        Integer prev = counts.get(b);
-                        if (prev == null) counts.put(b, 1);
-                        else counts.put(b, prev + 1);
-                    }
-                }
-            if (!counts.isEmpty()) {
-                Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                Item seed = CropRegistry.clutterSeed(chosen);
-                if (seed != null && ChestUtils.removeOne(anchor.chest, seed, false)) {
-                    BlockState plantState = chosen.defaultBlockState();
-                    try { if (plantState.getBlock() instanceof CropBlock) plantState = setAgeSafe(plantState, 0); } catch (Throwable t) {}
-                    level.setBlock(pos, plantState, 3);
-                }
+            for (Direction d : dirs) {
+                Block b = level.getBlockState(pos.relative(d)).getBlock();
+                if (b == Blocks.NETHER_WART) counts.merge(b, 1, Integer::sum);
             }
+            tryPlantConsensus(counts, anchor, level, pos);
         }
 
         if (below != null && (below.getBlock() == Blocks.DIRT || below.getBlock() == Blocks.GRASS_BLOCK) && cur.isAir()) {
             int farmlandNeighbors = 0;
             for (Direction d : dirs) {
-                BlockState ns = level.getBlockState(belowPos.relative(d));
-                if (ns != null && ns.getBlock() == Blocks.FARMLAND) farmlandNeighbors++;
+                if (level.getBlockState(belowPos.relative(d)).getBlock() == Blocks.FARMLAND) farmlandNeighbors++;
             }
             if (farmlandNeighbors >= 1) {
-                BlockState farmland = Blocks.FARMLAND.defaultBlockState();
-                level.setBlock(belowPos, farmland, 3);
+                level.setBlock(belowPos, Blocks.FARMLAND.defaultBlockState(), 3);
                 ItemStack before = (ctx.hoe == null || ctx.hoe.isEmpty()) ? (anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy()) : ctx.hoe.copy();
                 try {
-                    if (ctx != null && ctx.skipNextDamage) {
-                        ctx.skipNextDamage = false;
-                    } else {
-                        com.fastharvester.util.durability.DurabilityLogic.applyDamage(level, ctx.hoe, level.getRandom());
-                    }
+                    if (ctx.skipNextDamage) { ctx.skipNextDamage = false; }
+                    else { com.fastharvester.util.durability.DurabilityLogic.applyDamage(level, ctx.hoe, level.getRandom()); }
                 } catch (Throwable ignored) {}
-                if (ctx.hoe == null || ctx.hoe.isEmpty()) {
-                    HarvestUtils.handleBrokenHoe(ctx, before);
-                }
-                Map<Block, Integer> counts2 = new HashMap<>();
+                if (ctx.hoe == null || ctx.hoe.isEmpty()) HarvestUtils.handleBrokenHoe(ctx, before);
+                Map<Block, Integer> counts = new HashMap<>();
                 for (Direction d : dirs) {
-                    BlockPos npos = pos.relative(d);
-                    BlockState ns = level.getBlockState(npos);
-                    Block b = ns.getBlock();
-                    Block rep = CropRegistry.canonicalCropBlock(b);
-                    if (rep != null && CropRegistry.isCropBlock(rep)) {
-                        Integer prev = counts2.get(rep);
-                        if (prev == null) counts2.put(rep, 1);
-                        else counts2.put(rep, prev + 1);
-                    }
+                    Block rep = CropRegistry.canonicalCropBlock(level.getBlockState(pos.relative(d)).getBlock());
+                    if (rep != null && CropRegistry.isCropBlock(rep)) counts.merge(rep, 1, Integer::sum);
                 }
-                if (!counts2.isEmpty()) {
-                    Block chosen2 = counts2.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                    Item seed2 = CropRegistry.clutterSeed(chosen2);
-                    if (seed2 != null && ChestUtils.removeOne(anchor.chest, seed2, false)) {
-                        BlockState plantState2 = chosen2.defaultBlockState();
-                        try { if (plantState2.getBlock() instanceof CropBlock) plantState2 = setAgeSafe(plantState2, 0); } catch (Throwable t) {}
-                        level.setBlock(pos, plantState2, 3);
-                    }
-                }
+                tryPlantConsensus(counts, anchor, level, pos);
             }
         }
     }
@@ -726,30 +689,8 @@ public class FrameScanner {
             }
             this.computedMaxRing = maxRing;
 
-            spiralPositions.add(new SpiralStep(center, Direction.NORTH));
-            int x = 0, z = 0;
-            int stepSize = 1;
-            int[] dxs = new int[]{1, 0, -1, 0};
-            int[] dzs = new int[]{0, 1, 0, -1};
-            int dir = 0;
-            int maxCells = (2 * rX + 1) * (2 * rZ + 1);
-            int visitedCells = 1;
-            outer:
-            while (visitedCells < maxCells) {
-                for (int rep = 0; rep < 2; rep++) {
-                    for (int i = 0; i < stepSize; i++) {
-                        x += dxs[dir];
-                        z += dzs[dir];
-                        if (Math.abs(x) <= rX && Math.abs(z) <= rZ) {
-                            visitedCells++;
-                            BlockPos p = center.offset(x, 0, z);
-                            if (candidateSet.contains(p)) spiralPositions.add(new SpiralStep(p, getSpiralDirection(dxs[dir], dzs[dir])));
-                            if (visitedCells >= maxCells) break outer;
-                        }
-                    }
-                    dir = (dir + 1) & 3;
-                }
-                stepSize++;
+            for (SpiralStep step : generateSpiral(center, rX, rZ)) {
+                if (step.pos.equals(center) || candidateSet.contains(step.pos)) spiralPositions.add(step);
             }
 
             // Pre-scan repair pass: repair nearby dirt/grass into farmland across the whole scan rectangle
@@ -835,34 +776,17 @@ public class FrameScanner {
 
             // Validate anchor presence and chest integrity at the start of this tick
             try {
-                boolean framePresent = false;
-                java.util.List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(center));
-                for (ItemFrame f : frames) { if (f.blockPosition().equals(center)) { framePresent = true; break; } }
-                BlockEntity be = level.getBlockEntity(center);
-                // Targeted diagnostic for problematic FIF anchor during scheduled scan
-                try {
-                    if (center.equals(new BlockPos(-10, 56, 20))) {
-                        boolean beIsFIF = be != null && FIF.isFastItemFrameBlockEntity(be);
-                        LogUtils.logDebug("[DIAG] scheduled tick presence check for {}: framesFound={}, beClass={}, isFIF={}", center, frames.size(), be == null ? "null" : be.getClass().getName(), beIsFIF);
-                        ItemStack live = readHoeFromFrame(level, center);
-                        LogUtils.logDebug("[DIAG] scheduled tick readHoeFromFrame for {}: liveHoeEmpty={}", center, live == null || live.isEmpty());
-                    }
-                } catch (Throwable ignored) {}
-                if (!framePresent && (be == null || !FIF.isFastItemFrameBlockEntity(be))) {
+                if (!isFrameStillPresent(level, center)) {
                     try { LogUtils.logWarn("[SCAN] Anchor frame missing at {} during scheduled scan; unregistering.", center); } catch (Throwable ignored) {}
                     try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
                     ctx.logSummary();
                     return true;
                 }
-                if (anchor.chest instanceof BlockEntity chestBe) {
-                    BlockPos chestPos = chestBe.getBlockPos();
-                    BlockEntity current = level.getBlockEntity(chestPos);
-                    if (current != chestBe || !(current instanceof Container)) {
-                        try { LogUtils.logWarn("[SCAN] Anchor chest missing/changed at {} during scheduled scan; unregistering.", chestPos); } catch (Throwable ignored) {}
-                        try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
-                        ctx.logSummary();
-                        return true;
-                    }
+                if (!isChestStillValid(level, anchor)) {
+                    try { LogUtils.logWarn("[SCAN] Anchor chest missing/changed for {} during scheduled scan; unregistering.", center); } catch (Throwable ignored) {}
+                    try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                    ctx.logSummary();
+                    return true;
                 }
 
                 // Ensure a hoe is present on the frame at tick start; abort the scan if removed.
@@ -909,7 +833,6 @@ public class FrameScanner {
             int endIndex = Math.min(totalPositions - 1, currentIndex + positionsPerTick - 1);
 
             int beforeHarvest = ctx.harvestedCount;
-            // int baseRotation = getFrameRotation(level, center);
             int computedMaxRingLocal = computedMaxRing;
             int maxRing = computedMaxRingLocal;
             Map<Integer, List<Integer>> ringToIndices = new HashMap<>();
