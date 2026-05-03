@@ -1,12 +1,16 @@
 package com.fastharvester.harvest;
 
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.BlockItem;
-import java.util.Locale;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.core.BlockPos;
+import java.util.IdentityHashMap;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * Small registry for mapping vanilla crop blocks to their seed/replant items.
@@ -15,27 +19,36 @@ import net.minecraft.world.level.block.Blocks;
 public final class CropRegistry {
     private CropRegistry() {}
 
+    /** Block -> seed item used for replanting (one seed consumed per harvest). */
+    private static final Map<Block, Item> REPLANT_SEED = new IdentityHashMap<>();
+    /** Block -> seed/fruit item shown in the clutter-filter UI. Superset of REPLANT_SEED. */
+    private static final Map<Block, Item> CLUTTER_SEED = new IdentityHashMap<>();
+
+    static {
+        REPLANT_SEED.put(Blocks.BEETROOTS,  Items.BEETROOT_SEEDS);
+        REPLANT_SEED.put(Blocks.WHEAT,      Items.WHEAT_SEEDS);
+        REPLANT_SEED.put(Blocks.CARROTS,    Items.CARROT);
+        REPLANT_SEED.put(Blocks.POTATOES,   Items.POTATO);
+        REPLANT_SEED.put(Blocks.NETHER_WART, Items.NETHER_WART);
+
+        CLUTTER_SEED.putAll(REPLANT_SEED);
+        CLUTTER_SEED.put(Blocks.MELON,         Items.MELON_SEEDS);
+        CLUTTER_SEED.put(Blocks.PUMPKIN,       Items.PUMPKIN_SEEDS);
+        CLUTTER_SEED.put(Blocks.MELON_STEM,    Items.MELON_SEEDS);
+        CLUTTER_SEED.put(Blocks.PUMPKIN_STEM,  Items.PUMPKIN_SEEDS);
+    }
+
     public static ItemStack replantCost(Block block) {
-        if (block == Blocks.BEETROOTS) return new ItemStack(Items.BEETROOT_SEEDS);
-        if (block == Blocks.WHEAT) return new ItemStack(Items.WHEAT_SEEDS);
-        if (block == Blocks.CARROTS) return new ItemStack(Items.CARROT);
-        if (block == Blocks.POTATOES) return new ItemStack(Items.POTATO);
-        if (block == Blocks.NETHER_WART) return new ItemStack(Items.NETHER_WART);
-        try { if (block.getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower")) return new ItemStack(block.asItem()); } catch (Throwable ignored) {}
+        Item seed = REPLANT_SEED.get(block);
+        if (seed != null) return new ItemStack(seed);
+        try { if (block != null && block.getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower")) return new ItemStack(block.asItem()); } catch (Throwable ignored) {}
         return ItemStack.EMPTY;
     }
 
     public static Item clutterSeed(Block block) {
-        if (block == Blocks.BEETROOTS) return Items.BEETROOT_SEEDS;
-        if (block == Blocks.WHEAT) return Items.WHEAT_SEEDS;
-        if (block == Blocks.CARROTS) return Items.CARROT;
-        if (block == Blocks.POTATOES) return Items.POTATO;
-        if (block == Blocks.MELON) return Items.MELON_SEEDS;
-        if (block == Blocks.PUMPKIN) return Items.PUMPKIN_SEEDS;
-        if (block == Blocks.MELON_STEM) return Items.MELON_SEEDS;
-        if (block == Blocks.PUMPKIN_STEM) return Items.PUMPKIN_SEEDS;
-        if (block == Blocks.NETHER_WART) return Items.NETHER_WART;
-        try { if (block.getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower")) return block.asItem(); } catch (Throwable ignored) {}
+        Item seed = CLUTTER_SEED.get(block);
+        if (seed != null) return seed;
+        try { if (block != null && block.getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower")) return block.asItem(); } catch (Throwable ignored) {}
         return null;
     }
 
@@ -45,7 +58,7 @@ public final class CropRegistry {
             || seedItem instanceof BlockItem && ((BlockItem)seedItem).getBlock().getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower");
     }
 
-    public static boolean isCropBlock(net.minecraft.world.level.block.Block b) {
+    public static boolean isCropBlock(Block b) {
         if (b == null) return false;
         return b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM;
     }
@@ -55,7 +68,7 @@ public final class CropRegistry {
      * Maps fruit blocks (melon/pumpkin) to their stem form so neighbour
      * consensus and seed lookup behave consistently.
      */
-    public static net.minecraft.world.level.block.Block canonicalCropBlock(net.minecraft.world.level.block.Block b) {
+    public static Block canonicalCropBlock(Block b) {
         if (b == null) return null;
         if (b == Blocks.MELON) return Blocks.MELON_STEM;
         if (b == Blocks.PUMPKIN) return Blocks.PUMPKIN_STEM;
@@ -65,24 +78,24 @@ public final class CropRegistry {
     }
 
     // --- Farm-consensus helpers (migrated from original CropRouter) ---
-    public static boolean isMelonPumpkinFarmBlock(net.minecraft.world.level.block.Block block) {
+    public static boolean isMelonPumpkinFarmBlock(Block block) {
         if (block == null) return false;
         return block == Blocks.MELON || block == Blocks.PUMPKIN
                 || block == Blocks.MELON_STEM || block == Blocks.PUMPKIN_STEM
                 || block == Blocks.ATTACHED_MELON_STEM || block == Blocks.ATTACHED_PUMPKIN_STEM;
     }
 
-    public static boolean hasClearFarmlandCropConsensus(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+    public static boolean hasClearFarmlandCropConsensus(Level level, BlockPos pos) {
         return findDominantFarmlandCropIndex(level, pos) >= 0;
     }
 
-    private static int findDominantFarmlandCropIndex(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+    private static int findDominantFarmlandCropIndex(Level level, BlockPos pos) {
         int[] scores = new int[5];
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
                 if (dx == 0 && dz == 0) continue;
                 try {
-                    net.minecraft.world.level.block.Block neighbor = level.getBlockState(pos.offset(dx, 0, dz)).getBlock();
+                    Block neighbor = level.getBlockState(pos.offset(dx, 0, dz)).getBlock();
                     int idx = indexForFarmlandCrop(neighbor);
                     if (idx >= 0) {
                         int weight = (Math.abs(dx) + Math.abs(dz) == 1) ? 3 : 1;
@@ -107,14 +120,18 @@ public final class CropRegistry {
         return bestIdx;
     }
 
-    private static int indexForFarmlandCrop(net.minecraft.world.level.block.Block block) {
-        if (block == Blocks.WHEAT) return 0;
-        if (block == Blocks.CARROTS) return 1;
-        if (block == Blocks.POTATOES) return 2;
-        if (block == Blocks.BEETROOTS) return 3;
-        try {
-            if (block != null && block.getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower")) return 4;
-        } catch (Throwable ignored) {}
+    private static final Map<Block, Integer> FARMLAND_CROP_INDEX = new IdentityHashMap<>();
+    static {
+        FARMLAND_CROP_INDEX.put(Blocks.WHEAT,     0);
+        FARMLAND_CROP_INDEX.put(Blocks.CARROTS,   1);
+        FARMLAND_CROP_INDEX.put(Blocks.POTATOES,  2);
+        FARMLAND_CROP_INDEX.put(Blocks.BEETROOTS, 3);
+    }
+
+    private static int indexForFarmlandCrop(Block block) {
+        Integer idx = FARMLAND_CROP_INDEX.get(block);
+        if (idx != null) return idx;
+        try { if (block != null && block.getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower")) return 4; } catch (Throwable ignored) {}
         return -1;
     }
 }

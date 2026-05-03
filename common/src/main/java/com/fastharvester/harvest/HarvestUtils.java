@@ -26,6 +26,7 @@ import com.fastharvester.util.chest.ChestUtils;
 import com.fastharvester.util.durability.DurabilityLogic;
 import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.config.Config;
+import com.fastharvester.enums.SeedClutterMode;
 
 public class HarvestUtils {
     private HarvestUtils() {}
@@ -96,7 +97,7 @@ public class HarvestUtils {
 
     private static void applyPreReplantSeedClutterPolicy(List<ItemStack> drops, Item seedItem, boolean seedIsCropFruit) {
         if (seedItem == null) return;
-        if (Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.NONE) {
+        if (Config.seedClutterMode == SeedClutterMode.NONE) {
             if (seedIsCropFruit) return;
             drops.removeIf(s -> s.getItem() == seedItem);
         }
@@ -104,7 +105,7 @@ public class HarvestUtils {
 
     private static void applyPostReplantSeedClutterPolicy(List<ItemStack> drops, Item seedItem, boolean seedIsCropFruit) {
         if (seedItem == null) return;
-        if (Config.seedClutterMode == com.fastharvester.enums.SeedClutterMode.REDUCED) {
+        if (Config.seedClutterMode == SeedClutterMode.REDUCED) {
             if (seedIsCropFruit) return;
             for (Iterator<ItemStack> it = drops.iterator(); it.hasNext();) {
                 ItemStack s = it.next();

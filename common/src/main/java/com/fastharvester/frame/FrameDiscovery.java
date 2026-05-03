@@ -1,6 +1,7 @@
 package com.fastharvester.frame;
 import com.fastharvester.util.log.LogUtils;
 import com.fastharvester.config.Config;
+import com.fastharvester.harvest.CropRegistry;
 
 import com.fastharvester.platform.adapter.FIF;
 import com.fastharvester.platform.adapter.FastItemFrameAdapterImpl;
@@ -8,6 +9,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
@@ -177,9 +179,9 @@ public class FrameDiscovery {
     public static boolean isNearbyFarmlandCrop(ServerLevel level, BlockPos chestPos, int rX, int rZ) {
         for (int dx = -rX; dx <= rX; dx++) for (int dz = -rZ; dz <= rZ; dz++) {
             BlockState ns = level.getBlockState(chestPos.offset(dx, 0, dz));
-            net.minecraft.world.level.block.Block b = ns.getBlock();
-            net.minecraft.world.level.block.Block rep = com.fastharvester.harvest.CropRegistry.canonicalCropBlock(b);
-            if (rep != null && com.fastharvester.harvest.CropRegistry.isCropBlock(rep)) return true;
+            Block b = ns.getBlock();
+            Block rep = CropRegistry.canonicalCropBlock(b);
+            if (rep != null && CropRegistry.isCropBlock(rep)) return true;
         }
         return false;
     }

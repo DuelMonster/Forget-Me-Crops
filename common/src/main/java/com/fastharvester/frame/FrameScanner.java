@@ -29,6 +29,7 @@ import com.fastharvester.util.chest.ChestUtils;
 import com.fastharvester.harvest.HarvestUtils;
 import com.fastharvester.harvest.HarvestContext;
 import com.fastharvester.harvest.CropRegistry;
+import com.fastharvester.enums.RotationMode;
 import com.fastharvester.util.durability.DurabilityLogic;
 import java.util.HashMap;
 import java.util.Comparator;
@@ -296,7 +297,7 @@ public class FrameScanner {
             }
         }
 
-        if (anyHarvested && Config.rotationMode == com.fastharvester.enums.RotationMode.STEP_PER_HARVEST) {
+        if (anyHarvested && Config.rotationMode == RotationMode.STEP_PER_HARVEST) {
             int newRot = (getFrameRotation(level, center) + 1) & 7;
             setFrameRotation(level, center, newRot);
         }
@@ -378,8 +379,8 @@ public class FrameScanner {
                 BlockPos npos = pos.relative(d);
                 BlockState ns = level.getBlockState(npos);
                 Block b = ns.getBlock();
-                Block rep = com.fastharvester.harvest.CropRegistry.canonicalCropBlock(b);
-                if (rep != null && com.fastharvester.harvest.CropRegistry.isCropBlock(rep)) {
+                Block rep = CropRegistry.canonicalCropBlock(b);
+                if (rep != null && CropRegistry.isCropBlock(rep)) {
                     Integer prev = counts.get(rep);
                     if (prev == null) counts.put(rep, 1);
                     else counts.put(rep, prev + 1);
@@ -444,8 +445,8 @@ public class FrameScanner {
                     BlockPos npos = pos.relative(d);
                     BlockState ns = level.getBlockState(npos);
                     Block b = ns.getBlock();
-                    Block rep = com.fastharvester.harvest.CropRegistry.canonicalCropBlock(b);
-                    if (rep != null && com.fastharvester.harvest.CropRegistry.isCropBlock(rep)) {
+                    Block rep = CropRegistry.canonicalCropBlock(b);
+                    if (rep != null && CropRegistry.isCropBlock(rep)) {
                         Integer prev = counts2.get(rep);
                         if (prev == null) counts2.put(rep, 1);
                         else counts2.put(rep, prev + 1);
@@ -532,7 +533,7 @@ public class FrameScanner {
 
             Block below = level.getBlockState(pos.below()).getBlock();
             if (below == Blocks.FARMLAND) {
-                return com.fastharvester.harvest.CropRegistry.hasClearFarmlandCropConsensus(level, pos);
+                return CropRegistry.hasClearFarmlandCropConsensus(level, pos);
             }
             if (below == Blocks.SOUL_SAND) {
                 if (level.getBlockState(pos.north()).is(Blocks.NETHER_WART) || level.getBlockState(pos.south()).is(Blocks.NETHER_WART)
@@ -540,10 +541,10 @@ public class FrameScanner {
             }
 
             int melonPumpkinNeighbors = 0;
-            if (com.fastharvester.harvest.CropRegistry.isMelonPumpkinFarmBlock(level.getBlockState(pos.north()).getBlock())) melonPumpkinNeighbors++;
-            if (com.fastharvester.harvest.CropRegistry.isMelonPumpkinFarmBlock(level.getBlockState(pos.south()).getBlock())) melonPumpkinNeighbors++;
-            if (com.fastharvester.harvest.CropRegistry.isMelonPumpkinFarmBlock(level.getBlockState(pos.east()).getBlock())) melonPumpkinNeighbors++;
-            if (com.fastharvester.harvest.CropRegistry.isMelonPumpkinFarmBlock(level.getBlockState(pos.west()).getBlock())) melonPumpkinNeighbors++;
+            if (CropRegistry.isMelonPumpkinFarmBlock(level.getBlockState(pos.north()).getBlock())) melonPumpkinNeighbors++;
+            if (CropRegistry.isMelonPumpkinFarmBlock(level.getBlockState(pos.south()).getBlock())) melonPumpkinNeighbors++;
+            if (CropRegistry.isMelonPumpkinFarmBlock(level.getBlockState(pos.east()).getBlock())) melonPumpkinNeighbors++;
+            if (CropRegistry.isMelonPumpkinFarmBlock(level.getBlockState(pos.west()).getBlock())) melonPumpkinNeighbors++;
             return melonPumpkinNeighbors >= 2;
         } catch (Throwable t) {
             return false;
@@ -725,7 +726,6 @@ public class FrameScanner {
             }
             this.computedMaxRing = maxRing;
 
-            // int range = Math.max(rX, rZ);
             spiralPositions.add(new SpiralStep(center, Direction.NORTH));
             int x = 0, z = 0;
             int stepSize = 1;
@@ -984,7 +984,7 @@ public class FrameScanner {
                         if (harvested) ringHarvested = true;
                         if (harvested) { anyHarvested = true; lastHarvestedRing = ring; }
 
-                        if (Config.rotationMode == com.fastharvester.enums.RotationMode.FOLLOW_HARVEST_SPIRAL) {
+                        if (Config.rotationMode == RotationMode.FOLLOW_HARVEST_SPIRAL) {
                             Integer posInRing = indexToPosInRing.get(idx);
                             List<Integer> full = ringFullIndices.get(ring);
                             if (posInRing != null && full != null && !full.isEmpty()) {
@@ -1064,8 +1064,8 @@ public class FrameScanner {
                                     BlockPos npos = pos.relative(d);
                                     BlockState ns = level.getBlockState(npos);
                                     Block b = ns.getBlock();
-                                    Block rep = com.fastharvester.harvest.CropRegistry.canonicalCropBlock(b);
-                                    if (rep != null && com.fastharvester.harvest.CropRegistry.isCropBlock(rep)) {
+                                    Block rep = CropRegistry.canonicalCropBlock(b);
+                                    if (rep != null && CropRegistry.isCropBlock(rep)) {
                                                 Integer prev = counts.get(rep);
                                                 if (prev == null) counts.put(rep, 1);
                                                 else counts.put(rep, prev + 1);
@@ -1131,8 +1131,8 @@ public class FrameScanner {
                                     BlockPos npos = pos.relative(d);
                                     BlockState ns = level.getBlockState(npos);
                                     Block b = ns.getBlock();
-                                    Block rep = com.fastharvester.harvest.CropRegistry.canonicalCropBlock(b);
-                                    if (rep != null && com.fastharvester.harvest.CropRegistry.isCropBlock(rep)) {
+                                    Block rep = CropRegistry.canonicalCropBlock(b);
+                                    if (rep != null && CropRegistry.isCropBlock(rep)) {
                                         Integer prev = counts2.get(rep);
                                         if (prev == null) counts2.put(rep, 1);
                                         else counts2.put(rep, prev + 1);
