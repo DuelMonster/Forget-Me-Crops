@@ -205,7 +205,8 @@ public class FrameRegistry {
         FrameEntry replacement = new FrameEntry(newAnchor);
         replacement.active = old.active || (hoe != null && !hoe.isEmpty());
         if (hoe != null && !hoe.isEmpty()) {
-            replacement.ticksUntilNextRun = 0;
+            // Preserve configured cadence instead of forcing an immediate run
+            replacement.ticksUntilNextRun = Config.tickInterval;
         } else {
             replacement.ticksUntilNextRun = old.ticksUntilNextRun;
         }

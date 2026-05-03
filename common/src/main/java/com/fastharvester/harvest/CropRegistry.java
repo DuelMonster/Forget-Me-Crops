@@ -30,6 +30,8 @@ public final class CropRegistry {
         if (block == Blocks.WHEAT) return Items.WHEAT_SEEDS;
         if (block == Blocks.CARROTS) return Items.CARROT;
         if (block == Blocks.POTATOES) return Items.POTATO;
+        if (block == Blocks.MELON) return Items.MELON_SEEDS;
+        if (block == Blocks.PUMPKIN) return Items.PUMPKIN_SEEDS;
         if (block == Blocks.MELON_STEM) return Items.MELON_SEEDS;
         if (block == Blocks.PUMPKIN_STEM) return Items.PUMPKIN_SEEDS;
         if (block == Blocks.NETHER_WART) return Items.NETHER_WART;
@@ -46,6 +48,20 @@ public final class CropRegistry {
     public static boolean isCropBlock(net.minecraft.world.level.block.Block b) {
         if (b == null) return false;
         return b == Blocks.WHEAT || b == Blocks.BEETROOTS || b == Blocks.CARROTS || b == Blocks.POTATOES || b == Blocks.MELON_STEM || b == Blocks.PUMPKIN_STEM;
+    }
+
+    /**
+     * Return a canonical crop-block representative for counting/consensus.
+     * Maps fruit blocks (melon/pumpkin) to their stem form so neighbour
+     * consensus and seed lookup behave consistently.
+     */
+    public static net.minecraft.world.level.block.Block canonicalCropBlock(net.minecraft.world.level.block.Block b) {
+        if (b == null) return null;
+        if (b == Blocks.MELON) return Blocks.MELON_STEM;
+        if (b == Blocks.PUMPKIN) return Blocks.PUMPKIN_STEM;
+        if (b == Blocks.ATTACHED_MELON_STEM) return Blocks.MELON_STEM;
+        if (b == Blocks.ATTACHED_PUMPKIN_STEM) return Blocks.PUMPKIN_STEM;
+        return b;
     }
 
     // --- Farm-consensus helpers (migrated from original CropRouter) ---

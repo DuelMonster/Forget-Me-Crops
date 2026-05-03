@@ -178,7 +178,8 @@ public class FrameDiscovery {
         for (int dx = -rX; dx <= rX; dx++) for (int dz = -rZ; dz <= rZ; dz++) {
             BlockState ns = level.getBlockState(chestPos.offset(dx, 0, dz));
             net.minecraft.world.level.block.Block b = ns.getBlock();
-            if (com.fastharvester.harvest.CropRegistry.isCropBlock(b)) return true;
+            net.minecraft.world.level.block.Block rep = com.fastharvester.harvest.CropRegistry.canonicalCropBlock(b);
+            if (rep != null && com.fastharvester.harvest.CropRegistry.isCropBlock(rep)) return true;
         }
         return false;
     }

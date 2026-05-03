@@ -8,6 +8,7 @@ import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import com.fastharvester.harvest.CropRegistry;
 import java.util.List;
 
 /**
@@ -85,8 +86,15 @@ public class ChestUtils {
      * @return true if an item was removed
      */
     public static boolean removeOne(Container chest, Item item) {
+        return removeOne(chest, item, true);
+    }
+
+    /**
+     * Remove one item, optionally enforcing seed reserve protection.
+     */
+    public static boolean removeOne(Container chest, Item item, boolean respectSeedReserve) {
         if (chest == null || item == null) return false;
-        if (isSeedItem(item)) {
+        if (respectSeedReserve && isSeedItem(item) && !CropRegistry.isSeedAlsoCropFruit(item)) {
             int existing = countItem(chest, item);
             if (existing <= Config.seedReservePerType) {
                 try { LogUtils.logDebug("[CHEST] removeOne: refusing to remove {} because existing {} <= reserve {}", item, existing, Config.seedReservePerType); } catch (Throwable ignored) {}

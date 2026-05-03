@@ -83,6 +83,9 @@ public class HarvestUtils {
                 if (taken) { BlockState replanted = null; try { replanted = getReplantState.apply(state); } catch (Throwable ignore) {} if (replanted != null) { try { if (replanted.getBlock() instanceof CropBlock) replanted = FrameScanner.setAgeSafe(replanted, 1); } catch (Throwable ignored) {} ctx.level.setBlock(pos, replanted, 3); } }
                 else { try { ctx.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3); } catch (Throwable ignored) {} }
             }
+        } else {
+            // Non-replantable harvest targets (e.g. melon/pumpkin fruit) should be removed.
+            try { ctx.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3); } catch (Throwable ignored) {}
         }
 
         if (Config.harvestParticles) ctx.level.levelEvent(2001, pos, Block.getId(state));
