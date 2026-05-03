@@ -1,266 +1,464 @@
-# Technical Reference
+# Technical Reference — FastHarvester
 
-This file is the technical companion to README.md. It documents implementation details, scanning rules, configuration behavior, and development workflow.
+This document covers the full implementation of FastHarvester: architecture, scanning algorithms, rotation internals, hoe handling, loot logic, platform differences, configuration, build instructions, and credits.
 
-> Note: Forge support was removed from this project on 2026-04-22. The documentation and codebase now target Fabric and NeoForge only.
+For the user-facing setup guide and config reference see [README.md](README.md).
+
+---
+
+## Architecture Overview
+
+FastHarvester is structured as a Gradle multi-module project:
+
+| Module    | Role                                                                         |
+|-----------|------------------------------------------------------------------------------|
+| `common`  | All game logic — scanning, harvesting, registry, config, helpers             |
+| `fabric`  | Fabric glue — ticker, event hooks, Mod Menu screen, FIF mixin                |
+| `neoforge`| NeoForge glue — ticker, event hooks, native config registration              |
+
+All gameplay decisions live in `common`. The platform modules only wire up tickers and platform-specific config APIs.
+
+### Package Structure
+
+| Package                              | Contents                                                                          |
+|--------------------------------------|-----------------------------------------------------------------------------------|
+| `com.fastharvester.frame`            | `FrameScanner`, `FrameRegistry`, `FrameDiscovery`, `FarmScanTask`, `SpiralStep`, `CatchupManager` |
+| `com.fastharvester.harvest`          | `HarvestUtils`, `HarvestContext`, `CropRegistry`                                  |
+| `com.fastharvester.config`           | `Config`, `ConfigDescriptors`                                                     |
+| `com.fastharvester.enums`            | `DurabilityMode`, `RotationMode`, `SeedClutterMode`                               |
+| `com.fastharvester.util.chest`       | `ChestUtils` — insert/remove helpers with reserve enforcement                     |
+| `com.fastharvester.util.durability`  | `DurabilityLogic` — enchantment-aware hoe damage                                  |
+| `com.fastharvester.util.hoe`         | `FrameHoeReplacement` — broken-hoe replacement and frame sync                     |
+| `com.fastharvester.util.loot`        | `LootLogic` — Fortune/Silk Touch aware drop calculation                           |
+| `com.fastharvester.util.log`         | `LogUtils` — gated debug/trace logging                                            |
+| `com.fastharvester.platform`         | `Services`, platform adapter interfaces                                           |
+| `com.fastharvester.platform.adapter` | `FIF`, `FastItemFrameAdapterImpl` — FastItemFrames integration                    |
+| `com.fastharvester.mixin`            | Fabric-side accessor mixins for chunk enumeration                                 |
+
+---
 
 ## Anchor Rules
 
-A harvest anchor is:
+A harvest anchor is the combination of:
 
-1. A chest
-2. An item frame attached to the top face of that chest
-3. A hoe in the item frame
+1. A chest (or any `Container` block entity)
+2. An item frame attached to the **top face** of that chest (or at the same position as the chest top)
+3. A hoe held in the item frame
 
-Chest rules:
+Chest requirements:
 
-- Normal crop anchors require the chest below the frame to be waterlogged.
-- Nether Wart / Soul Sand anchors may use a normal chest.
-- Crop scanning happens only on the same Y level as the frame anchor.
-- Crops above or below that layer are ignored.
+- Normal crop anchors (wheat, carrots, etc.) require the chest to be **waterlogged**.
+- Nether Wart farms on soul sand may use a **non-waterlogged** chest.
+- Scanning only covers the **same Y level** as the item frame. Crops above or below that layer are ignored entirely.
 
-## Activation Range
+The anchor is validated at scan time. If the item frame entity or FIF block entity is gone, or if the chest block entity has been replaced, the anchor is immediately unregistered via `FrameRegistry.unregisterFrame(...)` and the scan is aborted.
 
-Anchors run whenever their chunks are loaded.
+---
 
-Behavior:
+## Frame Discovery and Registry
 
-- Vanilla item-frame scanning sweeps the currently loaded item-frame entities in the level.
-- FastItemFrames scanning iterates the currently loaded chunk holders and inspects their block entities.
-- This allows vanilla chunk loaders and modded chunk loaders to keep anchors active without depending on nearby players, simulation distance, or view distance.
+### Discovery
 
-Relevant code:
+`FrameDiscovery` centralises anchor detection for both vanilla item frames and FastItemFrames (FIF) block entities. Discovery runs in two modes:
 
-- common/src/main/java/com/fastharvester/FrameScanner.java
-- common/src/main/java/com/fastharvester/FastItemFrameAdapter.java
+- **Vanilla:** iterates `ItemFrame` entities in the loaded level, validates `direction == UP`, checks for an attached `Container` below, and registers valid anchors.
+- **FIF:** iterates loaded chunk block entities, identifies FIF block entities, performs the same container check.
+
+`CatchupManager` queues discovered candidate positions and drains them gradually across ticks so initial discovery work is spread rather than spiking on world load.
+
+### Registry
+
+`FrameRegistry` is the authoritative in-memory store for all discovered anchors, keyed by dimension ID and block position.
+
+Key operations:
+
+| Method                              | Purpose                                                                          |
+|-------------------------------------|----------------------------------------------------------------------------------|
+| `registerFrame(...)`                | Add or refresh an anchor entry                                                   |
+| `unregisterFrame(...)`              | Remove an anchor (called on frame/chest removal or validation failure)           |
+| `markChunkInactive(dimId, chunkKey)`| Mark all anchors in a chunk inactive when the chunk unloads                      |
+| `markChunkActive(dimId, chunkKey)`  | Re-activate anchors when a chunk reloads                                         |
+| `tickAndCollectReady(dimId, level)` | Decrement per-anchor countdown timers; return anchors due for scanning           |
+| `scheduleRotation(...)`             | Queue a rotation request for the pending-rotation map                            |
+| `tryRotation(...)`                  | Record that a rotation was attempted (cooldown gate)                             |
+| `setAnimating(dimId, pos, flag)`    | Mark/unmark a frame as currently animating; clears pending rotations when set    |
+| `updateHoe(dimId, pos, hoe)`        | Update the stored hoe in an existing registry entry                              |
+| `clearAll()`                        | Purge all entries (called on server/world unload)                                |
+
+#### Chunk-based lifecycle
+
+Anchors are indexed by chunk key in `CHUNK_INDEX`. When a chunk unloads, all its anchors are marked `inactive` — they remain in the registry but are skipped by `tickAndCollectReady`. When the chunk reloads or a rediscovery pass runs, they are re-activated. This avoids repeated register/unregister churn on chunks that load and unload frequently.
+
+Newly registered anchors start with `ticksUntilNextRun = tickInterval` so they wait a full cycle before doing any work. This prevents harvesting, tilling, or hoe replacement from firing immediately on world load.
+
+#### Rotation batching
+
+Rotation requests are not applied immediately. They are enqueued in `PENDING_ROTATIONS` (a per-dimension map) and applied in a single flush pass during `tickAndCollectReady`. This concentrates world mutation into one point per tick and avoids conflicting concurrent rotation writes.
+
+When `animating == true` for a frame entry, `scheduleRotation` skips adding new requests for that frame and the flush pass skips applying any pending rotation for it, so in-progress animations are never interrupted.
+
+---
 
 ## Scan Model
 
-FastHarvester builds a connected farm area from the frame position using BFS (breadth-first search).
+### BFS Farm Discovery
 
-Traversal rules:
+`FrameScanner.bfsDiscoverFarm(center, level, rangeX, rangeZ)` builds a connected set of farm tiles using breadth-first search from the anchor position. Traversal rules:
 
-- Standard crop farms expand through crop tiles and only through empty farmland when nearby crops give a clear local consensus.
-- Soul Sand / Nether Wart positions are treated as farm tiles.
-- Melon and pumpkin farms can traverse empty fruit lanes when those air blocks are clearly part of a real melon/pumpkin layout.
-- Arbitrary air gaps and ambiguous border tiles are not treated as bridges.
+- A position is a valid farm tile if `isFarmPosition(level, pos)` returns true.
+- `isFarmPosition` accepts: crop blocks, melon/pumpkin stems, melon/pumpkin fruit, farmland (with or without a crop above), soul sand (with or without nether wart above).
+- Traversal stops at the configured range limits `[center ± rangeX, center ± rangeZ]`.
+- Air gaps and ambiguous border tiles are not bridged — this prevents adjacent farms from leaking into each other.
 
-Effect:
+If BFS yields an empty result (e.g. brand-new empty farm), the scanner falls back to a full rectangular grid over `[center ± rangeX, center ± rangeZ]` so the repair/planting pass still runs.
 
-- Adjacent farms with a real separator line no longer leak harvests into each other.
-- Irregular farm shapes are supported more naturally than a fixed 9x9 square.
-- Frame rotation can now advance during the active spiral pass so harvest progress is more visible while the farm is working.
+### Spiral Sweep
+
+`FrameScanner.generateSpiral(center, rangeX, rangeZ)` generates an outward-expanding spiral of `SpiralStep` records, each holding a `BlockPos` and approach `Direction`. The `FarmScanTask` constructor filters this against the BFS candidate set so only valid farm positions remain.
+
+The spiral is used in preference to a simple row/column sweep because it naturally matches the outward-ring structure used by the rotation animation — each ring of the farm corresponds to one rotation step.
+
+### Incremental Execution (FarmScanTask)
+
+`FarmScanTask` is a package-private top-level class in `com.fastharvester.frame`. One task is created per anchor per scan cycle and stored in `FrameScanner.activeScans`. Each server tick `FrameScanner.tickScans(dimId, level)` calls `task.tick()` on every active task.
+
+Per-tick, the task processes `positionsPerTick` spiral positions. `positionsPerTick` is computed at construction time as `ceil(totalPositions / maxSpiralDurationTicks)`. The task self-removes when `currentIndex >= totalPositions` or when `ctx.chestFull` is set.
+
+**Pre-scan maturity check:** before the spiral begins, the constructor scans all candidate positions to check whether any mature crops or harvestable fruit exist. If none are found, the task sets `hasMature = false` and `tick()` returns immediately on the first call. This prevents the spiral, rotation animation, and neighbour repair pass from running on idle farms.
+
+**Neighbour repair pass:** once `currentIndex >= totalPositions`, the task runs one additional repair sweep over the full scan rectangle. This handles empty farmland, soul sand, and dirt/grass patches that were not part of the original BFS candidate set. The pass runs exactly once per task (`neighborPassDone` guard).
+
+#### Anchor re-validation per tick
+
+At the start of every `tick()` call the task re-validates the anchor via `FrameScanner.isFrameStillPresent(level, center)` and `FrameScanner.isChestStillValid(level, anchor)`. It also re-reads the hoe from the frame to catch mid-scan hoe removal. If any of these checks fail the task exits early and the anchor is unregistered.
+
+---
 
 ## Farm Maintenance
 
-### Chest-based replanting
+### Replanting
 
-When an empty tile is found:
+When an empty tile is encountered during the spiral or neighbour pass:
 
-- Empty farmland can be replanted from chest stock.
-- Empty Soul Sand can be replanted with Nether Wart from chest stock.
+1. The four cardinal neighbours are examined for crop blocks.
+2. Each neighbour's block is mapped to its canonical form via `CropRegistry.canonicalCropBlock(b)` (e.g. an attached melon stem maps to `MELON_STEM`).
+3. A count map accumulates how many neighbours represent each canonical crop type.
+4. The dominant type is selected; its seed/replant item is looked up via `CropRegistry.clutterSeed(block)`.
+5. One unit of that item is removed from the chest via `ChestUtils.removeOne(chest, seed, false)` (the `false` bypasses seed reserve for replanting contexts).
+6. The default block state of the crop is placed, then `FrameScanner.setAgeSafe(state, 0)` resets its age to 0 if it has an age property.
 
-Mixed crop decision logic:
+Soul sand positions follow the same logic but only consider `NETHER_WART` as a valid neighbour crop.
 
-- For empty farmland, neighboring crop blocks are sampled.
-- The dominant neighboring crop type is chosen.
-- The required seed/item must exist in the chest.
-- Supported replant-by-neighbor logic currently covers Wheat, Carrots, Potatoes, Beetroots, and Torchflower.
+The helper `FrameScanner.tryPlantConsensus(counts, anchor, level, pos)` encapsulates steps 4–6 and is called from all three branches of `tryAutoPlantAndTill` (farmland, soul sand, and dirt/grass).
 
-### Auto-till repair
+### Auto-till
 
-If an air gap is found and:
+If an air gap is found and the block below is `DIRT` or `GRASS_BLOCK`:
 
-- the block below is Dirt or Grass Block
-- the position is surrounded on the four cardinal sides by farmland
-- the gap is not part of a melon/pumpkin farm layout
+1. The four cardinal neighbours of the *block below* are checked for `FARMLAND`.
+2. If at least one farmland neighbour is found, the dirt/grass is converted to `FARMLAND.defaultBlockState()`.
+3. One durability point is applied to the hoe via `DurabilityLogic.applyDamage(...)`.
+4. If the hoe breaks, `HarvestUtils.handleBrokenHoe(ctx, before)` is called.
+5. A consensus replant pass is then run for the newly created farmland tile.
 
-then the block is converted back to Farmland.
-
-Durability:
-
-- Auto-till uses the same durability rules as harvesting.
-- It respects `durabilityMode`, Unbreaking, and `mendingNegation`.
-- When a hoe breaks, it is removed from the frame, break sound and item particles are played at the frame position, and the chest is checked for a replacement hoe.
-- If a frame is empty and the chest already contains a spare hoe, the scanner can equip that hoe automatically before the next harvest cycle begins.
+---
 
 ## Crop Handling
 
-| Crop          | Harvest rule                 | Replant rule                               |
-|---------------|------------------------------|--------------------------------------------|
-| Wheat         | Harvest when fully grown     | Consume one wheat seed from drops          |
-| Carrots       | Harvest when fully grown     | Consume one carrot from drops              |
-| Potatoes      | Harvest when fully grown     | Consume one potato from drops              |
-| Beetroots     | Harvest when fully grown     | Consume one beetroot seed from drops       |
-| Torchflower   | Harvest when fully grown     | Replant without consuming a harvested drop |
-| Sweet Berries | Harvest at age 3             | Reset bush to age 1                        |
-| Nether Wart   | Harvest at age 3             | Consume one nether wart from drops         |
-| Melon         | Harvest when fruit exists    | No direct replant; stem regrows fruit      |
-| Pumpkin       | Harvest when fruit exists    | No direct replant; stem regrows fruit      |
+### Maturity Thresholds
+
+`FrameScanner.getMaturityThreshold(BlockState)` derives the maximum age by inspecting the block state's registered `IntegerProperty` values. It returns the highest value in `property.getPossibleValues()`. There are two fallbacks:
+
+- Nether wart (`NETHER_WART`) and sweet berry bush (`SWEET_BERRY_BUSH`) return `3` if no property is found.
+- All other crops return `7`.
+
+This avoids hardcoded per-crop thresholds and correctly handles beetroot (max age 3), nether wart (max age 3), and full-age crops (max age 7).
+
+### Crop table
+
+| Crop            | Harvest condition                  | Post-harvest block state             | Replant item               |
+|-----------------|------------------------------------|--------------------------------------|----------------------------|
+| Wheat           | `age == maxAge` (7)                | Air (drops via loot)                 | `WHEAT_SEEDS`              |
+| Carrots         | `age == maxAge` (7)                | Air (drops via loot)                 | `CARROT`                   |
+| Potatoes        | `age == maxAge` (7)                | Air (drops via loot)                 | `POTATO`                   |
+| Beetroots       | `age == maxAge` (3)                | Air (drops via loot)                 | `BEETROOT_SEEDS`           |
+| Torchflower     | `age == maxAge`                    | Air (drops via loot)                 | `TORCHFLOWER_SEEDS` (item) |
+| Sweet Berries   | `age == 3`                         | Reset to `age = 1` (bush stays)      | n/a                        |
+| Nether Wart     | `age == 3`                         | Air (drops via loot)                 | `NETHER_WART`              |
+| Melon           | Fruit block adjacent to stem       | `AIR` (fruit only; stem untouched)   | `MELON_SEEDS` (stem regrows) |
+| Pumpkin         | Fruit block adjacent to stem       | `AIR` (fruit only; stem untouched)   | `PUMPKIN_SEEDS` (stem regrows) |
+
+### CropRegistry
+
+`CropRegistry` holds two `IdentityHashMap<Block, Item>` tables:
+
+- `REPLANT_SEED`: block → seed item consumed for replanting.
+- `CLUTTER_SEED`: superset of `REPLANT_SEED`, also covers melon/pumpkin stems and fruit blocks for the seed-clutter filter.
+
+`canonicalCropBlock(Block)` normalises fruit and attached-stem blocks to their plain stem form so neighbour-consensus counting works consistently (`MELON` → `MELON_STEM`, `ATTACHED_MELON_STEM` → `MELON_STEM`, etc.).
+
+---
 
 ## Enchantments
 
-- Fortune: applied to crop drops
-- Silk Touch: affects melons, causing melon block drops instead of slices
-- Unbreaking: respected in `normal` durability mode
-- Mending: can fully suppress durability loss when `mendingNegation=true`
+| Enchantment  | Behaviour                                                                                           |
+|--------------|-----------------------------------------------------------------------------------------------------|
+| Fortune      | Applied to all crop drop calculations via `LootLogic`                                               |
+| Silk Touch   | Causes melons to drop the melon block instead of slices                                             |
+| Unbreaking   | Respected in `normal` durability mode; ignored in `ignore_unbreaking` mode                          |
+| Mending      | When `mendingNegation = true`, no durability loss is applied to a hoe bearing Mending               |
 
-## Performance Limits
+Loot calculation is performed by `LootLogic`, which prefers server-side `LootContext` builders where available and falls back to reflective compatibility paths when needed.
 
-Current hard limits in `FrameScanner`:
+---
 
-- Max frames processed per run: 24
-- Max blocks processed per run: 3072
+## Hoe Handling
 
-Work can be spread across multiple ticks using `maxSpiralDurationTicks`.
+### During a scan
+
+At `FarmScanTask` construction and at the start of each `tick()`, the physical hoe is read from the frame via `FrameScanner.readHoeFromFrame(level, pos)`. This prefers the vanilla `ItemFrame` entity; if not found it falls back to `FIF.extractHeldItem(be)` for FastItemFrames block entities.
+
+### On hoe break
+
+When a hoe reaches 0 durability, `HarvestUtils.handleBrokenHoe(ctx, before)` is called:
+
+1. The broken hoe is cleared from `ctx.hoe`.
+2. A replacement hoe is searched in the chest via `FrameHoeReplacement.tryReplaceBrokenHoe(ctx)`.
+3. If found, it is set in `ctx.hoe`, `FrameRegistry.updateHoe(...)` is called to update the in-memory entry, and `Services.PLATFORM.updateFrameItem(...)` syncs the new hoe into the physical frame.
+4. Break sounds (`SoundEvents.ITEM_BREAK`) and item particles are played at the frame position.
+
+### Idle frame re-equip
+
+If a scan finds the frame empty but the chest contains a hoe, `FrameHoeReplacement.tryReplaceBrokenHoe(ctx)` also handles this case — it loads the chest hoe into the frame so the next scan cycle runs correctly.
+
+---
 
 ## Rotation & Animation Internals
 
-FastHarvester's frame rotation system was recently refactored to avoid races and produce deterministic animations. Key implementation notes for contributors and debuggers:
+The frame-rotation system is designed to be race-free and deterministic across the multi-tick scan.
 
-- Per-tick rotation batching: rotation requests are enqueued per-dimension in `FrameRegistry.PENDING_ROTATIONS` and flushed once per server tick by `FrameRegistry.tickAndCollectReady(...)`. This reduces conflicting concurrent rotation attempts and concentrates world updates into a single flush pass.
-- `FrameRegistry.scheduleRotation(...)` records a tentative `lastRotationGameTime` and places the requested rotation in the pending map. `tryRotation(...)` simply records the attempt time.
-- `FrameEntry.animating`: each frame entry has an `animating` boolean set while a full multi-step animation is running. When `animating==true`, `scheduleRotation(...)` will skip adding new rotation requests and the tick flush will skip applying pending rotations for that frame.
-- `FrameRegistry.setAnimating(...)` marks a frame animating/unanimating and proactively removes any pending rotation for that frame when animation starts so previously queued rotations do not interfere.
-- Deterministic full-rotation animation: `FrameScanner.FarmScanTask` computes a deterministic 8-step `fullAnimationSequence` derived from the current frame rotation (start+1..start+8 mod 8). The task marks the frame animating at animation start and unmarks it on completion. This eliminates the previously observed bouncing and out-of-order stepping.
-- Synchronous bypass removed: earlier forced synchronous rotation application caused renderer-freeze issues. The implementation now prefers scheduled per-tick application and relies on the `animating` guard to avoid visual races.
+### Per-tick batching
 
-## FarmScanTask: spiral + neighbor pass behavior
+Rotation requests from `FrameScanner.setFrameRotation(...)` are not applied immediately. They are queued in `FrameRegistry.PENDING_ROTATIONS` (a `Map<String, Map<BlockPos, Integer>>`) and flushed once per tick in `tickAndCollectReady`. This prevents multiple conflicting rotation writes within one tick and keeps world-mutation to a single flush point.
 
-- The `FarmScanTask` executes a spiral pass over farm tiles and performs an additional neighbor/repair pass exactly once per task to handle auto-planting and tilling. This ensures repair actions (auto-plant/till) run during the same logical scan and do not repeat unnecessarily across ticks.
-- Auto-plant and auto-till logic are executed during the spiral and neighbor pass so replanting decisions can consider local context and avoid removing valid seeds or overwriting neighboring farms.
+### Cooldown gate
 
-- Pre-scan maturity check: `FarmScanTask` now performs a quick maturity pre-check across the spiral candidate positions before beginning the harvest spiral. If no mature crops or harvestable fruit are present the task exits early for that cycle and no frame rotation/animation or neighbor repairs are scheduled. This reduces unnecessary world updates and frame rotations on idle farms.
+`FrameRegistry.tryRotation(dimId, pos, gameTime)` records the last rotation game-time per frame. Rapid repeated rotation requests (e.g. from multiple positions in the same tick) are gated to avoid visual flickering.
 
-## Loot & Enchantment Handling
+### Full-rotation animation
 
-- Block drop calculation now prefers server-side `LootContext` builders so `Fortune` and `Silk Touch` enchantments are respected for drop determination where available. When running in environments that require compatibility fallbacks, the code uses guarded reflection paths that safely degrade to conservative drop estimates.
-- Enchantment lookups and handler logic were moved into safer, loader-adaptable helpers under `util/loot` and `util/hoe` to centralize platform differences and reduce reflective fragility.
+When `rotationMode = FULL_ROTATION_PER_HARVEST`, `FarmScanTask` computes a deterministic 8-step sequence:
 
-## Hoe replacement and chest interactions
+```
+start = current frame rotation
+sequence = [(start+1)&7, (start+2)&7, ..., (start+8)&7]
+```
 
-- Broken-hoe handling now persists replacements by updating `FrameRegistry` and calling into platform adapters to sync the frame-held item. `HarvestUtils.handleBrokenHoe(...)` attempts to load a replacement hoe from the chest, updates the registry via `FrameRegistry.updateHoe(...)`, and calls `Services.PLATFORM.updateFrameItem(...)` where supported.
-- Chest insert/remove debug messages were moved behind `LogUtils.logDebug(...)` to avoid noisy per-item INFO messages on busy farms.
+`FrameRegistry.setAnimating(dimId, pos, true)` is called, which also clears any pending rotation for that frame. Each tick the next step in the sequence is applied via `setFrameRotation(..., bypassCooldown=true)`. When the sequence is exhausted, `setAnimating(..., false)` is called.
 
-## Tickers & Lifecycle
+The `animating` flag on `FrameEntry` guards both the pending-rotation flush (skips frames that are animating) and new `scheduleRotation` calls (ignores incoming requests while animating).
 
-- Fabric and NeoForge tickers were updated to call `FrameRegistry.clearAll()` when the server/world unloads so memory is freed and stale references are not kept across restarts.
+### Rotation modes
 
-See code references in the following files for the canonical implementation:
+| Mode                        | Mechanism                                                                              |
+|-----------------------------|----------------------------------------------------------------------------------------|
+| `STEP_PER_HARVEST`          | One `setFrameRotation` call after the full spiral completes, if anything was harvested |
+| `FULL_ROTATION_PER_HARVEST` | 8-step animation sequence, spread evenly across `numberOfTicksNeeded`                 |
+| `FOLLOW_HARVEST_SPIRAL`     | Per-position rotation based on ring index and ring size, applied during the spiral     |
 
-- `common/src/main/java/com/fastharvester/frame/FrameRegistry.java`
-- `common/src/main/java/com/fastharvester/frame/FrameScanner.java`
-- `common/src/main/java/com/fastharvester/util/loot/LootLogic.java`
-- `common/src/main/java/com/fastharvester/HarvestUtils.java`
+### Applying rotations
 
+`FrameScanner.applyScheduledRotation(level, pos, newRotation)` attempts to set the rotation in this priority order:
+
+1. Vanilla `ItemFrame` entity — reflective `setRotation(int)` or `setRotation(byte)` method call.
+2. Vanilla `ItemFrame` entity — direct field write to `rotation`.
+3. FIF block entity — `FIF.setRotation(be, newRotation)` with a follow-up `sendBlockUpdated`.
+
+---
+
+## Performance Limits
+
+Hard limits in `FrameScanner`:
+
+| Limit                          | Value | Notes                                                      |
+|--------------------------------|-------|------------------------------------------------------------|
+| Max frames processed per run   | 24    | `FrameScanner.MAX_FRAMES_PER_RUN`                          |
+| Max scan spread                | configurable | `maxSpiralDurationTicks` (default 200)              |
+
+Work is spread across ticks by `FarmScanTask`. One task instance per anchor per cycle; `positionsPerTick = ceil(totalPositions / maxSpiralDurationTicks)`.
+
+---
+
+## Tickers and Lifecycle
+
+Both the Fabric and NeoForge tickers follow the same pattern:
+
+1. **Server tick:** call `FrameRegistry.tickAndCollectReady(dimId, level)` to collect anchors due for scanning. For each, call `FrameScanner.submitScan(dimId, anchor, level)`. Then call `FrameScanner.tickScans(dimId, level)` to advance active `FarmScanTask` instances.
+2. **Frame rotation flush:** `FrameRegistry.tickAndCollectReady` also applies pending rotations from `PENDING_ROTATIONS`.
+3. **World unload:** call `FrameRegistry.clearAll()` and `FrameScanner.clearAllScans()` to release all in-memory state and avoid stale references across restarts.
+4. **Chunk load/unload:** chunk-load events re-activate anchors in that chunk; chunk-unload events mark them inactive.
+5. **Rediscovery:** every `frameRediscoveryInterval` ticks, `FrameDiscovery` rescans loaded chunks and refreshes the registry.
+
+---
+
+## FastItemFrames Compatibility
+
+FastItemFrames (FIF) replaces vanilla item frame entities with block entities for performance. FastHarvester detects this mod reflectively at runtime via `FIF.isFastItemFrameBlockEntity(be)`.
+
+When FIF is present:
+
+- Frame discovery iterates loaded chunk block entities instead of vanilla entity queries.
+- Held-item reads use `FIF.extractHeldItem(be)`.
+- Rotation reads/writes use `FIF.getRotation(be)` / `FIF.setRotation(be, rot)`.
+- Block update notifications use the client/listener-only path to avoid unnecessary neighbour-update churn.
+
+On Fabric, `FastItemFrameAdapterImpl` uses accessor mixins generated at compile time for chunk enumeration. This ensures field access survives Loom's remapping in packaged production jars rather than relying on string-based reflection on Minecraft internals.
+
+Falls back cleanly to vanilla paths when FIF is not installed.
+
+---
+
+## Fabric Platform Notes
+
+- Ticker: `ServerTickEvents.END_SERVER_TICK` drives the per-tick scan and rotation flush.
+- Config screen: a custom `Screen` implementation provided when Mod Menu is installed. Writes back to the same TOML files as the file-based config loader. Avoids calling `renderBackground` separately (prevents "Can only blur once per frame" on heavily-modded clients).
+- FIF mixin: accessor mixin targets the FIF chunk holder collection for safe compile-time-resolved field access.
+- Metadata: `fabric.mod.json` version is set from the Gradle `mod_version` property to avoid `${version}` appearing as `unspecified` in release jars.
+- Debug logging: frame-discovery changes are logged only when the discovered count changes or on periodic summaries, and slow-run warnings are rate-limited.
+
+## NeoForge Platform Notes
+
+- Ticker: `ServerTickEvent.Post` drives the per-tick scan.
+- Config: registers native `ModConfigSpec` client and server configs using the same file names (`fastharvester-client.toml`, `fastharvester-server.toml`). A `ModConfigEvent.LOADING` handler syncs the NeoForge config values into the shared `Config` fields that all common gameplay code reads.
+- Config screen: provided by NeoForge's built-in config UI from the Mods list; no custom screen needed.
+
+---
 
 ## Configuration Reference
 
-Runtime config file:
+### Server Config (`fastharvester-server.toml`)
 
-- `config/fastharvester-server.toml`
-- `config/fastharvester-client.toml`
+| Option                     | Default                     | Type          | Description                                                                 |
+|----------------------------|-----------------------------|---------------|-----------------------------------------------------------------------------|
+| `tickInterval`             | `300`                       | int           | Ticks between anchor runs                                                   |
+| `frameRediscoveryInterval` | `600`                       | int           | Ticks between loaded-chunk rediscovery passes                               |
+| `scanRangeX`               | `4`                         | int           | Scan radius along X from the anchor (1–5 clamped in discovery)              |
+| `scanRangeZ`               | `4`                         | int           | Scan radius along Z from the anchor (1–5 clamped in discovery)              |
+| `durabilityMode`           | `normal`                    | enum string   | `normal` / `ignore_unbreaking` / `none`                                     |
+| `mendingNegation`          | `true`                      | boolean       | Suppress durability loss on hoes with Mending                               |
+| `debugLogging`             | `false`                     | boolean       | Verbose server log output                                                   |
+| `chestFullCooldownTicks`   | `300`                       | int           | Cooldown when chest is full                                                 |
+| `maxSpiralDurationTicks`   | `200`                       | int           | Max ticks to spread one scan cycle across                                   |
+| `rotationMode`             | `full_rotation_per_harvest` | enum string   | `step_per_harvest` / `full_rotation_per_harvest` / `follow_harvest_spiral`  |
+| `seedClutterMode`          | `reduced`                   | enum string   | `none` / `normal` / `reduced`                                               |
+| `seedReservePerType`       | `80`                        | int           | Minimum seeds per type kept in chest when pulling for replanting            |
 
-Fabric integration:
+### Client Config (`fastharvester-client.toml`)
 
-- When Mod Menu is installed, FastHarvester provides a Fabric-side config screen for editing these values in game.
-- The screen writes back to the same TOML files used by the normal file-based config flow.
-- Fabric's FastItemFrames block-entity scan now uses accessor mixins for chunk access instead of reflective field-name lookups, so the packaged remapped jar still finds loaded FIF chunks in production.
-- Fabric release metadata now gets its version from the shared Gradle `mod_version` property instead of leaving `${version}` as `unspecified`.
-- The Fabric config screen now relies on the base `Screen.render` background pass and does not call `renderBackground` separately, which avoids the `Can only blur once per frame` crash on modded clients with extra screen hooks.
-- The active Fabric ticker now mirrors the shared farm-maintenance branch for empty farmland, Soul Sand, and dirt/grass gap repair instead of only harvesting mature crop blocks.
-
-NeoForge integration:
-
-- NeoForge now registers native `ModConfigSpec` client and server configs using the same `fastharvester-client.toml` and `fastharvester-server.toml` file names.
-- NeoForge syncs those native config values back into the shared `Config` fields that the common gameplay code reads.
-- NeoForge exposes its built-in config screen from the Mods list instead of using a custom screen.
-
-| Option                   | Default   | Description                                         |
-|--------------------------|-----------|-----------------------------------------------------|
-| `tickInterval`           | `300`     | Time between anchor runs in ticks                   |
-| `frameRediscoveryInterval` | `100`   | Time between loaded-chunk rediscovery passes for the recorded frame registry |
-| `scanRangeX`             | `4`       | Max scan radius along the X axis from the frame; value 4 covers 4 blocks in each X direction |
-| `scanRangeZ`             | `4`       | Max scan radius along the Z axis from the frame; value 4 covers 4 blocks in each Z direction |
-| `durabilityMode`         | `normal`  | Hoe durability behavior                             |
-| `mendingNegation`        | `true`    | If true, Mending prevents durability loss entirely  |
-| `debugLogging`           | `false`   | Enables verbose server log output                   |
-| `chestFullCooldownTicks` | `100`     | Delay before retrying a full chest                  |
-| `maxSpiralDurationTicks` | `100`     | Max number of ticks to spread one scan cycle across |
-| `rotationMode`          | `full_rotation_per_harvest`     | Controls how frame rotation progresses during a harvest cycle |
-| `seedClutterMode`        | `reduced` | Controls extra seed-drop filtering                  |
-| `seedReservePerType`     | `80`      | Reserve kept per supported seed type in `reduced` mode |
-
-Client-only config:
-
-| Option             | Default | Description                       |
-|--------------------|---------|-----------------------------------|
-| `harvestParticles` | `true`  | Enables colored harvest particles |
+| Option             | Default | Type    | Description                              |
+|--------------------|---------|---------|------------------------------------------|
+| `harvestParticles` | `true`  | boolean | Enable coloured harvest particle effects |
 
 ### `durabilityMode`
 
-| Mode                | Behavior                                               |
-|---------------------|--------------------------------------------------------|
-| `normal`            | Vanilla-like durability loss with Unbreaking respected |
-| `ignore_unbreaking` | Durability loss without Unbreaking reduction           |
-| `none`              | No durability loss                                     |
+| Value               | Behaviour                                                               |
+|---------------------|-------------------------------------------------------------------------|
+| `normal`            | Vanilla durability loss; Unbreaking enchantment is respected            |
+| `ignore_unbreaking` | Durability loss without Unbreaking reduction                            |
+| `none`              | No durability loss                                                      |
 
 ### `rotationMode`
 
-| Mode                        | Behavior                                                         |
-|-----------------------------|------------------------------------------------------------------|
-| `step_per_harvest`          | Advances the frame by 1 step for each completed harvest cycle with at least one crop |
-| `full_rotation_per_harvest` | Rotates through all 8 frame steps once across the whole harvest pass |
-| `follow_harvest_spiral`     | Rotates through all 8 frame steps multiple times across the harvest pass, matching the number of rings processed around the frame |
+| Value                       | Behaviour                                                                              |
+|-----------------------------|----------------------------------------------------------------------------------------|
+| `step_per_harvest`          | One step after each completed harvest cycle with at least one crop                     |
+| `full_rotation_per_harvest` | 8-step animation across the full harvest pass                                          |
+| `follow_harvest_spiral`     | Per-ring rotation tracking the outward spiral, up to 8 steps per ring                 |
 
 ### `seedClutterMode`
 
-| Mode      | Behavior                                            |
-|-----------|-----------------------------------------------------|
-| `normal`  | Keep all supported seed drops                       |
-| `reduced` | Keep only up to `seedReservePerType` per supported seed type |
-| `none`    | Discard supported seed drops entirely               |
+| Value     | Behaviour                                                                                                           |
+|-----------|---------------------------------------------------------------------------------------------------------------------|
+| `none`    | Discard seed drops before insertion. Replanting draws from drops first, then chest (subject to `seedReservePerType`) |
+| `normal`  | One drop seed consumed for replanting; all remaining go into the chest unchanged                                    |
+| `reduced` | One drop seed consumed for replanting; remaining drops halved (rounded down) before insertion                       |
 
-Current scope:
+Halving in `reduced` does not apply when the seed item is also the crop fruit (carrot, potato, nether wart, torchflower-type). Chest removal for replanting is always gated by `seedReservePerType`.
 
-- Included: Wheat Seeds, Beetroot Seeds
-- Excluded: Torchflower Seeds, Nether Wart, Sweet Berries
+Current scope for seed filtering (clutter/reserve logic):
 
-Config implementation notes:
+- **Included:** Wheat Seeds, Beetroot Seeds, Melon Seeds, Pumpkin Seeds
+- **Treated as crop-fruit (not halved):** Carrot, Potato, Nether Wart, Torchflower Seeds
 
-- `durabilityMode`, `rotationMode`, and `seedClutterMode` are backed by dedicated enums in separate files
-- The runtime config is split into separate server and client TOML files
-- Enum-backed config values are still stored as lowercase strings for readability and stability
-- Fabric-side Mod Menu support is implemented with a custom config screen because FastHarvester does not use PuzzlesLib's generated config UI
-- Fabric FastItemFrames chunk enumeration avoids string-based reflection on Minecraft internals because those names do not survive remapping in release jars
-- Fabric debug logging now emits loaded-frame discovery only when counts change or on periodic summaries, and slow-run warnings are rate-limited unless a tick is significantly over budget
-- Both the common and Fabric scanners now defer a newly discovered anchor's first real work cycle until `tickInterval` has elapsed, using a per-frame tick countdown so world load cannot immediately trigger harvest, tilling, replanting, or hoe replacement without starving the anchor indefinitely
-- Frames are now recorded per chunk as they are discovered; chunk unloads mark those recorded frames inactive instead of pruning them, and inactive entries are ignored by harvest execution until chunk load or a rediscovery pass marks them active again
-- NeoForge uses its native `ModConfigSpec` registration and built-in config screen while continuing to feed the shared common `Config` state
+---
 
-## Compatibility
+## Key Source Files
 
-FastItemFrames integration:
+| File                                                                     | Purpose                                                    |
+|--------------------------------------------------------------------------|------------------------------------------------------------|
+| `common/.../frame/FrameScanner.java`                                     | Scan orchestration, hoe I/O, rotation apply               |
+| `common/.../frame/FarmScanTask.java`                                     | Incremental tick-based spiral scanner                      |
+| `common/.../frame/SpiralStep.java`                                       | Immutable (pos, direction) spiral record                   |
+| `common/.../frame/FrameRegistry.java`                                    | Anchor registry, chunk lifecycle, rotation batching        |
+| `common/.../frame/FrameDiscovery.java`                                   | Frame discovery for vanilla and FIF frames                 |
+| `common/.../frame/CatchupManager.java`                                   | Gradual discovery queue across ticks                       |
+| `common/.../harvest/HarvestUtils.java`                                   | Harvest execution, drop handling, hoe break events         |
+| `common/.../harvest/HarvestContext.java`                                 | Per-scan mutable state (hoe, chest, counters)              |
+| `common/.../harvest/CropRegistry.java`                                   | Crop → seed mappings, canonical block normalisation        |
+| `common/.../util/loot/LootLogic.java`                                    | Fortune/Silk Touch drop calculation                        |
+| `common/.../util/hoe/FrameHoeReplacement.java`                           | Broken hoe replacement and frame sync                      |
+| `common/.../util/chest/ChestUtils.java`                                  | Chest insert/remove with reserve enforcement               |
+| `common/.../util/durability/DurabilityLogic.java`                        | Enchantment-aware hoe damage                               |
+| `common/.../config/Config.java`                                          | Runtime config state and TOML I/O                          |
+| `common/.../platform/adapter/FIF.java`                                   | FastItemFrames adapter interface                           |
 
-- Detected reflectively at runtime
-- Uses block-entity iteration instead of vanilla entity queries
-- Paces configurable frame rotation so one scan step produces at most one visual frame-rotation advance
-- Uses client/listener-only block update notifications for FastItemFrames item and rotation sync to avoid unnecessary neighbor-update churn
-- Falls back safely when the mod is not installed
+---
 
-## Build Notes
+## Build Instructions
 
-Useful commands:
+### Prerequisites
+
+- JDK 21
+- Gradle (wrapper included)
+
+### Commands
 
 ```bash
-./gradlew.bat clean build
-./gradlew.bat :common:compileJava :fabric:compileJava :neoforge:compileJava
-./gradlew.bat :common:test
-./gradlew.bat :fabric:runClient
-./gradlew.bat :neoforge:runClient
+# Full build (both loaders, runs tests)
+.\gradlew.bat clean build
+
+# Compile only
+.\gradlew.bat :common:compileJava :fabric:compileJava :neoforge:compileJava
+
+# Run tests
+.\gradlew.bat :common:test
+
+# Run Fabric dev client
+.\gradlew.bat :fabric:runClient
+
+# Run NeoForge dev client
+.\gradlew.bat :neoforge:runClient
 ```
 
-Release outputs:
+### Output
 
-- `releases/FastHarvester-1.21.11-0.10.0-Fabric.jar`
-- `releases/FastHarvester-1.21.11-0.10.0-NeoForge.jar`
+Release jars are produced in the `releases/` directory:
+
+```
+releases/FastHarvester-1.21.11-<version>-Fabric.jar
+releases/FastHarvester-1.21.11-<version>-NeoForge.jar
+```
+
+---
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+---
+
+## Credits
+
+Developed by **Jared**.
+Built with [MultiLoader Template](https://github.com/jaredlll08/MultiLoader-Template) targeting Fabric and NeoForge.
+Optional integration with [FastItemFrames](https://modrinth.com/mod/fastitemframes) by Fuzss.
