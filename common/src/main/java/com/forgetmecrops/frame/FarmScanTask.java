@@ -3,18 +3,15 @@ package com.forgetmecrops.frame;
 import com.forgetmecrops.config.Config;
 import com.forgetmecrops.enums.RotationMode;
 import com.forgetmecrops.frame.FrameScanner.Anchor;
-import com.forgetmecrops.harvest.CropRegistry;
 import com.forgetmecrops.harvest.HarvestContext;
 import com.forgetmecrops.harvest.HarvestUtils;
 import com.forgetmecrops.util.chest.ChestUtils;
-import com.forgetmecrops.util.durability.DurabilityLogic;
 import com.forgetmecrops.util.hoe.FrameHoeReplacement;
 import com.forgetmecrops.util.log.LogUtils;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.HoeItem;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -23,7 +20,6 @@ import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -103,20 +99,6 @@ class FarmScanTask {
             if (step.pos.equals(center) || candidateSet.contains(step.pos)) spiralPositions.add(step);
         }
 
-        // Pre-scan repair pass: repair nearby dirt/grass into farmland across the whole scan rectangle
-        try {
-            for (int dx = -rX; dx <= rX; dx++) {
-                for (int dz = -rZ; dz <= rZ; dz++) {
-                    BlockPos pos = center.offset(dx, 0, dz);
-                    try {
-                        BlockState s2 = level.getBlockState(pos);
-                        if (s2 == null || s2.isAir()) {
-                            FrameScanner.tryAutoPlantAndTill(anchor, this.ctx, pos, level);
-                        }
-                    } catch (Throwable ignored) {}
-                }
-            }
-        } catch (Throwable ignored) {}
 
         // Quick pre-scan: determine whether any spiral position contains a mature crop or harvestable fruit.
         boolean foundMature = false;
@@ -124,11 +106,9 @@ class FarmScanTask {
             BlockPos p = step.pos;
             try {
                 BlockState s = level.getBlockState(p);
-                    // If the spot is empty, attempt farmland repair (till dirt/grass where nearby farmland exists)
-                    if (s == null || s.isAir()) {
-                        try { FrameScanner.tryAutoPlantAndTill(anchor, this.ctx, p, level); } catch (Throwable ignored) {}
-                        continue;
-                    }
+                if (s == null || s.isAir()) {
+                    continue;
+                }
                 if (s.is(Blocks.MELON) || s.is(Blocks.PUMPKIN)) { foundMature = true; break; }
                 if (s.is(Blocks.MELON_STEM) || s.is(Blocks.PUMPKIN_STEM)) {
                     Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
@@ -179,9 +159,7 @@ class FarmScanTask {
         }
 
         if (!hasMature) {
-            try { LogUtils.logDebug("[SCAN] No mature crops found for {} — skipping spiral", center); } catch (Throwable ignored) {}
-            ctx.logSummary();
-            return true;
+            try { LogUtils.logDebug("[SCAN] No mature crops found for {} — continuing repair sweep via spiral", center); } catch (Throwable ignored) {}
         }
 
         // Validate anchor presence and chest integrity at the start of this tick
@@ -317,6 +295,8 @@ class FarmScanTask {
                     if (harvested) ringHarvested = true;
                     if (harvested) { anyHarvested = true; lastHarvestedRing = ring; }
 
+                    try { FrameScanner.tryAutoPlantAndTill(anchor, ctx, pos, level); } catch (Throwable ignored) {}
+
                     if (Config.getRotationMode() == RotationMode.FOLLOW_HARVEST_SPIRAL) {
                         Integer posInRing = indexToPosInRing.get(idx);
                         List<Integer> full = ringFullIndices.get(ring);
@@ -383,103 +363,7 @@ class FarmScanTask {
             if (!neighborPassDone) {
                 for (int dx = -rX; dx <= rX; dx++) {
                     for (int dz = -rZ; dz <= rZ; dz++) {
-                        BlockPos pos = center.offset(dx, 0, dz);
-                        BlockState cur = level.getBlockState(pos);
-                        if (!cur.isAir()) continue;
-                        BlockPos belowPos = pos.below();
-                        BlockState below = level.getBlockState(belowPos);
-
-                        if (below != null && below.getBlock() == Blocks.FARMLAND) {
-                            Map<Block, Integer> counts = new HashMap<>();
-                            Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                            for (Direction d : dirs) {
-                                BlockPos npos = pos.relative(d);
-                                BlockState ns = level.getBlockState(npos);
-                                Block b = ns.getBlock();
-                                Block rep = CropRegistry.canonicalCropBlock(b);
-                                if (rep != null && CropRegistry.isCropBlock(rep)) {
-                                    Integer prev = counts.get(rep);
-                                    if (prev == null) counts.put(rep, 1);
-                                    else counts.put(rep, prev + 1);
-                                }
-                            }
-                            if (!counts.isEmpty()) {
-                                Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                                Item seed = CropRegistry.clutterSeed(chosen);
-                                if (seed != null && ChestUtils.removeOne(anchor.chest, seed, false)) {
-                                    BlockState plantState = chosen.defaultBlockState();
-                                    try { if (plantState.getBlock() instanceof CropBlock) plantState = FrameScanner.setAgeSafe(plantState, 0); } catch (Throwable t) {}
-                                    level.setBlock(pos, plantState, 3);
-                                }
-                            }
-                        }
-
-                        if (below != null && below.getBlock() == Blocks.SOUL_SAND) {
-                            Map<Block, Integer> counts = new HashMap<>();
-                            Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                            for (Direction d : dirs) {
-                                BlockPos npos = pos.relative(d);
-                                BlockState ns = level.getBlockState(npos);
-                                Block b = ns.getBlock();
-                                if (b == Blocks.NETHER_WART) {
-                                    Integer prev = counts.get(b);
-                                    if (prev == null) counts.put(b, 1);
-                                    else counts.put(b, prev + 1);
-                                }
-                            }
-                            if (!counts.isEmpty()) {
-                                Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                                Item seed = CropRegistry.clutterSeed(chosen);
-                                if (seed != null && ChestUtils.removeOne(anchor.chest, seed, false)) {
-                                    BlockState plantState = chosen.defaultBlockState();
-                                    try { if (plantState.getBlock() instanceof CropBlock) plantState = FrameScanner.setAgeSafe(plantState, 0); } catch (Throwable t) {}
-                                    level.setBlock(pos, plantState, 3);
-                                }
-                            }
-                        }
-
-                        if (below != null && (below.getBlock() == Blocks.DIRT || below.getBlock() == Blocks.GRASS_BLOCK)) {
-                            Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                            int farmlandNeighbors = 0;
-                            for (Direction d : dirs) {
-                                BlockState ns = level.getBlockState(belowPos.relative(d));
-                                if (ns != null && ns.getBlock() == Blocks.FARMLAND) farmlandNeighbors++;
-                            }
-                            if (farmlandNeighbors < 1) continue;
-                            BlockState farmland = Blocks.FARMLAND.defaultBlockState();
-                            level.setBlock(belowPos, farmland, 3);
-                            ItemStack before = ctx.getHoe().isEmpty() ? (anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy()) : ctx.getHoe().copy();
-                            try {
-                                if (ctx.isSkipNextDamage()) {
-                                    ctx.setSkipNextDamage(false);
-                                } else {
-                                    DurabilityLogic.applyDamage(level, ctx.getHoe(), level.getRandom());
-                                }
-                            } catch (Throwable ignored) {}
-                            if (ctx.getHoe().isEmpty()) HarvestUtils.handleBrokenHoe(ctx, before);
-
-                            Map<Block, Integer> counts2 = new HashMap<>();
-                            for (Direction d : dirs) {
-                                BlockPos npos = pos.relative(d);
-                                BlockState ns = level.getBlockState(npos);
-                                Block b = ns.getBlock();
-                                Block rep = CropRegistry.canonicalCropBlock(b);
-                                if (rep != null && CropRegistry.isCropBlock(rep)) {
-                                    Integer prev = counts2.get(rep);
-                                    if (prev == null) counts2.put(rep, 1);
-                                    else counts2.put(rep, prev + 1);
-                                }
-                            }
-                            if (!counts2.isEmpty()) {
-                                Block chosen2 = counts2.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
-                                Item seed2 = CropRegistry.clutterSeed(chosen2);
-                                if (seed2 != null && ChestUtils.removeOne(anchor.chest, seed2, false)) {
-                                    BlockState plantState2 = chosen2.defaultBlockState();
-                                    try { if (plantState2.getBlock() instanceof CropBlock) plantState2 = FrameScanner.setAgeSafe(plantState2, 0); } catch (Throwable t) {}
-                                    level.setBlock(pos, plantState2, 3);
-                                }
-                            }
-                        }
+                        try { FrameScanner.tryAutoPlantAndTill(anchor, ctx, center.offset(dx, 0, dz), level); } catch (Throwable ignored) {}
                     }
                 }
                 neighborPassDone = true;
@@ -528,3 +412,4 @@ class FarmScanTask {
         return false;
     }
 }
+

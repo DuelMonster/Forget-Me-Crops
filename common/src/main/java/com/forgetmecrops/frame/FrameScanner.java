@@ -362,14 +362,58 @@ public class FrameScanner {
      * Returns true if a block was placed.
      */
     static boolean tryPlantConsensus(Map<Block, Integer> counts, Anchor anchor, Level level, BlockPos pos) {
-        if (counts.isEmpty()) return false;
-        Block chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
+        Block chosen = null;
+        if (!counts.isEmpty()) {
+            chosen = counts.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).get().getKey();
+        } else {
+            chosen = chooseChestFallbackCrop(anchor, level, pos);
+        }
+        if (chosen == null) return false;
         Item seed = CropRegistry.clutterSeed(chosen);
         if (seed == null || !ChestUtils.removeOne(anchor.chest, seed, false)) return false;
         BlockState plantState = chosen.defaultBlockState();
         try { if (plantState.getBlock() instanceof CropBlock) plantState = setAgeSafe(plantState, 0); } catch (Throwable ignored) {}
         level.setBlock(pos, plantState, 3);
         return true;
+    }
+
+    private static Block chooseChestFallbackCrop(Anchor anchor, Level level, BlockPos pos) {
+        if (anchor == null || anchor.chest == null || level == null || pos == null) return null;
+
+        Block soil = level.getBlockState(pos.below()).getBlock();
+        if (soil == Blocks.SOUL_SAND) {
+            return ChestUtils.countItem(anchor.chest, net.minecraft.world.item.Items.NETHER_WART) > 0 ? Blocks.NETHER_WART : null;
+        }
+        if (soil != Blocks.FARMLAND) return null;
+
+        Block bestBlock = null;
+        int bestCount = 0;
+
+        int wheatSeeds = ChestUtils.countItem(anchor.chest, net.minecraft.world.item.Items.WHEAT_SEEDS);
+        if (wheatSeeds > bestCount) {
+            bestBlock = Blocks.WHEAT;
+            bestCount = wheatSeeds;
+        }
+
+        int carrotCount = ChestUtils.countItem(anchor.chest, net.minecraft.world.item.Items.CARROT);
+        if (carrotCount > bestCount) {
+            bestBlock = Blocks.CARROTS;
+            bestCount = carrotCount;
+        }
+
+        int potatoCount = ChestUtils.countItem(anchor.chest, net.minecraft.world.item.Items.POTATO);
+        if (potatoCount > bestCount) {
+            bestBlock = Blocks.POTATOES;
+            bestCount = potatoCount;
+        }
+
+        int beetrootSeeds = ChestUtils.countItem(anchor.chest, net.minecraft.world.item.Items.BEETROOT_SEEDS);
+        if (beetrootSeeds > bestCount) {
+            bestBlock = Blocks.BEETROOTS;
+            bestCount = beetrootSeeds;
+        }
+
+        return bestBlock;
     }
 
     static void tryAutoPlantAndTill(Anchor anchor, HarvestContext ctx, BlockPos pos, Level level) {
@@ -487,11 +531,12 @@ public class FrameScanner {
 
             Block below = level.getBlockState(pos.below()).getBlock();
             if (below == Blocks.FARMLAND) {
-                return CropRegistry.hasClearFarmlandCropConsensus(level, pos);
+                // Empty prepared farmland should remain part of the farm so repair/replant scans can traverse it.
+                return true;
             }
             if (below == Blocks.SOUL_SAND) {
-                if (level.getBlockState(pos.north()).is(Blocks.NETHER_WART) || level.getBlockState(pos.south()).is(Blocks.NETHER_WART)
-                        || level.getBlockState(pos.east()).is(Blocks.NETHER_WART) || level.getBlockState(pos.west()).is(Blocks.NETHER_WART)) return true;
+                // Empty prepared soul sand should remain part of the farm so Nether Wart scans can traverse it.
+                return true;
             }
 
             int melonPumpkinNeighbors = 0;
@@ -843,3 +888,5 @@ public class FrameScanner {
         }
     }
 }
+
+

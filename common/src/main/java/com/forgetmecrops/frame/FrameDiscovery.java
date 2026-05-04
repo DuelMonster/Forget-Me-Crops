@@ -19,6 +19,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.Container;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 /**
  * Centralized discovery and validation helpers for item-frame based anchors.
@@ -50,18 +52,18 @@ public class FrameDiscovery {
                 if (beBelow instanceof Container) { be = beBelow; chestPos = below; }
             }
             if (be instanceof Container chest) {
+                Container resolvedChest = resolveAnchorContainer(level, chestPos, be);
+                if (resolvedChest != null) {
+                    chest = resolvedChest;
+                }
                 boolean chestWaterlogged = false;
                 try { BlockState cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
                 int rX = Math.min(5, Math.max(1, Config.getScanRangeX()));
                 int rZ = Math.min(5, Math.max(1, Config.getScanRangeZ()));
+                boolean nearbyFarmlandSoil = isNearbyFarmlandSoil(level, chestPos, rX, rZ);
                 boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
-                boolean isNetherWartFarm = false;
-                try {
-                    for (int dx = -rX; dx <= rX && !isNetherWartFarm; dx++) for (int dz = -rZ; dz <= rZ && !isNetherWartFarm; dz++) {
-                        if (level.getBlockState(chestPos.offset(dx, 0, dz)).is(Blocks.NETHER_WART)) { isNetherWartFarm = true; break; }
-                    }
-                } catch (Throwable ignored) {}
-                try { LogUtils.logInfo("[TICK] Chest check pos={} be={} waterlogged={} rX={} rZ={} nearbyFarmlandCrop={} isNetherWartFarm={}", chestPos, be.getClass().getName(), chestWaterlogged, rX, rZ, nearbyFarmlandCrop, isNetherWartFarm); } catch (Throwable ignored) {}
+                boolean isNetherWartFarm = isNearbyNetherWartFarm(level, chestPos, rX, rZ);
+                try { LogUtils.logInfo("[TICK] Chest check pos={} be={} waterlogged={} rX={} rZ={} nearbyFarmlandSoil={} nearbyFarmlandCrop={} isNetherWartFarm={}", chestPos, be.getClass().getName(), chestWaterlogged, rX, rZ, nearbyFarmlandSoil, nearbyFarmlandCrop, isNetherWartFarm); } catch (Throwable ignored) {}
                 if (nearbyFarmlandCrop && !chestWaterlogged && !isNetherWartFarm) {
                     LogUtils.logDebug("[TICK] Skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                     return false;
@@ -134,21 +136,21 @@ public class FrameDiscovery {
                 try { LogUtils.logDebug("[FIF] No Container at {} — aborting FIF anchor.", chestPos); } catch (Throwable ignored) {}
                 return false;
             }
-            Container chest = (Container) chestBe;
+            Container chest = resolveAnchorContainer(level, chestPos, chestBe);
+            if (chest == null) {
+                try { LogUtils.logDebug("[FIF] Could not resolve usable container at {} — aborting FIF anchor.", chestPos); } catch (Throwable ignored) {}
+                return false;
+            }
             boolean chestWaterlogged = false;
             BlockState cs = null;
             try { cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
             try { LogUtils.logDebug("[FIF] Chest waterlogged at {}: {}, blockState={}", chestPos, chestWaterlogged, cs == null ? "null" : cs.getBlock().getClass().getName()); } catch (Throwable ignored) {}
             int rX = Math.min(5, Math.max(1, Config.getScanRangeX()));
             int rZ = Math.min(5, Math.max(1, Config.getScanRangeZ()));
+            boolean nearbyFarmlandSoil = isNearbyFarmlandSoil(level, chestPos, rX, rZ);
             boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
-            boolean isNetherWartFarm = false;
-            try {
-                for (int dx = -rX; dx <= rX && !isNetherWartFarm; dx++) for (int dz = -rZ; dz <= rZ && !isNetherWartFarm; dz++) {
-                    if (level.getBlockState(chestPos.offset(dx, 0, dz)).is(Blocks.NETHER_WART)) { isNetherWartFarm = true; break; }
-                }
-            } catch (Throwable ignored) {}
-            try { LogUtils.logInfo("[FIF] chestPos={} be={} rX={} rZ={} nearbyFarmlandCrop={} chestWaterlogged={} isNetherWartFarm={}", chestPos, chestBe.getClass().getName(), rX, rZ, nearbyFarmlandCrop, chestWaterlogged, isNetherWartFarm); } catch (Throwable ignored) {}
+            boolean isNetherWartFarm = isNearbyNetherWartFarm(level, chestPos, rX, rZ);
+            try { LogUtils.logInfo("[FIF] chestPos={} be={} rX={} rZ={} nearbyFarmlandSoil={} nearbyFarmlandCrop={} chestWaterlogged={} isNetherWartFarm={}", chestPos, chestBe.getClass().getName(), rX, rZ, nearbyFarmlandSoil, nearbyFarmlandCrop, chestWaterlogged, isNetherWartFarm); } catch (Throwable ignored) {}
             if (nearbyFarmlandCrop && !chestWaterlogged && !isNetherWartFarm) {
                 LogUtils.logDebug("[TICK] FIF anchor at {} in {} skipped: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                 return false;
@@ -178,11 +180,53 @@ public class FrameDiscovery {
      */
     public static boolean isNearbyFarmlandCrop(ServerLevel level, BlockPos chestPos, int rX, int rZ) {
         for (int dx = -rX; dx <= rX; dx++) for (int dz = -rZ; dz <= rZ; dz++) {
-            BlockState ns = level.getBlockState(chestPos.offset(dx, 0, dz));
+            // Crops rooted in farmland are above chest-level farmland blocks.
+            BlockState ns = level.getBlockState(chestPos.offset(dx, 1, dz));
             Block b = ns.getBlock();
             Block rep = CropRegistry.canonicalCropBlock(b);
             if (rep != null && CropRegistry.isCropBlock(rep)) return true;
         }
         return false;
+    }
+
+    public static boolean isNearbyFarmlandSoil(ServerLevel level, BlockPos chestPos, int rX, int rZ) {
+        for (int dx = -rX; dx <= rX; dx++) for (int dz = -rZ; dz <= rZ; dz++) {
+            if (level.getBlockState(chestPos.offset(dx, 0, dz)).is(Blocks.FARMLAND)) return true;
+        }
+        return false;
+    }
+
+    private static boolean isNearbyNetherWartFarm(ServerLevel level, BlockPos chestPos, int rX, int rZ) {
+        for (int dx = -rX; dx <= rX; dx++) for (int dz = -rZ; dz <= rZ; dz++) {
+            BlockPos basePos = chestPos.offset(dx, 0, dz);
+            // Treat prepared soul sand as a valid Nether Wart farm context, even if currently unplanted.
+            if (level.getBlockState(basePos).is(Blocks.SOUL_SAND)) return true;
+            // Nether Wart is planted above soul sand, so check the crop layer above chest level.
+            if (level.getBlockState(basePos.above()).is(Blocks.NETHER_WART)) return true;
+            // Keep same-level check as a fallback for unusual setups.
+            if (level.getBlockState(basePos).is(Blocks.NETHER_WART)) return true;
+        }
+        return false;
+    }
+
+    private static Container resolveAnchorContainer(ServerLevel level, BlockPos chestPos, BlockEntity chestBe) {
+        if (!(chestBe instanceof Container baseContainer)) {
+            return null;
+        }
+
+        try {
+            if (chestBe instanceof ChestBlockEntity) {
+                BlockState state = level.getBlockState(chestPos);
+                if (state.getBlock() instanceof ChestBlock chestBlock) {
+                    // Prefer the combined container so double chests expose both halves.
+                    Container combined = ChestBlock.getContainer(chestBlock, state, level, chestPos, true);
+                    if (combined != null) {
+                        return combined;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        return baseContainer;
     }
 }
