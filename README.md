@@ -1,8 +1,8 @@
-# FastHarvester
+# ForgetMeCrops
 
 > *Because nobody ever got rich standing next to a wheat field with a hoe.*
 
-FastHarvester automates crop harvesting for Fabric and NeoForge. Put a hoe in an item frame on top of a chest, grow crops around it, and the farm handles itself — harvesting mature crops, stowing the drops in the chest, replanting from stock, and even fixing the occasional dirt gap you accidentally trampled or hoed into existence.
+ForgetMeCrops automates crop harvesting for Fabric and NeoForge. Put a hoe in an item frame on top of a chest, grow crops around it, and the farm handles itself — harvesting mature crops, stowing the drops in the chest, replanting from stock, and even fixing the occasional dirt gap you accidentally trampled or hoed into existence.
 
 For the full implementation deep-dive — scan internals, package structure, build instructions, and everything else that starts with the word "BFS" — see [TECHNICAL.md](TECHNICAL.md).
 
@@ -10,7 +10,7 @@ For the full implementation deep-dive — scan internals, package structure, bui
 
 ## Overview
 
-FastHarvester scans the crops around a designated item-frame anchor every few seconds, harvests anything ripe, and deposits the drops straight into the attached chest. No player interaction needed. The frame gently rotates as it works so you can tell at a glance that something is actually happening.
+ForgetMeCrops scans the crops around a designated item-frame anchor every few seconds, harvests anything ripe, and deposits the drops straight into the attached chest. No player interaction needed. The frame gently rotates as it works so you can tell at a glance that something is actually happening.
 
 Farms stay active as long as their chunks are loaded, so vanilla chunk loaders and any modded loaders you already have work fine.
 
@@ -79,7 +79,7 @@ Sweet berry bushes are harvested without destroying the bush — the age is simp
 | Fabric Loader | 0.19.2             |
 | Fabric API  | 0.139.5+1.21.11      |
 
-Drop `FastHarvester-1.21.11-<version>-Fabric.jar` into your `mods/` folder alongside Fabric API.
+Drop `ForgetMeCrops-1.21.11-<version>-Fabric.jar` into your `mods/` folder alongside Fabric API.
 Mod Menu is optional but recommended — it gives you an in-game config screen.
 
 ### NeoForge
@@ -88,7 +88,7 @@ Mod Menu is optional but recommended — it gives you an in-game config screen.
 |------------|----------|
 | NeoForge   | 21.11.42 |
 
-Drop `FastHarvester-1.21.11-<version>-NeoForge.jar` into your `mods/` folder.
+Drop `ForgetMeCrops-1.21.11-<version>-NeoForge.jar` into your `mods/` folder.
 The built-in NeoForge config screen is available from the Mods list in the main menu.
 
 ### Quick Setup
@@ -101,7 +101,7 @@ The built-in NeoForge config screen is available from the Mods list in the main 
 
 **Important placement rules:**
 
-- FastHarvester only scans on the same Y level as the item frame. Crops above or below that layer are ignored.
+- ForgetMeCrops only scans on the same Y level as the item frame. Crops above or below that layer are ignored.
 - Normal crop anchors need a waterlogged chest. Nether Wart farms on soul sand do not.
 - The scan range is controlled by `scanRangeX` and `scanRangeZ` in the config (default: 4 blocks in each direction).
 - Anchor validation runs at scan time — if the frame or chest disappears the anchor is automatically unregistered.
@@ -110,7 +110,7 @@ The built-in NeoForge config screen is available from the Mods list in the main 
 
 ## Configuration
 
-Config files are written to `config/fastharvester-server.toml` and `config/fastharvester-client.toml` in your instance directory.
+Config files are written to `config/forget_me_crops-server.toml` and `config/forget_me_crops-client.toml` in your instance directory.
 
 On **Fabric**, if Mod Menu is installed, these can also be edited in-game via the mod's Configure button.
 On **NeoForge**, the built-in config screen is available from the Mods list.
@@ -172,12 +172,12 @@ The halving in `reduced` mode does **not** apply when the seed item is also the 
 
 ### FastItemFrames
 
-FastHarvester works with [FastItemFrames by Fuzss](https://modrinth.com/mod/fastitemframes). When that mod is installed, FastHarvester automatically uses its block-entity based frame lookup instead of the vanilla entity query, which is faster on large farms. The Fabric build uses accessor mixins for chunk access so the remapped production jar works correctly — not just in dev runs.
+ForgetMeCrops works with [FastItemFrames by Fuzss](https://modrinth.com/mod/fastitemframes). When that mod is installed, ForgetMeCrops automatically uses its block-entity based frame lookup instead of the vanilla entity query, which is faster on large farms. The Fabric build uses accessor mixins for chunk access so the remapped production jar works correctly — not just in dev runs.
 
 ### Other Mods
 
 - Any vanilla-compatible chunk loader keeps anchors ticking while no player is nearby.
-- FastHarvester does not modify any block behaviour directly; it reads and sets blocks through the normal level API, so it should coexist cleanly with crop growth mods.
+- ForgetMeCrops does not modify any block behaviour directly; it reads and sets blocks through the normal level API, so it should coexist cleanly with crop growth mods.
 - The mod does not register custom blocks, items, or entities — there is nothing to conflict with at registry time.
 
 ---

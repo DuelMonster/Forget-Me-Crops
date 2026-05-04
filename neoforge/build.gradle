@@ -154,7 +154,7 @@ tasks.named('runClient') {
                 f.isFile() && lower.endsWith('.jar') && relatedModNameTokens.any { token -> lower.contains(token) }
             }?.each { stale ->
                 stale.delete()
-                logger.lifecycle("[FastHarvester] Removed related mod jar: ${stale.name}")
+                logger.lifecycle("[ForgetMeCrops] Removed related mod jar: ${stale.name}")
             }
         }
     }
@@ -170,7 +170,7 @@ tasks.named('runServer') {
                 f.isFile() && lower.endsWith('.jar') && relatedModNameTokens.any { token -> lower.contains(token) }
             }?.each { stale ->
                 stale.delete()
-                logger.lifecycle("[FastHarvester] Removed related mod jar: ${stale.name}")
+                logger.lifecycle("[ForgetMeCrops] Removed related mod jar: ${stale.name}")
             }
         }
     }

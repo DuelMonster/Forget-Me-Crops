@@ -1,0 +1,14 @@
+{
+  "ForgetMeCrops.config.tickInterval": "Tick Interval",
+  "ForgetMeCrops.config.scanRangeX": "Scan Range (X)",
+  "ForgetMeCrops.config.scanRangeZ": "Scan Range (Z)",
+  "ForgetMeCrops.config.durabilityMode": "Durability Mode",
+  "ForgetMeCrops.config.mendingNegation": "Mending Negation",
+  "ForgetMeCrops.config.debugLogging": "Debug Logging",
+  "ForgetMeCrops.config.chestFullCooldownTicks": "Chest Full Cooldown Ticks",
+  "ForgetMeCrops.config.maxSpiralDurationTicks": "Max Spiral Duration Ticks",
+  "ForgetMeCrops.config.rotationMode": "Rotation Mode",
+  "ForgetMeCrops.config.seedClutterMode": "Seed Clutter Mode",
+  "ForgetMeCrops.config.seedReservePerType": "Seed Reserve Per Type",
+  "ForgetMeCrops.config.harvestParticles": "Harvest Particles"
+}

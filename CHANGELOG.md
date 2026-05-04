@@ -1,9 +1,17 @@
 # CHANGELOG
 
+## 0.12.0
+
+- Rename project from FastHarvester to Forget-Me-Crops: display name, mod ID (`forget_me_crops`), Java package root (`com.forgetmecrops`), metadata, resources, and documentation updated throughout.
+- Replace all ignored-exception catch blocks with explicit `logTrace`/`logDebug` calls in `FabricPlatformHelper`, `NeoForgePlatformHelper`, `FabricFarmTicker`, and `FrameScanner`.
+- Remove redundant null checks on non-null context objects in `HarvestUtils` and `FarmScanTask`.
+- Harden `Config.configFileForKey` to use literal file name strings, eliminating a potential null-deref SpotBugs warning.
+- Fix `FrameDiscovery` debug log to use resolved `be.getClass().getName()` instead of conditional null check.
+
 ## 0.11.0
 
 - Refactor `FrameScanner` to deduplicate anchor validation, planting consensus logic, and shared spiral generation paths.
-- Extract `FarmScanTask` and `SpiralStep` from `FrameScanner` into top-level package-private classes in `com.fastharvester.frame`.
+- Extract `FarmScanTask` and `SpiralStep` from `FrameScanner` into top-level package-private classes in `com.forgetmecrops.frame`.
 
 ## 0.10.0
 
@@ -76,10 +84,10 @@
 - Implement per tick rotation batching and frame registry flush path
 - Mark utility classes non instantiable
 - Move FastItemFrameAdapterImpl to platform.adapter and update refs; move TestUtils to test sources
-- Move FrameScanner/FrameRegistry/FrameDiscovery to com.fastharvester.frame and update callers
-- Move LootLogic to com.fastharvester.util.loot; preserve vanilla fortune/silk touch behavior
-- Move HoeUtils, ChestUtils, DurabilityLogic to com.fastharvester.util.*; update callers and tests
-- Update callers to new com.fastharvester.frame and com.fastharvester.util.* packages
+- Move FrameScanner/FrameRegistry/FrameDiscovery to com.forgetmecrops.frame and update callers
+- Move LootLogic to com.forgetmecrops.util.loot; preserve vanilla fortune/silk touch behavior
+- Move HoeUtils, ChestUtils, DurabilityLogic to com.forgetmecrops.util.*; update callers and tests
+- Update callers to new com.forgetmecrops.frame and com.forgetmecrops.util.* packages
 
 ## 0.5.0
 
@@ -109,7 +117,7 @@
 - Align toolchain languageVersion with java version property
 - Set java version back to 21 and restore neoforge mixin compatibility to JAVA 21
 - Relax NeoForge loader version range for dev runs
-- Correct mixin package names to com.fastharvester.mixin
+- Correct mixin package names to com.forgetmecrops.mixin
 - Add tests, CI, packaging; bump version to 1.2.0; remove forge placeholders; update fabric mod metadata; add changelog
 - Add pure Java TestUtils and update tests to avoid Minecraft classes
 - Commit remaining platform/loot/durability changes
@@ -142,7 +150,7 @@
 
 ## 0.0.0
 
-- Initial commit of FastHarvester mod skeleton
+- Initial commit of ForgetMeCrops mod skeleton
 - Implement core farm scanning and automation logic in common
 - Recreate common module structure, config, and core files
 - Add Fabric and NeoForge entrypoints and update loader metadata

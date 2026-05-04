@@ -1,6 +1,6 @@
-# Technical Reference — FastHarvester
+# Technical Reference — ForgetMeCrops
 
-This document covers the full implementation of FastHarvester: architecture, scanning algorithms, rotation internals, hoe handling, loot logic, platform differences, configuration, build instructions, and credits.
+This document covers the full implementation of ForgetMeCrops: architecture, scanning algorithms, rotation internals, hoe handling, loot logic, platform differences, configuration, build instructions, and credits.
 
 For the user-facing setup guide and config reference see [README.md](README.md).
 
@@ -8,7 +8,7 @@ For the user-facing setup guide and config reference see [README.md](README.md).
 
 ## Architecture Overview
 
-FastHarvester is structured as a Gradle multi-module project:
+ForgetMeCrops is structured as a Gradle multi-module project:
 
 | Module    | Role                                                                         |
 |-----------|------------------------------------------------------------------------------|
@@ -22,18 +22,18 @@ All gameplay decisions live in `common`. The platform modules only wire up ticke
 
 | Package                              | Contents                                                                          |
 |--------------------------------------|-----------------------------------------------------------------------------------|
-| `com.fastharvester.frame`            | `FrameScanner`, `FrameRegistry`, `FrameDiscovery`, `FarmScanTask`, `SpiralStep`, `CatchupManager` |
-| `com.fastharvester.harvest`          | `HarvestUtils`, `HarvestContext`, `CropRegistry`                                  |
-| `com.fastharvester.config`           | `Config`, `ConfigDescriptors`                                                     |
-| `com.fastharvester.enums`            | `DurabilityMode`, `RotationMode`, `SeedClutterMode`                               |
-| `com.fastharvester.util.chest`       | `ChestUtils` — insert/remove helpers with reserve enforcement                     |
-| `com.fastharvester.util.durability`  | `DurabilityLogic` — enchantment-aware hoe damage                                  |
-| `com.fastharvester.util.hoe`         | `FrameHoeReplacement` — broken-hoe replacement and frame sync                     |
-| `com.fastharvester.util.loot`        | `LootLogic` — Fortune/Silk Touch aware drop calculation                           |
-| `com.fastharvester.util.log`         | `LogUtils` — gated debug/trace logging                                            |
-| `com.fastharvester.platform`         | `Services`, platform adapter interfaces                                           |
-| `com.fastharvester.platform.adapter` | `FIF`, `FastItemFrameAdapterImpl` — FastItemFrames integration                    |
-| `com.fastharvester.mixin`            | Fabric-side accessor mixins for chunk enumeration                                 |
+| `com.forgetmecrops.frame`            | `FrameScanner`, `FrameRegistry`, `FrameDiscovery`, `FarmScanTask`, `SpiralStep`, `CatchupManager` |
+| `com.forgetmecrops.harvest`          | `HarvestUtils`, `HarvestContext`, `CropRegistry`                                  |
+| `com.forgetmecrops.config`           | `Config`, `ConfigDescriptors`                                                     |
+| `com.forgetmecrops.enums`            | `DurabilityMode`, `RotationMode`, `SeedClutterMode`                               |
+| `com.forgetmecrops.util.chest`       | `ChestUtils` — insert/remove helpers with reserve enforcement                     |
+| `com.forgetmecrops.util.durability`  | `DurabilityLogic` — enchantment-aware hoe damage                                  |
+| `com.forgetmecrops.util.hoe`         | `FrameHoeReplacement` — broken-hoe replacement and frame sync                     |
+| `com.forgetmecrops.util.loot`        | `LootLogic` — Fortune/Silk Touch aware drop calculation                           |
+| `com.forgetmecrops.util.log`         | `LogUtils` — gated debug/trace logging                                            |
+| `com.forgetmecrops.platform`         | `Services`, platform adapter interfaces                                           |
+| `com.forgetmecrops.platform.adapter` | `FIF`, `FastItemFrameAdapterImpl` — FastItemFrames integration                    |
+| `com.forgetmecrops.mixin`            | Fabric-side accessor mixins for chunk enumeration                                 |
 
 ---
 
@@ -120,7 +120,7 @@ The spiral is used in preference to a simple row/column sweep because it natural
 
 ### Incremental Execution (FarmScanTask)
 
-`FarmScanTask` is a package-private top-level class in `com.fastharvester.frame`. One task is created per anchor per scan cycle and stored in `FrameScanner.activeScans`. Each server tick `FrameScanner.tickScans(dimId, level)` calls `task.tick()` on every active task.
+`FarmScanTask` is a package-private top-level class in `com.forgetmecrops.frame`. One task is created per anchor per scan cycle and stored in `FrameScanner.activeScans`. Each server tick `FrameScanner.tickScans(dimId, level)` calls `task.tick()` on every active task.
 
 Per-tick, the task processes `positionsPerTick` spiral positions. `positionsPerTick` is computed at construction time as `ceil(totalPositions / maxSpiralDurationTicks)`. The task self-removes when `currentIndex >= totalPositions` or when `ctx.chestFull` is set.
 
@@ -303,7 +303,7 @@ Both the Fabric and NeoForge tickers follow the same pattern:
 
 ## FastItemFrames Compatibility
 
-FastItemFrames (FIF) replaces vanilla item frame entities with block entities for performance. FastHarvester detects this mod reflectively at runtime via `FIF.isFastItemFrameBlockEntity(be)`.
+FastItemFrames (FIF) replaces vanilla item frame entities with block entities for performance. ForgetMeCrops detects this mod reflectively at runtime via `FIF.isFastItemFrameBlockEntity(be)`.
 
 When FIF is present:
 
@@ -329,14 +329,14 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 ## NeoForge Platform Notes
 
 - Ticker: `ServerTickEvent.Post` drives the per-tick scan.
-- Config: registers native `ModConfigSpec` client and server configs using the same file names (`fastharvester-client.toml`, `fastharvester-server.toml`). A `ModConfigEvent.LOADING` handler syncs the NeoForge config values into the shared `Config` fields that all common gameplay code reads.
+- Config: registers native `ModConfigSpec` client and server configs using the same file names (`forget_me_crops-client.toml`, `forget_me_crops-server.toml`). A `ModConfigEvent.LOADING` handler syncs the NeoForge config values into the shared `Config` fields that all common gameplay code reads.
 - Config screen: provided by NeoForge's built-in config UI from the Mods list; no custom screen needed.
 
 ---
 
 ## Configuration Reference
 
-### Server Config (`fastharvester-server.toml`)
+### Server Config (`forget_me_crops-server.toml`)
 
 | Option                     | Default                     | Type          | Description                                                                 |
 |----------------------------|-----------------------------|---------------|-----------------------------------------------------------------------------|
@@ -353,7 +353,7 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 | `seedClutterMode`          | `reduced`                   | enum string   | `none` / `normal` / `reduced`                                               |
 | `seedReservePerType`       | `80`                        | int           | Minimum seeds per type kept in chest when pulling for replanting            |
 
-### Client Config (`fastharvester-client.toml`)
+### Client Config (`forget_me_crops-client.toml`)
 
 | Option             | Default | Type    | Description                              |
 |--------------------|---------|---------|------------------------------------------|
@@ -445,8 +445,8 @@ Current scope for seed filtering (clutter/reserve logic):
 Release jars are produced in the `releases/` directory:
 
 ```
-releases/FastHarvester-1.21.11-<version>-Fabric.jar
-releases/FastHarvester-1.21.11-<version>-NeoForge.jar
+releases/ForgetMeCrops-1.21.11-<version>-Fabric.jar
+releases/ForgetMeCrops-1.21.11-<version>-NeoForge.jar
 ```
 
 ---

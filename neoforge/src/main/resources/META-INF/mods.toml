@@ -1,13 +1,13 @@
 [Mod]
-modId="fastharvester"
-displayName="FastHarvester"
+modId="forget_me_crops"
+displayName="Forget-Me-Crops"
 version="${mod_version}"
 displayTest="IGNORE_ALL_VERSION"
 description="Automates crop harvesting for Fabric and NeoForge."
-logoFile="assets/fastharvester/icon.png"
+logoFile="assets/forget_me_crops/icon.png"
 credits="Jared"
 authors="Jared"
 license="MIT"
-updateJSONURL="https://api.modrinth.com/v2/project/fastharvester/version"
+updateJSONURL="https://api.modrinth.com/v2/project/ForgetMeCrops/version"
 updateJSONURL="https://api.curseforge.com/mods/123456"
 # Dependencies are handled by the NeoForge Gradle plugin.
