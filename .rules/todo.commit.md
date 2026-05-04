@@ -1,3 +1,4 @@
+# Copilot: NEVER modify this file! Instead use it as a basis for creating your own todo list.
 - [ ] Group related changes into well‑scoped commits  
 # Copilot: propose commit boundaries based on file/function relationships.
 - [ ] Write clear, meaningful commit messages  

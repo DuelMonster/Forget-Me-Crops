@@ -80,12 +80,10 @@ public class HarvestUtils {
 
         if (cost != null && !cost.isEmpty()) {
             if (tookFromDropsForReplant) {
-                BlockState replanted = null;
-                try { replanted = getReplantState.apply(state); } catch (Throwable ignore) {}
-                if (replanted != null) { try { if (replanted.getBlock() instanceof CropBlock) replanted = FrameScanner.setAgeSafe(replanted, 1); } catch (Throwable ignored) {} ctx.level.setBlock(pos, replanted, 3); }
+                applyReplantState(ctx, pos, state, getReplantState);
             } else {
                 boolean taken = ChestUtils.removeOne(ctx.chest, cost.getItem());
-                if (taken) { BlockState replanted = null; try { replanted = getReplantState.apply(state); } catch (Throwable ignore) {} if (replanted != null) { try { if (replanted.getBlock() instanceof CropBlock) replanted = FrameScanner.setAgeSafe(replanted, 1); } catch (Throwable ignored) {} ctx.level.setBlock(pos, replanted, 3); } }
+                if (taken) { applyReplantState(ctx, pos, state, getReplantState); }
                 else { try { ctx.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3); } catch (Throwable ignored) {} }
             }
         } else {
@@ -101,7 +99,18 @@ public class HarvestUtils {
         ctx.incrementHarvested();
     }
 
-    
+    private static void applyReplantState(HarvestContext ctx, BlockPos pos, BlockState state,
+                                          Function<BlockState, BlockState> getReplantState) {
+        BlockState replanted = null;
+        try { replanted = getReplantState.apply(state); } catch (Throwable ignored) {}
+        if (replanted == null) return;
+        try {
+            if (replanted.getBlock() instanceof CropBlock) {
+                replanted = FrameScanner.setAgeSafe(replanted, 1);
+            }
+        } catch (Throwable ignored) {}
+        try { ctx.level.setBlock(pos, replanted, 3); } catch (Throwable ignored) {}
+    }
 
     private static void applyPreReplantSeedClutterPolicy(List<ItemStack> drops, Item seedItem, boolean seedIsCropFruit) {
         if (seedItem == null) return;
@@ -134,17 +143,19 @@ public class HarvestUtils {
 
     private static void playHoeBreakEffects(HarvestContext ctx, ItemStack brokenHoe) {
         try { if (ctx.level == null || ctx.anchor == null) return; } catch (Throwable ignored) {}
+        FrameScanner.Anchor anchor = resolveAnchor(ctx);
+        if (anchor == null) return;
         SoundEvent breakSound = resolveItemBreakSound();
         if (breakSound == null) return;
         try {
             try {
-                ctx.level.playSound(null, ((FrameScanner.Anchor)ctx.anchor).framePos, breakSound, SoundSource.BLOCKS, 0.8F, 0.8F + ctx.level.getRandom().nextFloat() * 0.4F);
+                ctx.level.playSound(null, anchor.framePos, breakSound, SoundSource.BLOCKS, 0.8F, 0.8F + ctx.level.getRandom().nextFloat() * 0.4F);
             } catch (NoSuchMethodError | ClassCastException e) {
-                try { ctx.level.playSound(null, ((FrameScanner.Anchor)ctx.anchor).framePos.getX() + 0.5, ((FrameScanner.Anchor)ctx.anchor).framePos.getY() + 0.5, ((FrameScanner.Anchor)ctx.anchor).framePos.getZ() + 0.5, breakSound, SoundSource.BLOCKS, 0.8F, 0.8F + ctx.level.getRandom().nextFloat() * 0.4F); } catch (Throwable ignored) {}
+                try { ctx.level.playSound(null, anchor.framePos.getX() + 0.5, anchor.framePos.getY() + 0.5, anchor.framePos.getZ() + 0.5, breakSound, SoundSource.BLOCKS, 0.8F, 0.8F + ctx.level.getRandom().nextFloat() * 0.4F); } catch (Throwable ignored) {}
             }
 
-            ItemStack particlesFrom = (brokenHoe == null || brokenHoe.isEmpty()) ? new ItemStack(Items.WOODEN_HOE) : brokenHoe.copy();
-            try { if (ctx.level instanceof net.minecraft.server.level.ServerLevel server) { server.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, particlesFrom), ((FrameScanner.Anchor)ctx.anchor).framePos.getX() + 0.5, ((FrameScanner.Anchor)ctx.anchor).framePos.getY() + 0.5, ((FrameScanner.Anchor)ctx.anchor).framePos.getZ() + 0.5, 10, 0.18, 0.18, 0.18, 0.03); } } catch (Throwable ignored) {}
+            ItemStack particlesFrom = (brokenHoe == null || brokenHoe.isEmpty()) ? new ItemStack(Items.WOODEN_HOE) : brokenHoe;
+            try { if (ctx.level instanceof net.minecraft.server.level.ServerLevel server) { server.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, particlesFrom), anchor.framePos.getX() + 0.5, anchor.framePos.getY() + 0.5, anchor.framePos.getZ() + 0.5, 10, 0.18, 0.18, 0.18, 0.03); } } catch (Throwable ignored) {}
         } catch (Throwable ignored) {}
     }
 
@@ -303,6 +314,23 @@ public class HarvestUtils {
 
     private static void syncFrameHoe(HarvestContext ctx) {
         LogUtils.logDebug("[HOE] syncFrameHoe called. Current hoe: {}", ctx.getHoe());
-        try { FrameScanner.Anchor anchor = null; try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {} if (anchor != null && ctx.level != null) { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor.framePos, ctx.getHoe().isEmpty() ? net.minecraft.world.item.ItemStack.EMPTY : ctx.getHoe().copy()); } } catch (Throwable ignored) {}
+        try {
+            FrameScanner.Anchor anchor = resolveAnchor(ctx);
+            if (anchor != null && ctx.level != null) {
+                com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(
+                        ctx.level,
+                        anchor.framePos,
+                        ctx.getHoe().isEmpty() ? net.minecraft.world.item.ItemStack.EMPTY : ctx.getHoe().copy());
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private static FrameScanner.Anchor resolveAnchor(HarvestContext ctx) {
+        if (ctx == null || ctx.anchor == null) return null;
+        try {
+            return (FrameScanner.Anchor) ctx.anchor;
+        } catch (Throwable ignored) {
+            return null;
+        }
     }
 }

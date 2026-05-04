@@ -1,3 +1,4 @@
+# Copilot: NEVER modify this file! Instead use it as a basis for creating your own todo list.
 - [ ] Scan entire workspace for duplicated code  
 # Copilot: identify repeated patterns, utilities, or logic blocks and propose consolidation.
 - [ ] Remove redundant or obsolete code  
