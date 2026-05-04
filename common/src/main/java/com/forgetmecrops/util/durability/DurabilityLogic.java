@@ -51,10 +51,10 @@ public class DurabilityLogic {
                 for (Map.Entry<String, Integer> e : ench.entrySet()) {
                     String id = e.getKey();
                     int lvl = (e.getValue() == null) ? 0 : e.getValue();
-                    if (id != null && id.toLowerCase().contains("unbreaking")) {
+                    if (id != null && id.toLowerCase(java.util.Locale.ROOT).contains("unbreaking")) {
                         unbreakingLevel = Math.max(unbreakingLevel, lvl);
                     }
-                    if (id != null && id.toLowerCase().contains("mending")) {
+                    if (id != null && id.toLowerCase(java.util.Locale.ROOT).contains("mending")) {
                         mendingLevel = Math.max(mendingLevel, lvl);
                     }
                 }

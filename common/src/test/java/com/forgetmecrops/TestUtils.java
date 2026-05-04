@@ -16,8 +16,9 @@ public final class TestUtils {
      * @return the simulated number of drops produced
      */
     public static int calculateLootSimple(Object cropType, int fortuneLevel) {
-        int baseDrops = 1 + (int)(Math.random() * 2);
-        int bonus = (int)(Math.random() * (fortuneLevel + 1));
+        java.util.concurrent.ThreadLocalRandom rng = java.util.concurrent.ThreadLocalRandom.current();
+        int baseDrops = 1 + rng.nextInt(2);
+        int bonus = rng.nextInt(fortuneLevel + 1);
         return baseDrops + bonus;
     }
 }

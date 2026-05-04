@@ -82,5 +82,6 @@ subprojects {
         toolVersion = '4.9.0'
         ignoreFailures = true
         showProgress = false
+        excludeFilter = rootProject.file('config/spotbugs-exclude.xml')
     }
 }
