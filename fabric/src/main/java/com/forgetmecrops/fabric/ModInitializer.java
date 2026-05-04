@@ -5,16 +5,15 @@ package com.forgetmecrops.fabric;
 
 import com.forgetmecrops.config.Config;
 import com.forgetmecrops.ForgetMeCrops;
-import com.forgetmecrops.fabric.ticker.FabricFarmTicker;
+import com.forgetmecrops.fabric.ticker.FarmTicker;
 import com.forgetmecrops.util.log.LogUtils;
-import net.fabricmc.api.ModInitializer;
 
 /**
  * Fabric bootstrap: wires up the mod on Fabric and initializes core systems.
  */
-public class ForgetMeCropsFabric implements ModInitializer {
+public class ModInitializer implements net.fabricmc.api.ModInitializer {
     /** Public no-arg constructor used by the mod loader. */
-    public ForgetMeCropsFabric() {}
+    public ModInitializer() {}
     /**
      * Fabric entrypoint: load config, init common logic, and start the farm ticker.
      * Emotional aside: this is the tiny handshake that starts all the farming drama.
@@ -30,6 +29,6 @@ public class ForgetMeCropsFabric implements ModInitializer {
         }
         ForgetMeCrops.init();
         // Start the Fabric farm ticker (discovers anchors and schedules scans)
-        FabricFarmTicker.init();
+        FarmTicker.init();
     }
 }

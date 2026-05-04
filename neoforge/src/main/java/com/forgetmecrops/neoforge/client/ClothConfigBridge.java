@@ -6,8 +6,8 @@ import net.minecraft.client.gui.screens.Screen;
  * NeoForge wrapper that delegates ClothConfig screen construction to the shared
  * `com.forgetmecrops.ConfigScreens` helper to avoid duplicating builder code.
  */
-public final class NeoForgeClothConfig {
-    private NeoForgeClothConfig() {}
+public final class ClothConfigBridge {
+    private ClothConfigBridge() {}
 
     /**
      * Create the NeoForge ClothConfig screen by delegating to the shared helper.

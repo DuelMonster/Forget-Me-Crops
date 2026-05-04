@@ -29,16 +29,16 @@ import com.forgetmecrops.frame.FrameDiscovery;
 import com.forgetmecrops.platform.adapter.FastItemFrameAdapterImpl;
 
 /**
- * NeoForgeFarmTicker: discovers anchors on chunk load/unload and schedules scans on server tick.
+ * FarmTicker: discovers anchors on chunk load/unload and schedules scans on server tick.
  *
  * This ticker behaves similarly to the Fabric ticker but uses NeoForge event hooks.
  *
  * Emotional aside: it likes long walks on the server and gradual, polite discovery.
  * It queues pre-existing frames for gradual processing to avoid large single-tick work.
  */
-public class NeoForgeFarmTicker {
+public class FarmTicker {
     /** Non-instantiable utility class; all members are static. */
-    private NeoForgeFarmTicker() {}
+    private FarmTicker() {}
     private static boolean tickSnapshotLogged = false;
     private static final int CATCHUP_TICKS = 40;
     private static final int DIRECT_SCAN_MAX_SPIRAL_TICKS = 1;
@@ -50,10 +50,10 @@ public class NeoForgeFarmTicker {
      * @param bus event bus to register ticker listeners on
      */
     public static void init(IEventBus bus) {
-        bus.addListener(NeoForgeFarmTicker::onChunkLoad);
-        bus.addListener(NeoForgeFarmTicker::onChunkUnload);
-        bus.addListener(NeoForgeFarmTicker::onServerTick);
-        bus.addListener(NeoForgeFarmTicker::onLevelUnload);
+        bus.addListener(FarmTicker::onChunkLoad);
+        bus.addListener(FarmTicker::onChunkUnload);
+        bus.addListener(FarmTicker::onServerTick);
+        bus.addListener(FarmTicker::onLevelUnload);
     }
 
     private static void onLevelUnload(LevelEvent.Unload event) {

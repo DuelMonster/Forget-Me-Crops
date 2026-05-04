@@ -11,9 +11,9 @@ import net.neoforged.fml.loading.FMLLoader;
 import com.forgetmecrops.util.log.LogUtils;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-public class NeoForgePlatformHelper implements IPlatformHelper {
+public class PlatformHelper implements IPlatformHelper {
     /** Public constructor required by service loading. */
-    public NeoForgePlatformHelper() {}
+    public PlatformHelper() {}
 
     @Override
     public String getPlatformName() { return "NeoForge"; }

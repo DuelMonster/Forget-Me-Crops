@@ -9,7 +9,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.bus.api.IEventBus;
 // ModConfigEvent handlers removed; NeoForge uses shared Config load/save.
 // NeoForge now uses the shared `Config` class and Fabric-style toml filenames.
-import com.forgetmecrops.neoforge.ticker.NeoForgeFarmTicker;
+import com.forgetmecrops.neoforge.ticker.FarmTicker;
 // AutoConfig is not used for NeoForge to avoid duplicate config sources.
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -24,16 +24,16 @@ import com.forgetmecrops.ForgetMeCrops;
  * registers config handlers, and wires the NeoForge farm ticker.
  */
 @Mod(com.forgetmecrops.ModCommon.MOD_ID)
-public final class NeoForgeModInitializer {
+public final class ModInitializer {
 
     @SuppressWarnings("null")
-    public NeoForgeModInitializer(IEventBus modEventBus, ModContainer container) {
+    public ModInitializer(IEventBus modEventBus, ModContainer container) {
         // Use the shared `Config` files (forget_me_crops-client.toml / forget_me_crops-server.toml)
         // to remain consistent with the Fabric module. Avoid registering an
         // additional NeoForge ModConfigSpec to prevent duplicate/conflicting
         // configuration sources that make runtime changes non-deterministic.
         modEventBus.addListener(this::commonSetup);
-        NeoForgeFarmTicker.init(net.neoforged.neoforge.common.NeoForge.EVENT_BUS);
+        FarmTicker.init(net.neoforged.neoforge.common.NeoForge.EVENT_BUS);
 
         boolean isClient = true;
         try {
@@ -47,11 +47,11 @@ public final class NeoForgeModInitializer {
             ClassLoader loader = factoryClass.getClassLoader();
             final java.lang.reflect.Method[] neoForgeCreate = new java.lang.reflect.Method[1];
             try {
-                Class<?> neoCfg = loader.loadClass("com.forgetmecrops.neoforge.client.NeoForgeClothConfig");
+                Class<?> neoCfg = loader.loadClass("com.forgetmecrops.neoforge.client.ClothConfigBridge");
                 Class<?> screenClass = loader.loadClass("net.minecraft.client.gui.screens.Screen");
                 neoForgeCreate[0] = neoCfg.getMethod("create", screenClass);
             } catch (Throwable t2) {
-                LogUtils.logDebug("Could not resolve NeoForgeClothConfig.create on loader", t2);
+                LogUtils.logDebug("Could not resolve ClothConfigBridge.create on loader", t2);
             }
 
             Object factory = Proxy.newProxyInstance(loader, new Class<?>[]{factoryClass}, (proxy, method, args) -> {
@@ -66,7 +66,7 @@ public final class NeoForgeModInitializer {
                                     LogUtils.logInfo("Creating ClothConfig screen for ForgetMeCrops (parent loader={})", a.getClass().getName());
                                     return neoForgeCreate[0].invoke(null, a);
                                 } catch (Throwable t3) {
-                                    LogUtils.logDebug("Invocation of NeoForgeClothConfig.create failed", t3);
+                                    LogUtils.logDebug("Invocation of ClothConfigBridge.create failed", t3);
                                     return null;
                                 }
                             }

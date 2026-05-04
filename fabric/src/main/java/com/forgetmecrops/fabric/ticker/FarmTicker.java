@@ -1,6 +1,6 @@
 package com.forgetmecrops.fabric.ticker;
 
-// ⏱️ FabricFarmTicker: politely pokes farms to scan on a schedule. Cheerful and punctual.
+// ⏱️ FarmTicker: politely pokes farms to scan on a schedule. Cheerful and punctual.
 // Emotional aside: it measures time and whispers encouragement.
 
 import com.forgetmecrops.config.Config;
@@ -25,8 +25,8 @@ import java.util.Map;
 import com.forgetmecrops.frame.CatchupManager;
 import com.forgetmecrops.platform.adapter.FastItemFrameAdapterImpl;
 
-public class FabricFarmTicker {
-    private FabricFarmTicker() {}
+public class FarmTicker {
+    private FarmTicker() {}
     private static boolean tickSnapshotLogged = false;
     private static final int CATCHUP_TICKS = 40;
     private static final int DIRECT_SCAN_MAX_SPIRAL_TICKS = 1;

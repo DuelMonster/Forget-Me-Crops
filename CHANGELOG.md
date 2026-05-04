@@ -3,6 +3,7 @@
 ## 0.12.0
 
 - Rename project from FastHarvester to Forget-Me-Crops: display name, mod ID (`forget_me_crops`), Java package root (`com.forgetmecrops`), metadata, resources, and documentation updated throughout.
+- Unify Fabric and NeoForge class naming for loader entrypoints and helper bridges: use shared names such as `ModInitializer`, `FarmTicker`, `PlatformHelper`, `ClothConfigBridge`, and `ConfigScreenFactoryBridge` with updated loader metadata/service declarations.
 - Replace all ignored-exception catch blocks with explicit `logTrace`/`logDebug` calls in `FabricPlatformHelper`, `NeoForgePlatformHelper`, `FabricFarmTicker`, and `FrameScanner`.
 - Remove redundant null checks on non-null context objects in `HarvestUtils` and `FarmScanTask`.
 - Harden `Config.configFileForKey` to use literal file name strings, eliminating a potential null-deref SpotBugs warning.

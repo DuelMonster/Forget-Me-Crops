@@ -11,9 +11,9 @@ import com.forgetmecrops.util.log.LogUtils;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.phys.AABB;
 
-public class FabricPlatformHelper implements IPlatformHelper {
+public class PlatformHelper implements IPlatformHelper {
     /** Public constructor required by service loading. */
-    public FabricPlatformHelper() {}
+    public PlatformHelper() {}
 
     @Override
     public String getPlatformName() { return "Fabric"; }

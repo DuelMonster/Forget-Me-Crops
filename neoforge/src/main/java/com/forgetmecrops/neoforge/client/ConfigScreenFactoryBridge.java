@@ -10,11 +10,11 @@ import net.neoforged.fml.ModContainer;
  * when building the mods list; providing this class enables the
  * "Config" button for ForgetMeCrops.
  */
-public final class NeoForgeConfigFactory implements IConfigScreenFactory {
-    public NeoForgeConfigFactory() {}
+public final class ConfigScreenFactoryBridge implements IConfigScreenFactory {
+    public ConfigScreenFactoryBridge() {}
 
     @Override
     public Screen createScreen(ModContainer container, Screen parent) {
-        return NeoForgeClothConfig.create(parent);
+        return ClothConfigBridge.create(parent);
     }
 }

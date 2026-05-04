@@ -11,10 +11,10 @@
   "description": "Automates crop harvesting for Fabric and NeoForge.",
   "entrypoints": {
     "main": [
-      "com.forgetmecrops.fabric.ForgetMeCropsFabric"
+      "com.forgetmecrops.fabric.ModInitializer"
     ],
     "modmenu": [
-      "com.forgetmecrops.fabric.ForgetMeCropsFabricModMenu"
+      "com.forgetmecrops.fabric.client.ModMenuEntrypoint"
     ]
   },
   "version": "${mod_version}",

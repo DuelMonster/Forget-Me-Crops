@@ -5,8 +5,8 @@ import net.minecraft.client.gui.screens.Screen;
 /**
  * Tiny wrapper that exposes the config screen factory target class.
  */
-public final class ForgetMeCropsClothConfig {
-    private ForgetMeCropsClothConfig() {}
+public final class ClothConfigBridge {
+    private ClothConfigBridge() {}
 
     /**
      * Creates the in-game config screen.
