@@ -121,6 +121,8 @@ On **NeoForge**, the Mods list Configure button opens the same shared Cloth Conf
 
 Both loaders delegate to the same `ConfigScreen` builder in `common`, with custom entry widgets for every option so tooltips only appear when the mouse is over the option label lane (not over the value field or reset button).
 
+Implementation note: in Cloth Config `21.11.153`, the low-level `BooleanListEntry`, `IntegerListEntry`, and `EnumListEntry` constructors used by custom subclasses are marked deprecated upstream. Forget-Me-Crops keeps these subclasses for label-only tooltip behavior and wraps callbacks with null-safe adapters to satisfy strict null-analysis diagnostics.
+
 ### Server Config
 
 | Option                     | Default                     | What it does                                                                                    |

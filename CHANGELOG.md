@@ -28,6 +28,9 @@
 - Config UI: all option labels, tooltips, category headings, and enum display names moved to `en_us.json`; config screen title now uses `ModCommon.MOD_NAME` directly.
 - Renamed `ConfigDescriptors` to `ConfigDefaults`; class now holds only `DEFAULT` and `MIN` constants, no string literals.
 - Renamed `RotationMode` enum constants: `STEP_PER_HARVEST` → `SINGLE_STEP`, `FULL_ROTATION_PER_HARVEST` → `FULL_ROTATION`, `FOLLOW_HARVEST_SPIRAL` → `FOLLOW_ROTATION`. All usages, docs, and the server TOML template updated.
+- Diagnostics cleanup: resolved Java null-safety warnings in config UI callback wiring by introducing primitive-safe callback adapters in `LabelTooltipIntegerListEntry` and `LabelTooltipBooleanListEntry`, and a typed enum-name bridge in `LabelTooltipEnumListEntry`.
+- Diagnostics cleanup: replaced `Map.merge(..., Integer::sum)` counter updates in `FrameScanner.tryAutoPlantAndTill` with explicit increment logic (`getOrDefault(...)+1`) to avoid boxed `BiFunction<Integer,Integer,Integer>` null-analysis warnings.
+- Cloth Config maintenance note: retained custom `LabelTooltip*ListEntry` subclasses (for label-only tooltip behavior) and added targeted constructor-level deprecation suppressions because Cloth Config `21.11.153` marks all relevant entry constructors deprecated upstream.
 
 ## 0.11.0
 

@@ -303,6 +303,19 @@ Work is spread across ticks by `FarmScanTask`. One task instance per anchor per 
 
 ---
 
+## Null-Safety and Diagnostics Notes
+
+Recent maintenance cleanup addressed null-analysis warnings in Eclipse JDT / VS Code Java diagnostics:
+
+- `LabelTooltipIntegerListEntry` now accepts `IntConsumer` and adapts it to `Consumer<Integer>` with a null-safe bridge.
+- `LabelTooltipBooleanListEntry` now accepts a primitive-style boolean callback (`BoolConsumer`) and adapts it to `Consumer<Boolean>` with null-safe coercion.
+- `LabelTooltipEnumListEntry` now uses a generic `Function<T, Component>` name provider and bridges to Cloth Config's legacy raw-`Enum` function signature.
+- `FrameScanner.tryAutoPlantAndTill` replaced `Map.merge(..., Integer::sum)` hot-path counters with explicit `getOrDefault(...)+1` updates to avoid boxed null-safety warnings on `BiFunction<Integer, Integer, Integer>` descriptors.
+
+Cloth Config API caveat: with pinned version `21.11.153`, the entry constructors used by these subclasses are marked deprecated upstream, so the project keeps targeted `@SuppressWarnings("deprecation")` annotations at those constructor call sites until a non-deprecated replacement API is adopted.
+
+---
+
 ## Tickers and Lifecycle
 
 Both the Fabric and NeoForge tickers follow the same pattern:
