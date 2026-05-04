@@ -50,19 +50,62 @@ tasks.register("publishCurseForge") {
     }
 }
 
-// Release packaging: collect built artifacts into releases/${mod_version}
+tasks.register('cleanLoaderLibs') {
+    group = 'release'
+    description = 'Delete all files from fabric/build/libs and neoforge/build/libs before packaging.'
+    doLast {
+        delete fileTree('fabric/build/libs') { include '**/*' }
+        delete fileTree('neoforge/build/libs') { include '**/*' }
+    }
+}
+
+project(':fabric').tasks.named('build') {
+    mustRunAfter(tasks.named('cleanLoaderLibs'))
+}
+
+project(':neoforge').tasks.named('build') {
+    mustRunAfter(tasks.named('cleanLoaderLibs'))
+}
+
+// Release packaging: copy built runtime jars into releases/
 tasks.register('packageReleases') {
     group = 'release'
-    description = 'Collect Fabric/NeoForge jars into releases/<mod_version> and zip them.'
-    dependsOn(':fabric:build', ':neoforge:build')
+    description = 'Build and copy runtime Fabric/NeoForge jars into releases/.'
+    dependsOn('cleanLoaderLibs', ':fabric:build', ':neoforge:build')
     doLast {
-        def out = file("releases/${mod_version}")
+        def out = file('releases')
         out.mkdirs()
-        fileTree('fabric/build/libs').matching { include '**/*.jar' }.each { f -> copy { from f; into out } }
-        fileTree('neoforge/build/libs').matching { include '**/*.jar' }.each { f -> copy { from f; into out } }
-        def zipFile = file("releases/${mod_version}.zip")
-        ant.zip(destfile: zipFile) { fileset(dir: out) }
-        println "Packaged release at: ${zipFile}"
+
+        def runtimeJarFor = { String loader, String libsDir ->
+            def jars = fileTree(libsDir).matching {
+                include '**/*.jar'
+                exclude '**/*-sources.jar', '**/*-javadoc.jar'
+            }.files.sort { a, b -> b.lastModified() <=> a.lastModified() }
+            def runtimeJar = jars.find { f -> !f.name.contains('-dev') }
+            return runtimeJar ?: jars.find { true }
+        }
+
+        def fabricRuntimeJar = runtimeJarFor('fabric', 'fabric/build/libs')
+        if (fabricRuntimeJar == null) {
+            throw new GradleException('No Fabric runtime jar found in fabric/build/libs')
+        }
+
+        def neoForgeRuntimeJar = runtimeJarFor('neoforge', 'neoforge/build/libs')
+        if (neoForgeRuntimeJar == null) {
+            throw new GradleException('No NeoForge runtime jar found in neoforge/build/libs')
+        }
+
+        copy {
+            from fabricRuntimeJar
+            into out
+        }
+
+        copy {
+            from neoForgeRuntimeJar
+            into out
+        }
+
+        println "Packaged release jars into: ${out}"
     }
 }
 

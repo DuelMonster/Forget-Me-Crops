@@ -2,6 +2,16 @@ plugins {
     id 'multiloader-common'
 }
 
+def releaseModName = mod_name.toString().replaceAll(/\s+/, '_')
+def releaseArchiveBaseName = "${releaseModName}_${mod_version}+${minecraft_version}-${project.name}"
+
+tasks.withType(AbstractArchiveTask).configureEach {
+    if (archiveExtension.getOrElse('') == 'jar') {
+        archiveBaseName.set(releaseArchiveBaseName)
+        archiveVersion.set('')
+    }
+}
+
 configurations {
     commonJava{
         canBeResolved = true
