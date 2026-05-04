@@ -3,11 +3,11 @@ package com.forgetmecrops;
 import com.forgetmecrops.config.Config;
 import com.forgetmecrops.util.log.LogUtils;
 
-// 🚀 ForgetMeCrops: the mod's heart. It waves a tiny flag when the mod starts and quietly hopes players enjoy the harvest.
+// 🚀 Forget-Me-Crops: the mod's heart. It waves a tiny flag when the mod starts and quietly hopes players enjoy the harvest.
 // Why it matters: startup rituals are emotional anchoring for mods.
 
 /**
- * 🌾 ForgetMeCrops: The beating heart of your automated farming dreams! 🌾
+ * 🌾 Forget-Me-Crops: The beating heart of your automated farming dreams! 🌾
  * <p>
  * This class is the main entry point for all the juicy, loader-agnostic logic that makes crops tremble and farmers cheer.
  * Loader-specific entrypoints call into here to kick off the magic. If you ever wondered where the fun begins, it's right here!

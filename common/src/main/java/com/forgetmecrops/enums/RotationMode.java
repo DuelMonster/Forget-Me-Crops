@@ -13,11 +13,11 @@ import java.util.Locale;
  */
 public enum RotationMode {
     /** Advance one rotation step per full farm harvest. */
-    STEP_PER_HARVEST,
+    SINGLE_STEP,
     /** Perform exactly one full 0..7 rotation cycle per full farm harvest. */
-    FULL_ROTATION_PER_HARVEST,
+    FULL_ROTATION,
     /** Rotate to follow the spiral scan progression during harvest. */
-    FOLLOW_HARVEST_SPIRAL;
+    FOLLOW_ROTATION;
 
     /**
      * Return the string value used in config files for this mode.
@@ -28,15 +28,15 @@ public enum RotationMode {
     }
 
     /**
-     * Parse the config string into a RotationMode, defaulting to FOLLOW_HARVEST_SPIRAL on errors.
+     * Parse the config string into a RotationMode, defaulting to FOLLOW_ROTATION on errors.
      * @param value the string value read from config
-     * @return the corresponding RotationMode, or FOLLOW_HARVEST_SPIRAL if unknown
+     * @return the corresponding RotationMode, or FOLLOW_ROTATION if unknown
      */
     public static RotationMode fromConfigValue(String value) {
         try {
             return valueOf(value.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            return FOLLOW_HARVEST_SPIRAL;
+            return FOLLOW_ROTATION;
         }
     }
 }

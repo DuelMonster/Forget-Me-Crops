@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "license": "CC0-1.0",
-  "icon": "assets/forget_me_crops/icon.png",
+  "icon": "assets/forgetmecrops/icon.png",
   "depends": {
     "minecraft": ">=1.20.1",
     "fabricloader": ">=0.14.0",
@@ -20,13 +20,13 @@
   "version": "${mod_version}",
   "environment": "*",
   "contact": {
-    "homepage": "https://github.com/duelmonster/ForgetMeCrops",
-    "issues": "https://github.com/duelmonster/ForgetMeCrops/issues"
+    "homepage": "https://github.com/duelmonster/Forget-Me-Crops",
+    "issues": "https://github.com/duelmonster/Forget-Me-Crops/issues"
   },
   "name": "Forget-Me-Crops",
   "authors": [
     "Jared"
   ],
-  "id": "forget_me_crops"
+  "id": "forgetmecrops"
 }
 

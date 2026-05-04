@@ -9,7 +9,7 @@ import net.neoforged.fml.ModContainer;
  * Service implementation for NeoForge's config-screen SPI.
  * NeoForge discovers implementations via the standard Java ServiceLoader
  * when building the mods list; providing this class enables the
- * "Config" button for ForgetMeCrops.
+ * "Config" button for forgetmecrops.
  */
 public final class ConfigScreenFactoryBridge implements IConfigScreenFactory {
     public ConfigScreenFactoryBridge() {}

@@ -10,14 +10,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Config: The grand spellbook of ForgetMeCrops (now in `config` package).
+ * Config: The grand spellbook of Forget-Me-Crops (now in `config` package).
  */
 public class Config {
     public Config() {}
 
     private static final Path CONFIG_DIR = Path.of("config");
-    private static final Path SERVER_CONFIG_PATH = CONFIG_DIR.resolve("forget_me_crops-server.toml");
-    private static final Path CLIENT_CONFIG_PATH = CONFIG_DIR.resolve("forget_me_crops-client.toml");
+    private static final Path SERVER_CONFIG_PATH = CONFIG_DIR.resolve("forgetmecrops-server.toml");
+    private static final Path CLIENT_CONFIG_PATH = CONFIG_DIR.resolve("forgetmecrops-client.toml");
 
     private static int tickInterval = 300;
     private static int frameRediscoveryInterval = 150;
@@ -29,7 +29,7 @@ public class Config {
     private static int chestFullCooldownTicks = 300;
     private static int maxSpiralDurationTicks = 200;
     private static boolean harvestParticles = true;
-    private static RotationMode rotationMode = RotationMode.FULL_ROTATION_PER_HARVEST;
+    private static RotationMode rotationMode = RotationMode.FULL_ROTATION;
 
     private static SeedClutterMode seedClutterMode = SeedClutterMode.REDUCED;
     private static int seedReservePerType = 80;
@@ -166,11 +166,11 @@ public class Config {
     }
 
     private static List<String> serverHeader() {
-        return List.of("# ForgetMeCrops server config", "# Gameplay and server-side debug behavior.", "");
+        return List.of("# Forget-Me-Crops server config", "# Gameplay and server-side debug behavior.", "");
     }
 
     private static List<String> clientHeader() {
-        return List.of("# ForgetMeCrops client config", "# Client-side visual preferences.", "");
+        return List.of("# Forget-Me-Crops client config", "# Client-side visual preferences.", "");
     }
 
     private static void writeToml(Path path, Map<String, Object> values, List<String> headerLines) throws IOException {
@@ -254,6 +254,6 @@ public class Config {
     }
 
     private static String configFileForKey(String key) {
-        return "harvestParticles".equals(key) ? "forget_me_crops-client.toml" : "forget_me_crops-server.toml";
+        return "harvestParticles".equals(key) ? "forgetmecrops-client.toml" : "forgetmecrops-server.toml";
     }
 }

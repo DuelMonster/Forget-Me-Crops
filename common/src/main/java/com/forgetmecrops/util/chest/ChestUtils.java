@@ -12,7 +12,7 @@ import com.forgetmecrops.harvest.CropRegistry;
 import java.util.List;
 
 /**
- * ChestUtils: Simple, loader-agnostic helpers for container operations used by ForgetMeCrops.
+ * ChestUtils: Simple, loader-agnostic helpers for container operations used by forgetmecrops.
  */
 public class ChestUtils {
     private ChestUtils() {}

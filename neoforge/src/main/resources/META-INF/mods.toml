@@ -1,13 +1,13 @@
 [Mod]
-modId="forget_me_crops"
+modId="forgetmecrops"
 displayName="Forget-Me-Crops"
 version="${mod_version}"
 displayTest="IGNORE_ALL_VERSION"
 description="Automates crop harvesting for Fabric and NeoForge."
-logoFile="assets/forget_me_crops/icon.png"
+logoFile="assets/forgetmecrops/icon.png"
 credits="Jared"
 authors="Jared"
 license="MIT"
-updateJSONURL="https://api.modrinth.com/v2/project/ForgetMeCrops/version"
+updateJSONURL="https://api.modrinth.com/v2/project/Forget-Me-Crops/version"
 updateJSONURL="https://api.curseforge.com/mods/123456"
 # Dependencies are handled by the NeoForge Gradle plugin.

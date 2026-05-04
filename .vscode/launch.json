@@ -7,7 +7,7 @@
       "name": "debug fabric client",
       "preLaunchTask": "debug fabric client",
       "presentation": {
-        "group": "ForgetMeCrops Debug (client)",
+        "group": "Forget-Me-Crops Debug (client)",
         "order": 0
       }
     },
@@ -17,7 +17,7 @@
       "name": "debug fabric client (no related mods)",
       "preLaunchTask": "debug fabric client (no related mods)",
       "presentation": {
-        "group": "ForgetMeCrops Debug (client)",
+        "group": "Forget-Me-Crops Debug (client)",
         "order": 2
       }
     },
@@ -27,7 +27,7 @@
       "name": "debug neoforge client",
       "preLaunchTask": "debug neoforge client",
       "presentation": {
-        "group": "ForgetMeCrops Debug (client)",
+        "group": "Forget-Me-Crops Debug (client)",
         "order": 1
       }
     },
@@ -37,7 +37,7 @@
       "name": "debug neoforge client (no related mods)",
       "preLaunchTask": "debug neoforge client (no related mods)",
       "presentation": {
-        "group": "ForgetMeCrops Debug (client)",
+        "group": "Forget-Me-Crops Debug (client)",
         "order": 3
       }
     },
@@ -47,7 +47,7 @@
       "name": "debug fabric server",
       "preLaunchTask": "debug fabric server",
       "presentation": {
-        "group": "ForgetMeCrops Debug (server)",
+        "group": "Forget-Me-Crops Debug (server)",
         "order": 0
       }
     },
@@ -57,7 +57,7 @@
       "name": "debug fabric server (no related mods)",
       "preLaunchTask": "debug fabric server (no related mods)",
       "presentation": {
-        "group": "ForgetMeCrops Debug (server)",
+        "group": "Forget-Me-Crops Debug (server)",
         "order": 2
       }
     },
@@ -67,7 +67,7 @@
       "name": "debug neoforge server",
       "preLaunchTask": "debug neoforge server",
       "presentation": {
-        "group": "ForgetMeCrops Debug (server)",
+        "group": "Forget-Me-Crops Debug (server)",
         "order": 1
       }
     },
@@ -77,7 +77,7 @@
       "name": "debug neoforge server (no related mods)",
       "preLaunchTask": "debug neoforge server (no related mods)",
       "presentation": {
-        "group": "ForgetMeCrops Debug (server)",
+        "group": "Forget-Me-Crops Debug (server)",
         "order": 3
       }
     },
@@ -96,7 +96,7 @@
       ],
       "vmArgs": [
         "@D:\\Mod_Source\\FastHarvester\\neoforge\\build\\moddev\\clientRunVmArgs.txt",
-        "-Dfml.modFolders\u003dforget_me_crops%%D:\\Mod_Source\\FastHarvester\\neoforge\\bin\\main"
+        "-Dfml.modFolders\u003dforgetmecrops%%D:\\Mod_Source\\FastHarvester\\neoforge\\bin\\main"
       ],
       "cwd": "${workspaceFolder}\\neoforge\\runs\\client",
       "env": {},
@@ -118,7 +118,7 @@
       ],
       "vmArgs": [
         "@D:\\Mod_Source\\FastHarvester\\neoforge\\build\\moddev\\dataRunVmArgs.txt",
-        "-Dfml.modFolders\u003dforget_me_crops%%D:\\Mod_Source\\FastHarvester\\neoforge\\bin\\main"
+        "-Dfml.modFolders\u003dforgetmecrops%%D:\\Mod_Source\\FastHarvester\\neoforge\\bin\\main"
       ],
       "cwd": "${workspaceFolder}\\neoforge\\run",
       "env": {},
@@ -140,7 +140,7 @@
       ],
       "vmArgs": [
         "@D:\\Mod_Source\\FastHarvester\\neoforge\\build\\moddev\\serverRunVmArgs.txt",
-        "-Dfml.modFolders\u003dforget_me_crops%%D:\\Mod_Source\\FastHarvester\\neoforge\\bin\\main"
+        "-Dfml.modFolders\u003dforgetmecrops%%D:\\Mod_Source\\FastHarvester\\neoforge\\bin\\main"
       ],
       "cwd": "${workspaceFolder}\\neoforge\\runs\\server",
       "env": {},

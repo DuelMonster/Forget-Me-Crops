@@ -1,7 +1,7 @@
 package com.forgetmecrops.platform.adapter;
 
 /*
- * FastItemFrameAdapter — a tiny bridge so FastItemFrames and ForgetMeCrops can hold hands.
+ * FastItemFrameAdapter — a tiny bridge so FastItemFrames and Forget-Me-Crops can hold hands.
  * Notes: this is intentionally simple; implementations should be resilient and forgiving.
  */
 

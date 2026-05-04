@@ -4,7 +4,7 @@ package com.forgetmecrops;
 // Why it matters: cross-platform calmness.
 
 /**
- * ModCommon: The universal handshake for ForgetMeCrops!
+ * ModCommon: The universal handshake for Forget-Me-Crops!
  * <p>
  * This class is the glue that binds Fabric, NeoForge, and any other loader together in harmony. It holds the mod's identity and version—think of it as the mod's passport and birth certificate.
  * </p>
@@ -16,21 +16,18 @@ public final class ModCommon {
     /**
      * The mod's unique ID. Don't leave home without it!
      */
-    public static final String MOD_ID = "ForgetMeCrops";
+    public static final String MOD_ID = "${mod_id}";
 
     /**
      * The mod's display name. For when you want to look fancy in logs.
      */
-    public static final String MOD_NAME = "ForgetMeCrops";
+    public static final String MOD_NAME = "${mod_name}";
 
     /**
-     * The mod's version. Always know what flavor of ForgetMeCrops you're running.
+     * The mod's version. Always know what flavor of Forget-Me-Crops you're running.
      */
     public static final String MOD_VERSION = "${mod_version}";
 
-    /**
-     * Private constructor: No one gets to make an instance of this class. It's too cool for that.
-     */
     /**
      * Private constructor: No one gets to make an instance of this class. It's too cool for that.
      */

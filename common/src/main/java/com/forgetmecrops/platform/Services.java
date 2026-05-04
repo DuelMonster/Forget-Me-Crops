@@ -5,7 +5,7 @@ import com.forgetmecrops.platform.services.IPlatformHelper;
 import java.util.ServiceLoader;
 
 /**
- * Services: The magical switchboard operator for ForgetMeCrops!
+ * Services: The magical switchboard operator for Forget-Me-Crops!
  * <p>
  * This class uses Java's ServiceLoader to find the right platform-specific helpers at runtime. It's like a talent scout, but for code.
  * </p>

@@ -20,7 +20,7 @@ import com.forgetmecrops.config.Config;
 import com.forgetmecrops.ForgetMeCrops;
 
 /**
- * NeoForge mod initializer: bootstraps ForgetMeCrops on the NeoForge loader,
+ * NeoForge mod initializer: bootstraps Forget-Me-Crops on the NeoForge loader,
  * registers config handlers, and wires the NeoForge farm ticker.
  */
 @Mod(com.forgetmecrops.ModCommon.MOD_ID)
@@ -28,7 +28,7 @@ public final class ModInitializer {
 
     @SuppressWarnings("null")
     public ModInitializer(IEventBus modEventBus, ModContainer container) {
-        // Use the shared `Config` files (forget_me_crops-client.toml / forget_me_crops-server.toml)
+        // Use the shared `Config` files (forgetmecrops-client.toml / forgetmecrops-server.toml)
         // to remain consistent with the Fabric module. Avoid registering an
         // additional NeoForge ModConfigSpec to prevent duplicate/conflicting
         // configuration sources that make runtime changes non-deterministic.
@@ -63,7 +63,7 @@ public final class ModInitializer {
                         while (argClass != null) {
                             if ("net.minecraft.client.gui.screens.Screen".equals(argClass.getName())) {
                                 try {
-                                    LogUtils.logInfo("Creating ClothConfig screen for ForgetMeCrops (parent loader={})", a.getClass().getName());
+                                    LogUtils.logInfo("Creating ClothConfig screen for Forget-Me-Crops (parent loader={})", a.getClass().getName());
                                     return neoForgeCreate[0].invoke(null, a);
                                 } catch (Throwable t3) {
                                     LogUtils.logDebug("Invocation of ConfigScreen.create failed", t3);

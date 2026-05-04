@@ -159,20 +159,20 @@ public class FrameScanner {
             blocksScanned++;
 
             switch (Config.getRotationMode()) {
-                case FOLLOW_HARVEST_SPIRAL -> {
+                case FOLLOW_ROTATION -> {
                     if (lastDir == null || dir != lastDir) {
                         setFrameRotation(level, center, dirToRotation(dir));
                         lastDir = dir;
                     }
                 }
-                case FULL_ROTATION_PER_HARVEST -> {
+                case FULL_ROTATION -> {
                     int rot = (int) Math.floor((double) i * 8.0 / spiralSteps) & 7;
                     if (rot != lastComputedRot) {
                         setFrameRotation(level, center, rot);
                         lastComputedRot = rot;
                     }
                 }
-                case STEP_PER_HARVEST -> {
+                case SINGLE_STEP -> {
                 }
             }
 
@@ -281,7 +281,7 @@ public class FrameScanner {
             }
         }
 
-        if (anyHarvested && Config.getRotationMode() == RotationMode.STEP_PER_HARVEST) {
+        if (anyHarvested && Config.getRotationMode() == RotationMode.SINGLE_STEP) {
             int newRot = (getFrameRotation(level, center) + 1) & 7;
             setFrameRotation(level, center, newRot);
         }

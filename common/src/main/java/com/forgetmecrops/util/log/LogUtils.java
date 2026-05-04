@@ -7,7 +7,7 @@ import com.forgetmecrops.ModCommon;
 import com.forgetmecrops.config.Config;
 
 /**
- * LogUtils: centralized logging helpers for ForgetMeCrops.
+ * LogUtils: centralized logging helpers for forgetmecrops.
  */
 public final class LogUtils {
     private LogUtils() {}

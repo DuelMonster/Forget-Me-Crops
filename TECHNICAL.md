@@ -1,6 +1,6 @@
-# Technical Reference — ForgetMeCrops
+# Technical Reference — Forget-Me-Crops
 
-This document covers the full implementation of ForgetMeCrops: architecture, scanning algorithms, rotation internals, hoe handling, loot logic, platform differences, configuration, build instructions, and credits.
+This document covers the full implementation of Forget-Me-Crops: architecture, scanning algorithms, rotation internals, hoe handling, loot logic, platform differences, configuration, build instructions, and credits.
 
 For the user-facing setup guide and config reference see [README.md](README.md).
 
@@ -8,7 +8,7 @@ For the user-facing setup guide and config reference see [README.md](README.md).
 
 ## Architecture Overview
 
-ForgetMeCrops is structured as a Gradle multi-module project:
+Forget-Me-Crops is structured as a Gradle multi-module project:
 
 | Module    | Role                                                                         |
 |-----------|------------------------------------------------------------------------------|
@@ -261,7 +261,7 @@ Rotation requests from `FrameScanner.setFrameRotation(...)` are not applied imme
 
 ### Full-rotation animation
 
-When `rotationMode = FULL_ROTATION_PER_HARVEST`, `FarmScanTask` computes a deterministic 8-step sequence:
+When `rotationMode = FULL_ROTATION`, `FarmScanTask` computes a deterministic 8-step sequence:
 
 ```
 start = current frame rotation
@@ -276,9 +276,9 @@ The `animating` flag on `FrameEntry` guards both the pending-rotation flush (ski
 
 | Mode                        | Mechanism                                                                              |
 |-----------------------------|----------------------------------------------------------------------------------------|
-| `STEP_PER_HARVEST`          | One `setFrameRotation` call after the full spiral completes, if anything was harvested |
-| `FULL_ROTATION_PER_HARVEST` | 8-step animation sequence, spread evenly across `numberOfTicksNeeded`                 |
-| `FOLLOW_HARVEST_SPIRAL`     | Per-position rotation based on ring index and ring size, applied during the spiral     |
+| `SINGLE_STEP`               | One `setFrameRotation` call after the full spiral completes, if anything was harvested |
+| `FULL_ROTATION`             | 8-step animation sequence, spread evenly across `numberOfTicksNeeded`                 |
+| `FOLLOW_ROTATION`           | Per-position rotation based on ring index and ring size, applied during the spiral     |
 
 ### Applying rotations
 
@@ -317,7 +317,7 @@ Both the Fabric and NeoForge tickers follow the same pattern:
 
 ## FastItemFrames Compatibility
 
-FastItemFrames (FIF) replaces vanilla item frame entities with block entities for performance. ForgetMeCrops detects this mod reflectively at runtime via `FIF.isFastItemFrameBlockEntity(be)`.
+FastItemFrames (FIF) replaces vanilla item frame entities with block entities for performance. Forget-Me-Crops detects this mod reflectively at runtime via `FIF.isFastItemFrameBlockEntity(be)`.
 
 When FIF is present:
 
@@ -343,14 +343,14 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 ## NeoForge Platform Notes
 
 - Ticker: `ServerTickEvent.Post` drives the per-tick scan.
-- Config files: uses the same shared TOML loader/saver as Fabric (`Config.load()` / `Config.save()` writing `forget_me_crops-client.toml` and `forget_me_crops-server.toml`).
+- Config files: uses the same shared TOML loader/saver as Fabric (`Config.load()` / `Config.save()` writing `forgetmecrops-client.toml` and `forgetmecrops-server.toml`).
 - Config screen: registered via `IConfigScreenFactory` SPI so the Configure button appears in NeoForge's Mods list. Delegates to the same `com.forgetmecrops.client.config.ConfigScreen` used by Fabric.
 
 ---
 
 ## Configuration Reference
 
-### Server Config (`forget_me_crops-server.toml`)
+### Server Config (`forgetmecrops-server.toml`)
 
 | Option                     | Default                     | Type          | Description                                                                 |
 |----------------------------|-----------------------------|---------------|-----------------------------------------------------------------------------|
@@ -363,11 +363,11 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 | `debugLogging`             | `false`                     | boolean       | Verbose server log output                                                   |
 | `chestFullCooldownTicks`   | `300`                       | int           | Cooldown when chest is full                                                 |
 | `maxSpiralDurationTicks`   | `200`                       | int           | Max ticks to spread one scan cycle across                                   |
-| `rotationMode`             | `full_rotation_per_harvest` | enum string   | `step_per_harvest` / `full_rotation_per_harvest` / `follow_harvest_spiral`  |
+| `rotationMode`             | `FULL_ROTATION`             | enum string   | `SINGLE_STEP` / `FULL_ROTATION` / `FOLLOW_ROTATION`                         |
 | `seedClutterMode`          | `reduced`                   | enum string   | `none` / `normal` / `reduced`                                               |
 | `seedReservePerType`       | `80`                        | int           | Minimum seeds per type kept in chest when pulling for replanting            |
 
-### Client Config (`forget_me_crops-client.toml`)
+### Client Config (`forgetmecrops-client.toml`)
 
 | Option             | Default | Type    | Description                              |
 |--------------------|---------|---------|------------------------------------------|
@@ -385,9 +385,9 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 
 | Value                       | Behaviour                                                                              |
 |-----------------------------|----------------------------------------------------------------------------------------|
-| `step_per_harvest`          | One step after each completed harvest cycle with at least one crop                     |
-| `full_rotation_per_harvest` | 8-step animation across the full harvest pass                                          |
-| `follow_harvest_spiral`     | Per-ring rotation tracking the outward spiral, up to 8 steps per ring                 |
+| `SINGLE_STEP`               | One step after each completed harvest cycle with at least one crop                     |
+| `FULL_ROTATION`             | 8-step animation across the full harvest pass                                          |
+| `FOLLOW_ROTATION`           | Per-ring rotation tracking the outward spiral, up to 8 steps per ring                 |
 
 ### `seedClutterMode`
 
@@ -461,8 +461,8 @@ Current scope for seed filtering (clutter/reserve logic):
 Release jars are produced in the `releases/` directory:
 
 ```
-releases/ForgetMeCrops-1.21.11-<version>-Fabric.jar
-releases/ForgetMeCrops-1.21.11-<version>-NeoForge.jar
+releases/Forget-Me-Crops-1.21.11-<version>-Fabric.jar
+releases/Forget-Me-Crops-1.21.11-<version>-NeoForge.jar
 ```
 
 ---

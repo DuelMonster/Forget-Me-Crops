@@ -2,7 +2,7 @@
 
 ## 0.12.0
 
-- Rename project from FastHarvester to Forget-Me-Crops: display name, mod ID (`forget_me_crops`), Java package root (`com.forgetmecrops`), metadata, resources, and documentation updated throughout.
+- Rename project from FastHarvester to Forget-Me-Crops: display name, mod ID (`forgetmecrops`), Java package root (`com.forgetmecrops`), metadata, resources, and documentation updated throughout.
 - Unify Fabric and NeoForge class naming for loader entrypoints and helper bridges: use shared names such as `ModInitializer`, `FarmTicker`, `PlatformHelper`, `ClothConfigBridge`, and `ConfigScreenFactoryBridge` with updated loader metadata/service declarations.
 - Replace all ignored-exception catch blocks with explicit `logTrace`/`logDebug` calls in `PlatformHelper` (Fabric/NeoForge), `FarmTicker`, and `FrameScanner`.
 - Remove redundant null checks on non-null context objects in `HarvestUtils` and `FarmScanTask`.
@@ -19,7 +19,7 @@
 - Fixed scheduled scan continuity when a frame is empty: scan now attempts chest-driven hoe replacement inline instead of immediately aborting.
 - Fixed anchor resumption latency after chest-driven hoe replacement by scheduling immediate scan run (`ticksUntilNextRun = 0`) when an anchor transitions from no hoe to has hoe.
 - Fixed TOML string parsing for quoted enum values so `rotationMode` and other string-backed options load correctly instead of silently falling back.
-- Fixed `FULL_ROTATION_PER_HARVEST` timing to start with spiral scan progression and complete exactly one paced `0..7` cycle over the configured scan duration.
+- Fixed `FULL_ROTATION` timing to start with spiral scan progression and complete exactly one paced `0..7` cycle over the configured scan duration.
 - Config UI: tooltips for all option types (integer fields, boolean toggles, and enum selectors) now appear only when hovering the option label text, not when hovering the value widget or reset button. Implemented via per-loader `LabelHitbox` helper and `LabelTooltipIntegerListEntry` / `LabelTooltipBooleanListEntry` / `LabelTooltipEnumListEntry` custom entry subclasses; `ConfigEntryBuilder` is no longer used in either loader's config screen.
 - Config UI refactor: moved Cloth Config screen construction into shared `com.forgetmecrops.client.config.ConfigScreen` (common module) with shared `ConfigTooltipFactory`, `LabelHitbox`, and `LabelTooltip*ListEntry` classes.
 - Removed now-redundant loader wrappers (`ConfigScreens` and `ClothConfigBridge` in Fabric/NeoForge); loader entrypoints now delegate directly to `ConfigScreen.create(...)`.
@@ -167,7 +167,7 @@
 
 ## 0.0.0
 
-- Initial commit of ForgetMeCrops mod skeleton
+- Initial commit of Forget-Me-Crops mod skeleton
 - Implement core farm scanning and automation logic in common
 - Recreate common module structure, config, and core files
 - Add Fabric and NeoForge entrypoints and update loader metadata

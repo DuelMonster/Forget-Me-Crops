@@ -1,8 +1,8 @@
-# ForgetMeCrops
+# Forget-Me-Crops
 
 > *Because nobody ever got rich standing next to a wheat field with a hoe.*
 
-ForgetMeCrops automates crop harvesting for Fabric and NeoForge. Put a hoe in an item frame on top of a chest, grow crops around it, and the farm handles itself — harvesting mature crops, stowing the drops in the chest, replanting from stock, and even fixing the occasional dirt gap you accidentally trampled or hoed into existence.
+Forget-Me-Crops automates crop harvesting for Fabric and NeoForge. Put a hoe in an item frame on top of a chest, grow crops around it, and the farm handles itself — harvesting mature crops, stowing the drops in the chest, replanting from stock, and even fixing the occasional dirt gap you accidentally trampled or hoed into existence.
 
 For the full implementation deep-dive — scan internals, package structure, build instructions, and everything else that starts with the word "BFS" — see [TECHNICAL.md](TECHNICAL.md).
 
@@ -10,7 +10,7 @@ For the full implementation deep-dive — scan internals, package structure, bui
 
 ## Overview
 
-ForgetMeCrops scans the crops around a designated item-frame anchor every few seconds, harvests anything ripe, and deposits the drops straight into the attached chest. No player interaction needed. The frame gently rotates as it works so you can tell at a glance that something is actually happening.
+Forget-Me-Crops scans the crops around a designated item-frame anchor every few seconds, harvests anything ripe, and deposits the drops straight into the attached chest. No player interaction needed. The frame gently rotates as it works so you can tell at a glance that something is actually happening.
 
 Farms stay active as long as their chunks are loaded, so vanilla chunk loaders and any modded loaders you already have work fine.
 
@@ -83,7 +83,7 @@ Sweet berry bushes are harvested without destroying the bush — the age is simp
 | Fabric Loader | 0.19.2             |
 | Fabric API  | 0.139.5+1.21.11      |
 
-Drop `ForgetMeCrops-1.21.11-<version>-Fabric.jar` into your `mods/` folder alongside Fabric API.
+Drop `Forget-Me-Crops-1.21.11-<version>-Fabric.jar` into your `mods/` folder alongside Fabric API.
 Mod Menu is optional but recommended — it gives you an in-game config screen.
 
 ### NeoForge
@@ -92,7 +92,7 @@ Mod Menu is optional but recommended — it gives you an in-game config screen.
 |------------|----------|
 | NeoForge   | 21.11.42 |
 
-Drop `ForgetMeCrops-1.21.11-<version>-NeoForge.jar` into your `mods/` folder.
+Drop `Forget-Me-Crops-1.21.11-<version>-NeoForge.jar` into your `mods/` folder.
 The built-in NeoForge config screen is available from the Mods list in the main menu.
 
 ### Quick Setup
@@ -105,7 +105,7 @@ The built-in NeoForge config screen is available from the Mods list in the main 
 
 **Important placement rules:**
 
-- ForgetMeCrops only scans on the same Y level as the item frame. Crops above or below that layer are ignored.
+- Forget-Me-Crops only scans on the same Y level as the item frame. Crops above or below that layer are ignored.
 - Normal crop anchors need a waterlogged chest. Nether Wart farms on soul sand do not.
 - The scan range is controlled by `scanRangeX` and `scanRangeZ` in the config (default: 4 blocks in each direction).
 - Anchor validation runs at scan time — if the frame or chest disappears the anchor is automatically unregistered.
@@ -114,7 +114,7 @@ The built-in NeoForge config screen is available from the Mods list in the main 
 
 ## Configuration
 
-Config files are written to `config/forget_me_crops-server.toml` and `config/forget_me_crops-client.toml` in your instance directory.
+Config files are written to `config/forgetmecrops-server.toml` and `config/forgetmecrops-client.toml` in your instance directory.
 
 On **Fabric**, if Mod Menu is installed, these can also be edited in-game via the mod's Configure button.
 On **NeoForge**, the Mods list Configure button opens the same shared Cloth Config screen.
@@ -133,7 +133,7 @@ Both loaders delegate to the same `ConfigScreen` builder in `common`, with custo
 | `mendingNegation`          | `true`                      | When `true`, a hoe with Mending takes no durability loss from this mod's actions.               |
 | `chestFullCooldownTicks`   | `300`                       | How many ticks to wait before retrying when the attached chest is full.                         |
 | `maxSpiralDurationTicks`   | `200`                       | Maximum ticks to spread one scan cycle across. Higher values reduce per-tick load.              |
-| `rotationMode`             | `full_rotation_per_harvest` | How the item frame rotates during a harvest cycle. See table below.                             |
+| `rotationMode`             | `FULL_ROTATION`             | How the item frame rotates during a harvest cycle. See table below.                             |
 | `debugLogging`             | `false`                     | Writes detailed farm activity to the log. Useful for troubleshooting; leave off normally.       |
 | `seedClutterMode`          | `reduced`                   | Controls how excess seed drops are handled before chest insertion. See section below.           |
 | `seedReservePerType`       | `80`                        | Minimum seeds to keep per type in the chest. Replanting will not pull seeds below this amount.  |
@@ -156,9 +156,9 @@ Both loaders delegate to the same `ConfigScreen` builder in `common`, with custo
 
 | Mode                        | Behaviour                                                                                        |
 |-----------------------------|--------------------------------------------------------------------------------------------------|
-| `step_per_harvest`          | Advances the frame by one step for each harvest cycle that collects at least one crop.           |
-| `full_rotation_per_harvest` | Animates through all 8 frame positions once across the full harvest pass.                        |
-| `follow_harvest_spiral`     | Rotates through all 8 positions multiple times, roughly tracking the outward ring being scanned. |
+| `SINGLE_STEP`               | Advances the frame by one step for each harvest cycle that collects at least one crop.           |
+| `FULL_ROTATION`             | Animates through all 8 frame positions once across the full harvest pass.                        |
+| `FOLLOW_ROTATION`           | Rotates through all 8 positions multiple times, roughly tracking the outward ring being scanned. |
 
 ### Seed Clutter Mode
 
@@ -178,12 +178,12 @@ The halving in `reduced` mode does **not** apply when the seed item is also the 
 
 ### FastItemFrames
 
-ForgetMeCrops works with [FastItemFrames by Fuzss](https://modrinth.com/mod/fastitemframes). When that mod is installed, ForgetMeCrops automatically uses its block-entity based frame lookup instead of the vanilla entity query, which is faster on large farms. The Fabric build uses accessor mixins for chunk access so the remapped production jar works correctly — not just in dev runs.
+Forget-Me-Crops works with [FastItemFrames by Fuzss](https://modrinth.com/mod/fastitemframes). When that mod is installed, Forget-Me-Crops automatically uses its block-entity based frame lookup instead of the vanilla entity query, which is faster on large farms. The Fabric build uses accessor mixins for chunk access so the remapped production jar works correctly — not just in dev runs.
 
 ### Other Mods
 
 - Any vanilla-compatible chunk loader keeps anchors ticking while no player is nearby.
-- ForgetMeCrops does not modify any block behaviour directly; it reads and sets blocks through the normal level API, so it should coexist cleanly with crop growth mods.
+- Forget-Me-Crops does not modify any block behaviour directly; it reads and sets blocks through the normal level API, so it should coexist cleanly with crop growth mods.
 - The mod does not register custom blocks, items, or entities — there is nothing to conflict with at registry time.
 
 ---

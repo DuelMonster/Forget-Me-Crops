@@ -15,12 +15,12 @@ import java.util.function.Supplier;
 public final class LabelTooltipEnumListEntry<T extends Enum<?>> extends EnumListEntry<T> {
     private final LabelHitbox hitbox = new LabelHitbox();
 
-    @SuppressWarnings("unchecked")
     public LabelTooltipEnumListEntry(Component fieldName,
                                      Class<T> enumClass,
                                      T value,
                                      T defaultValue,
                                      Consumer<T> saveCallback,
+                                     Function<Enum, Component> enumNameProvider,
                                      Supplier<Optional<Component[]>> tooltipSupplier) {
         super(
                 fieldName,
@@ -29,7 +29,7 @@ public final class LabelTooltipEnumListEntry<T extends Enum<?>> extends EnumList
                 Component.translatable("text.cloth-config.reset_value"),
                 () -> defaultValue,
                 saveCallback,
-                (Function<Enum, Component>) EnumListEntry.DEFAULT_NAME_PROVIDER,
+                enumNameProvider,
                 tooltipSupplier
         );
     }

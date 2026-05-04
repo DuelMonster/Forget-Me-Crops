@@ -204,8 +204,8 @@ class FarmScanTask {
             try { LogUtils.logDebug("[ROT] Full animation complete for {} — cleared sequence", center); } catch (Throwable ignored) {}
         }
 
-        // FULL_ROTATION_PER_HARVEST should begin with the scan progression, not only after a mature crop is found.
-        if (Config.getRotationMode() == RotationMode.FULL_ROTATION_PER_HARVEST && currentIndex == 0 && !fullAnimationScheduled) {
+        // FULL_ROTATION should begin with the scan progression, not only after a mature crop is found.
+        if (Config.getRotationMode() == RotationMode.FULL_ROTATION && currentIndex == 0 && !fullAnimationScheduled) {
             startFullRotationAnimation();
         }
 
@@ -291,7 +291,7 @@ class FarmScanTask {
 
                     try { FrameScanner.tryAutoPlantAndTill(anchor, ctx, pos, level); } catch (Throwable ignored) {}
 
-                    if (Config.getRotationMode() == RotationMode.FOLLOW_HARVEST_SPIRAL) {
+                    if (Config.getRotationMode() == RotationMode.FOLLOW_ROTATION) {
                         Integer posInRing = indexToPosInRing.get(idx);
                         List<Integer> full = ringFullIndices.get(ring);
                         if (posInRing != null && full != null && !full.isEmpty()) {
@@ -320,11 +320,11 @@ class FarmScanTask {
             }
             if (ringHarvested) {
                 switch (Config.getRotationMode()) {
-                    case STEP_PER_HARVEST -> {
+                    case SINGLE_STEP -> {
                     }
-                    case FULL_ROTATION_PER_HARVEST -> {
+                    case FULL_ROTATION -> {
                     }
-                    case FOLLOW_HARVEST_SPIRAL -> {
+                    case FOLLOW_ROTATION -> {
                     }
                 }
             }
@@ -346,18 +346,18 @@ class FarmScanTask {
             if (anyHarvested && lastHarvestedRing >= 0) {
                 int newRotation = 0;
                 switch (Config.getRotationMode()) {
-                    case STEP_PER_HARVEST -> {
+                    case SINGLE_STEP -> {
                         newRotation = (FrameScanner.getFrameRotation(level, center) + 1) & 7;
                         FrameScanner.setFrameRotation(level, center, newRotation);
                     }
-                    case FULL_ROTATION_PER_HARVEST -> {
+                    case FULL_ROTATION -> {
                         if (!fullAnimationScheduled) {
                             int steps = computedMaxRing > 0 ? (int) Math.floor((double)(lastHarvestedRing + 1) * 8.0 / (computedMaxRing + 1)) : 0;
                             newRotation = steps & 7;
                             FrameScanner.setFrameRotation(level, center, newRotation);
                         }
                     }
-                    case FOLLOW_HARVEST_SPIRAL -> {
+                    case FOLLOW_ROTATION -> {
                         List<Integer> full = ringFullIndices.get(lastHarvestedRing);
                         if (full != null && !full.isEmpty()) {
                             int posIdx = Math.max(0, full.size() - 1);

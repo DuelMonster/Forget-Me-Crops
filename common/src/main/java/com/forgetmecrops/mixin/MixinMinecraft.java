@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * MixinMinecraft: The backstage pass to Minecraft's main class!
  * <p>
- * This mixin sneaks in at the end of Minecraft's constructor to let you know ForgetMeCrops is here and ready to party.
+ * This mixin sneaks in at the end of Minecraft's constructor to let you know Forget-Me-Crops is here and ready to party.
  * </p>
  * <p>
  * Why does this matter? Because sometimes you just want to say hi (and check the version).
