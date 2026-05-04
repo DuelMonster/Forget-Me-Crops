@@ -38,7 +38,7 @@ public class ForgetMeCrops {
         // --- Guaranteed debug log for mod initialization ---
         LogUtils.logInfo("Mod initialization started! If you see this, the core logic is alive and kicking.");
         // Defer FastItemFrames adapter probe to first use to avoid heavy classloading during init
-        if (CONFIG != null && Config.debugLogging) {
+        if (CONFIG != null && Config.isDebugLogging()) {
             LogUtils.logDebug("Debug logging is ENABLED! Prepare for a flood of farming facts.");
         } else {
             LogUtils.logInfo("Debug logging is OFF. For more details, set debugLogging=true in your config.");

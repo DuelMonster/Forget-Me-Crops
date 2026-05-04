@@ -150,12 +150,12 @@ public class NeoForgeFarmTicker {
             if (server == null) return;
             for (ServerLevel level : server.getAllLevels()) {
                 String dimId = level.dimension().identifier().toString();
-                    int rem = rediscoveryCountdown.getOrDefault(dimId, Config.frameRediscoveryInterval);
+                    int rem = rediscoveryCountdown.getOrDefault(dimId, Config.getFrameRediscoveryInterval());
                     rem--;
                     if (rem <= 0) {
                             LogUtils.logTrace("[TICK] NeoForge rediscovery pass for {}", dimId);
                             CatchupManager.queueLoadedFrames(level, dimId);
-                            rem = Config.frameRediscoveryInterval;
+                            rem = Config.getFrameRediscoveryInterval();
                         }
                     rediscoveryCountdown.put(dimId, rem);
                 if (!tickSnapshotLogged) {
@@ -170,7 +170,7 @@ public class NeoForgeFarmTicker {
                     FrameScanner scanner = new FrameScanner();
                     for (var anchor : ready) {
                         try {
-                            if (Config.maxSpiralDurationTicks <= DIRECT_SCAN_MAX_SPIRAL_TICKS) {
+                            if (Config.getMaxSpiralDurationTicks() <= DIRECT_SCAN_MAX_SPIRAL_TICKS) {
                                         try {
                                             scanner.scanFarm(anchor, level);
                                         } catch (Throwable t) {

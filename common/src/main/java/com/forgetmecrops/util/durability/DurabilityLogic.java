@@ -41,7 +41,7 @@ public class DurabilityLogic {
      */
     public static void applyDamage(Level level, ItemStack hoe, Object random) {
         if (hoe == null || hoe.isEmpty()) return;
-        if (Config.durabilityMode == DurabilityMode.NONE) return;
+        if (Config.getDurabilityMode() == DurabilityMode.NONE) return;
 
         int unbreakingLevel = 0;
         int mendingLevel = 0;
@@ -64,9 +64,9 @@ public class DurabilityLogic {
         }
 
         boolean hasMending = mendingLevel > 0;
-        if (Config.mendingNegation && hasMending) return;
+        if (Config.isMendingNegation() && hasMending) return;
 
-        if (!shouldDamageHoe(Config.durabilityMode, unbreakingLevel > 0, hasMending)) return;
+        if (!shouldDamageHoe(Config.getDurabilityMode(), unbreakingLevel > 0, hasMending)) return;
 
         try {
             int max = hoe.getMaxDamage();
@@ -74,7 +74,7 @@ public class DurabilityLogic {
 
             int current = hoe.getDamageValue();
             boolean applyDamage = true;
-            if (Config.durabilityMode == DurabilityMode.NORMAL && unbreakingLevel > 0) {
+            if (Config.getDurabilityMode() == DurabilityMode.NORMAL && unbreakingLevel > 0) {
                 if (level != null) {
                     if (level.getRandom().nextInt(unbreakingLevel + 1) != 0) {
                         applyDamage = false;

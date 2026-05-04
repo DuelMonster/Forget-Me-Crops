@@ -71,9 +71,9 @@ class FarmScanTask {
         try {
             ItemStack frameHoe = FrameScanner.readHoeFromFrame(level, center);
             if (frameHoe != null && !frameHoe.isEmpty() && frameHoe.getItem() instanceof HoeItem) {
-                this.ctx.hoe = frameHoe.copy();
-                try { FrameRegistry.updateHoe(dimId, center, this.ctx.hoe.copy()); } catch (Throwable ignored) {}
-            } else if (this.ctx.hoe == null || this.ctx.hoe.isEmpty()) {
+                this.ctx.setHoe(frameHoe);
+                try { FrameRegistry.updateHoe(dimId, center, this.ctx.getHoe().copy()); } catch (Throwable ignored) {}
+            } else if (this.ctx.getHoe().isEmpty()) {
                 try {
                     FrameHoeReplacement.tryReplaceBrokenHoe(this.ctx);
                 } catch (Throwable ignored) {}
@@ -81,8 +81,8 @@ class FarmScanTask {
         } catch (Throwable ignored) {}
         this.dimId = dimId;
 
-        int rX = Math.max(1, Config.scanRangeX);
-        int rZ = Math.max(1, Config.scanRangeZ);
+        int rX = Math.max(1, Config.getScanRangeX());
+        int rZ = Math.max(1, Config.getScanRangeZ());
         List<BlockPos> candidates = FrameScanner.bfsDiscoverFarm(center, level, rX, rZ);
         if (candidates.isEmpty()) {
             for (int dx = -rX; dx <= rX; dx++) for (int dz = -rZ; dz <= rZ; dz++) candidates.add(center.offset(dx, 0, dz));
@@ -151,7 +151,7 @@ class FarmScanTask {
         this.hasMature = foundMature;
         this.totalPositions = spiralPositions.size();
 
-        int ticks = Math.max(1, Config.maxSpiralDurationTicks);
+        int ticks = Math.max(1, Config.getMaxSpiralDurationTicks());
         this.positionsPerTick = Math.max(1, (int) Math.ceil((double) totalPositions / (double) ticks));
         for (int i = 0; i < spiralPositions.size(); i++) {
             BlockPos p = spiralPositions.get(i).pos;
@@ -167,8 +167,8 @@ class FarmScanTask {
     }
 
     boolean tick() {
-        if (ctx.chestFull) {
-            FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
+        if (ctx.isChestFull()) {
+            FrameRegistry.setCooldown(dimId, center, Config.getChestFullCooldownTicks());
             ctx.logSummary();
             return true;
         }
@@ -207,8 +207,8 @@ class FarmScanTask {
                     ctx.logSummary();
                     return true;
                 }
-                try { ctx.hoe = liveHoe.copy(); } catch (Throwable ignored) {}
-                try { FrameRegistry.updateHoe(dimId, center, ctx.hoe.copy()); } catch (Throwable ignored) {}
+                try { ctx.setHoe(liveHoe); } catch (Throwable ignored) {}
+                try { FrameRegistry.updateHoe(dimId, center, ctx.getHoe().copy()); } catch (Throwable ignored) {}
             } catch (Throwable ignored) {}
         } catch (Throwable t) {
             LogUtils.logDebug("[SCAN] Anchor re-check failed for " + center, t);
@@ -226,7 +226,7 @@ class FarmScanTask {
                         fullAnimationIndex++;
                         animationStepsRemaining--;
                     } else {
-                        if (Config.debugLogging) try { LogUtils.logDebug("[ROT] No animation sequence available for {} (idx={} size={})", center, fullAnimationIndex, fullAnimationSequence.size()); } catch (Throwable ignored) {}
+                        if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] No animation sequence available for {} (idx={} size={})", center, fullAnimationIndex, fullAnimationSequence.size()); } catch (Throwable ignored) {}
                     }
                 }
             } catch (Throwable ignored) {}
@@ -242,7 +242,7 @@ class FarmScanTask {
 
         int endIndex = Math.min(totalPositions - 1, currentIndex + positionsPerTick - 1);
 
-        int beforeHarvest = ctx.harvestedCount;
+        int beforeHarvest = ctx.getHarvestedCount();
         int computedMaxRingLocal = computedMaxRing;
         int maxRing = computedMaxRingLocal;
         Map<Integer, List<Integer>> ringToIndices = new HashMap<>();
@@ -269,7 +269,7 @@ class FarmScanTask {
                         int ageDbg = FrameScanner.getAgeSafe(state);
                         int thresholdDbg = FrameScanner.getMaturityThreshold(state);
                         boolean chestSpaceDbg = false;
-                        try { chestSpaceDbg = ChestUtils.hasSpace(ctx.chest); } catch (Throwable ignored) {}
+                    try { chestSpaceDbg = ChestUtils.hasSpace(ctx.chest); } catch (Throwable ignored) {}
                         try { LogUtils.logDebug("[SCAN-DBG] pos={} block={} isCrop={} age={} threshold={} chestHasSpace={} beforeHarvest={}", pos, state.getBlock().getClass().getName(), isCropDbg, ageDbg, thresholdDbg, chestSpaceDbg, beforeHarvest); } catch (Throwable ignored) {}
                     } catch (Throwable ignored) {}
 
@@ -277,7 +277,7 @@ class FarmScanTask {
                     boolean harvested = false;
                     if (state.is(Blocks.MELON) || state.is(Blocks.PUMPKIN)) {
                         HarvestUtils.harvestCrop(ctx, pos, state, s -> true, s -> null);
-                        harvested = ctx.harvestedCount > beforeHarvest;
+                        harvested = ctx.getHarvestedCount() > beforeHarvest;
                     } else if (state.is(Blocks.MELON_STEM) || state.is(Blocks.PUMPKIN_STEM)) {
                         Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
                         boolean harvestedFruit = false;
@@ -286,7 +286,7 @@ class FarmScanTask {
                             BlockState ns = level.getBlockState(npos);
                             if ((ns.is(Blocks.MELON) && state.is(Blocks.MELON_STEM)) || (ns.is(Blocks.PUMPKIN) && state.is(Blocks.PUMPKIN_STEM))) {
                                 HarvestUtils.harvestCrop(ctx, npos, ns, s -> true, s -> null);
-                                harvestedFruit = ctx.harvestedCount > beforeHarvest;
+                                harvestedFruit = ctx.getHarvestedCount() > beforeHarvest;
                                 if (harvestedFruit) break;
                             }
                         }
@@ -310,14 +310,14 @@ class FarmScanTask {
                                                 return FrameScanner.setAgeSafe(s, 0);
                                             } catch (Throwable tt) { return null; }
                                         });
-                                harvested = ctx.harvestedCount > beforeHarvest;
+                                harvested = ctx.getHarvestedCount() > beforeHarvest;
                             }
                         }
                     }
                     if (harvested) ringHarvested = true;
                     if (harvested) { anyHarvested = true; lastHarvestedRing = ring; }
 
-                    if (Config.rotationMode == RotationMode.FOLLOW_HARVEST_SPIRAL) {
+                    if (Config.getRotationMode() == RotationMode.FOLLOW_HARVEST_SPIRAL) {
                         Integer posInRing = indexToPosInRing.get(idx);
                         List<Integer> full = ringFullIndices.get(ring);
                         if (posInRing != null && full != null && !full.isEmpty()) {
@@ -338,14 +338,14 @@ class FarmScanTask {
                     LogUtils.logDebug("[SCAN] Exception while scanning " + center, t);
                 }
 
-                if (ctx.chestFull) {
-                    FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
+                if (ctx.isChestFull()) {
+                    FrameRegistry.setCooldown(dimId, center, Config.getChestFullCooldownTicks());
                     ctx.logSummary();
                     return true;
                 }
             }
             if (ringHarvested) {
-                switch (Config.rotationMode) {
+                switch (Config.getRotationMode()) {
                     case STEP_PER_HARVEST -> {
                     }
                     case FULL_ROTATION_PER_HARVEST -> {
@@ -377,8 +377,8 @@ class FarmScanTask {
         currentIndex = endIndex + 1;
 
         if (currentIndex >= totalPositions) {
-            int rX = Math.max(1, Config.scanRangeX);
-            int rZ = Math.max(1, Config.scanRangeZ);
+            int rX = Math.max(1, Config.getScanRangeX());
+            int rZ = Math.max(1, Config.getScanRangeZ());
 
             if (!neighborPassDone) {
                 for (int dx = -rX; dx <= rX; dx++) {
@@ -448,15 +448,15 @@ class FarmScanTask {
                             if (farmlandNeighbors < 1) continue;
                             BlockState farmland = Blocks.FARMLAND.defaultBlockState();
                             level.setBlock(belowPos, farmland, 3);
-                            ItemStack before = (ctx.hoe == null || ctx.hoe.isEmpty()) ? (anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy()) : ctx.hoe.copy();
+                            ItemStack before = ctx.getHoe().isEmpty() ? (anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy()) : ctx.getHoe().copy();
                             try {
-                                if (ctx.skipNextDamage) {
-                                    ctx.skipNextDamage = false;
+                                if (ctx.isSkipNextDamage()) {
+                                    ctx.setSkipNextDamage(false);
                                 } else {
-                                    DurabilityLogic.applyDamage(level, ctx.hoe, level.getRandom());
+                                    DurabilityLogic.applyDamage(level, ctx.getHoe(), level.getRandom());
                                 }
                             } catch (Throwable ignored) {}
-                            if (ctx.hoe == null || ctx.hoe.isEmpty()) HarvestUtils.handleBrokenHoe(ctx, before);
+                            if (ctx.getHoe().isEmpty()) HarvestUtils.handleBrokenHoe(ctx, before);
 
                             Map<Block, Integer> counts2 = new HashMap<>();
                             for (Direction d : dirs) {
@@ -485,8 +485,8 @@ class FarmScanTask {
                 neighborPassDone = true;
             }
 
-            if (ctx.chestFull) {
-                FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
+            if (ctx.isChestFull()) {
+                FrameRegistry.setCooldown(dimId, center, Config.getChestFullCooldownTicks());
                 ctx.logSummary();
                 return true;
             }
@@ -497,7 +497,7 @@ class FarmScanTask {
 
             if (anyHarvested && lastHarvestedRing >= 0) {
                 int newRotation = 0;
-                switch (Config.rotationMode) {
+                switch (Config.getRotationMode()) {
                     case STEP_PER_HARVEST -> {
                         newRotation = (FrameScanner.getFrameRotation(level, center) + 1) & 7;
                         FrameScanner.setFrameRotation(level, center, newRotation);

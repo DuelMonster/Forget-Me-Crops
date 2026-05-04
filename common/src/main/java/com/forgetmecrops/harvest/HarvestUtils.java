@@ -33,17 +33,17 @@ public class HarvestUtils {
     private HarvestUtils() {}
 
     public static void harvestCrop(HarvestContext ctx, BlockPos pos, BlockState state, Function<BlockState, Boolean> isMature, Function<BlockState, BlockState> getReplantState) {
-        if (ctx.level == null || ctx.hoe == null || ctx.hoe.isEmpty() || ctx.chest == null) return;
+        if (ctx.level == null || ctx.getHoe().isEmpty() || ctx.chest == null) return;
 
         Block block = state.getBlock();
         if (!isMature.apply(state)) return;
 
         if (!ChestUtils.hasSpace(ctx.chest)) {
-            ctx.chestFull = true;
+            ctx.setChestFull(true);
             return;
         }
 
-        List<ItemStack> drops = LootLogic.getBlockDrops((net.minecraft.server.level.ServerLevel)ctx.level, pos, state, ctx.hoe);
+        List<ItemStack> drops = LootLogic.getBlockDrops((net.minecraft.server.level.ServerLevel)ctx.level, pos, state, ctx.getHoe());
         if (drops.isEmpty()) return;
 
         Item seedItem = CropRegistry.clutterSeed(block);
@@ -69,10 +69,10 @@ public class HarvestUtils {
         ChestUtils.insertAll(ctx.chest, drops);
 
         try {
-            if (ctx.skipNextDamage) { ctx.skipNextDamage = false; }
-            else { DurabilityLogic.applyDamage(ctx.level, ctx.hoe, ctx.level.getRandom()); }
+            if (ctx.isSkipNextDamage()) { ctx.setSkipNextDamage(false); }
+            else { DurabilityLogic.applyDamage(ctx.level, ctx.getHoe(), ctx.level.getRandom()); }
         } catch (Throwable ignored) {}
-        if (ctx.hoe.isEmpty()) { FrameHoeReplacement.tryReplaceBrokenHoe(ctx); }
+        if (ctx.getHoe().isEmpty()) { FrameHoeReplacement.tryReplaceBrokenHoe(ctx); }
         else { syncFrameHoe(ctx); }
 
         if (cost != null && !cost.isEmpty()) {
@@ -90,15 +90,15 @@ public class HarvestUtils {
             try { ctx.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3); } catch (Throwable ignored) {}
         }
 
-        if (Config.harvestParticles) ctx.level.levelEvent(2001, pos, Block.getId(state));
-        ctx.harvestedCount++;
+        if (Config.isHarvestParticles()) ctx.level.levelEvent(2001, pos, Block.getId(state));
+        ctx.incrementHarvested();
     }
 
     
 
     private static void applyPreReplantSeedClutterPolicy(List<ItemStack> drops, Item seedItem, boolean seedIsCropFruit) {
         if (seedItem == null) return;
-        if (Config.seedClutterMode == SeedClutterMode.NONE) {
+        if (Config.getSeedClutterMode() == SeedClutterMode.NONE) {
             if (seedIsCropFruit) return;
             drops.removeIf(s -> s.getItem() == seedItem);
         }
@@ -106,7 +106,7 @@ public class HarvestUtils {
 
     private static void applyPostReplantSeedClutterPolicy(List<ItemStack> drops, Item seedItem, boolean seedIsCropFruit) {
         if (seedItem == null) return;
-        if (Config.seedClutterMode == SeedClutterMode.REDUCED) {
+        if (Config.getSeedClutterMode() == SeedClutterMode.REDUCED) {
             if (seedIsCropFruit) return;
             for (Iterator<ItemStack> it = drops.iterator(); it.hasNext();) {
                 ItemStack s = it.next();
@@ -193,7 +193,7 @@ public class HarvestUtils {
     }
 
     private static void syncFrameHoe(HarvestContext ctx) {
-        LogUtils.logDebug("[HOE] syncFrameHoe called. Current hoe: {}", ctx.hoe);
-        try { FrameScanner.Anchor anchor = null; try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {} if (anchor != null && ctx.level != null) { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor.framePos, ctx.hoe == null ? net.minecraft.world.item.ItemStack.EMPTY : ctx.hoe.copy()); } } catch (Throwable ignored) {}
+        LogUtils.logDebug("[HOE] syncFrameHoe called. Current hoe: {}", ctx.getHoe());
+        try { FrameScanner.Anchor anchor = null; try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {} if (anchor != null && ctx.level != null) { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor.framePos, ctx.getHoe().isEmpty() ? net.minecraft.world.item.ItemStack.EMPTY : ctx.getHoe().copy()); } } catch (Throwable ignored) {}
     }
 }

@@ -40,7 +40,7 @@ public class FrameRegistry {
         FrameEntry(FrameScanner.Anchor anchor) {
             this.anchor = anchor;
             this.active = anchor != null && anchor.hoe != null && !anchor.hoe.isEmpty();
-            this.ticksUntilNextRun = Config.tickInterval;
+            this.ticksUntilNextRun = Config.getTickInterval();
             this.lastSeenMs = System.currentTimeMillis();
             this.lastRotationGameTime = -1L;
         }
@@ -71,7 +71,7 @@ public class FrameRegistry {
         } else {
             if (hoe != null && !hoe.isEmpty()) existing.active = true;
             existing.lastSeenMs = System.currentTimeMillis();
-            existing.ticksUntilNextRun = Math.min(existing.ticksUntilNextRun, Config.tickInterval);
+            existing.ticksUntilNextRun = Math.min(existing.ticksUntilNextRun, Config.getTickInterval());
             String hoeDesc = hoe == null || hoe.isEmpty() ? "<empty>" : hoe.getItem().toString() + " x" + hoe.getCount();
             int chestId = existing.anchor.chest == null ? 0 : System.identityHashCode(existing.anchor.chest);
                 LogUtils.logTrace("[REG] Refreshed frame at {} in {}. active={} hoe={} chestId={} lastSeenMs={}",
@@ -206,7 +206,7 @@ public class FrameRegistry {
         replacement.active = old.active || (hoe != null && !hoe.isEmpty());
         if (hoe != null && !hoe.isEmpty()) {
             // Preserve configured cadence instead of forcing an immediate run
-            replacement.ticksUntilNextRun = Config.tickInterval;
+            replacement.ticksUntilNextRun = Config.getTickInterval();
         } else {
             replacement.ticksUntilNextRun = old.ticksUntilNextRun;
         }
@@ -352,7 +352,7 @@ public class FrameRegistry {
             fe.ticksUntilNextRun--;
             if (fe.ticksUntilNextRun <= 0) {
                 int prevTicks = fe.ticksUntilNextRun;
-                fe.ticksUntilNextRun = Config.tickInterval;
+                fe.ticksUntilNextRun = Config.getTickInterval();
                 String hoeDesc = fe.anchor.hoe == null || fe.anchor.hoe.isEmpty() ? "<empty>" : fe.anchor.hoe.getItem().toString() + " x" + fe.anchor.hoe.getCount();
                 int chestId = fe.anchor.chest == null ? 0 : System.identityHashCode(fe.anchor.chest);
                 try { LogUtils.logTrace("[REG] Anchor ready: {} in {}. hoe={} chestId={} lastSeenMs={} prevTicks={}", fe.anchor.framePos, dimensionId, hoeDesc, chestId, fe.lastSeenMs, prevTicks); } catch (Throwable ignored) {}

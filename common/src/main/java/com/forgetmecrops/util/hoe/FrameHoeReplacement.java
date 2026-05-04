@@ -31,27 +31,27 @@ public final class FrameHoeReplacement {
             if (replacement != null && !replacement.isEmpty()) {
                 try {
                     ItemStack newHoe = replacement.copy(); newHoe.setCount(1);
-                    ctx.hoe = newHoe;
-                    ctx.skipNextDamage = true;
+                    ctx.setHoe(newHoe);
+                    ctx.setSkipNextDamage(true);
                 } catch (Throwable ignored) {}
 
                 try {
                     if (anchor != null) {
                         String dimId = ctx.level.dimension().identifier().toString();
-                        FrameRegistry.updateHoe(dimId, anchor.framePos, ctx.hoe == null ? replacement.copy() : ctx.hoe.copy());
+                        FrameRegistry.updateHoe(dimId, anchor.framePos, ctx.getHoe().isEmpty() ? replacement.copy() : ctx.getHoe().copy());
                     }
                 } catch (Throwable ignored) {}
 
-                try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, ctx.hoe == null ? ItemStack.EMPTY : ctx.hoe.copy()); } catch (Throwable ignored) {}
+                try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, ctx.getHoe().isEmpty() ? ItemStack.EMPTY : ctx.getHoe().copy()); } catch (Throwable ignored) {}
 
                 if (anchor != null && ctx.level != null) {
                     try {
                         ItemStack verified = FrameScanner.readHoeFromFrame(ctx.level, anchor.framePos);
                         if (verified == null || verified.isEmpty() || !(verified.getItem() instanceof HoeItem)) {
                             try { ChestUtils.insertAll(ctx.chest, java.util.List.of(replacement)); } catch (Throwable ignored) {}
-                            try { String dimId = ctx.level.dimension().identifier().toString(); FrameRegistry.updateHoe(dimId, anchor.framePos, ItemStack.EMPTY); FrameRegistry.setCooldown(dimId, anchor.framePos, Config.chestFullCooldownTicks); } catch (Throwable ignored) {}
+                            try { String dimId = ctx.level.dimension().identifier().toString(); FrameRegistry.updateHoe(dimId, anchor.framePos, ItemStack.EMPTY); FrameRegistry.setCooldown(dimId, anchor.framePos, Config.getChestFullCooldownTicks()); } catch (Throwable ignored) {}
                             try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor.framePos, ItemStack.EMPTY); } catch (Throwable ignored) {}
-                            ctx.chestFull = true;
+                            ctx.setChestFull(true);
                             LogUtils.logDebug("[HOE] Replacement did not persist to frame; returned to chest and aborting for {}", anchor.framePos);
                             return;
                         }
@@ -62,9 +62,9 @@ public final class FrameHoeReplacement {
                 return;
             } else {
                 LogUtils.logDebug("[HOE] No replacement hoe available in chest for frame at {}", anchor == null ? "unknown" : anchor.framePos);
-                try { if (anchor != null) { String dimId = ctx.level.dimension().identifier().toString(); FrameRegistry.updateHoe(dimId, anchor.framePos, ItemStack.EMPTY); FrameRegistry.setCooldown(dimId, anchor.framePos, Config.chestFullCooldownTicks); } } catch (Throwable ignored) {}
+                try { if (anchor != null) { String dimId = ctx.level.dimension().identifier().toString(); FrameRegistry.updateHoe(dimId, anchor.framePos, ItemStack.EMPTY); FrameRegistry.setCooldown(dimId, anchor.framePos, Config.getChestFullCooldownTicks()); } } catch (Throwable ignored) {}
                 try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, ItemStack.EMPTY); } catch (Throwable ignored) {}
-                ctx.chestFull = true;
+                ctx.setChestFull(true);
             }
         } catch (Throwable t) { LogUtils.logWarn("[HOE] Error attempting to replace broken hoe", t); }
     }

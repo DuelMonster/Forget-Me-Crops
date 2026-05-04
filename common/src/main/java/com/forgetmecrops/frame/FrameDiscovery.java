@@ -52,8 +52,8 @@ public class FrameDiscovery {
             if (be instanceof Container chest) {
                 boolean chestWaterlogged = false;
                 try { BlockState cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
-                int rX = Math.min(5, Math.max(1, Config.scanRangeX));
-                int rZ = Math.min(5, Math.max(1, Config.scanRangeZ));
+                int rX = Math.min(5, Math.max(1, Config.getScanRangeX()));
+                int rZ = Math.min(5, Math.max(1, Config.getScanRangeZ()));
                 boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
                 boolean isNetherWartFarm = false;
                 try {
@@ -139,8 +139,8 @@ public class FrameDiscovery {
             BlockState cs = null;
             try { cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
             try { LogUtils.logDebug("[FIF] Chest waterlogged at {}: {}, blockState={}", chestPos, chestWaterlogged, cs == null ? "null" : cs.getBlock().getClass().getName()); } catch (Throwable ignored) {}
-            int rX = Math.min(5, Math.max(1, Config.scanRangeX));
-            int rZ = Math.min(5, Math.max(1, Config.scanRangeZ));
+            int rX = Math.min(5, Math.max(1, Config.getScanRangeX()));
+            int rZ = Math.min(5, Math.max(1, Config.getScanRangeZ()));
             boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
             boolean isNetherWartFarm = false;
             try {

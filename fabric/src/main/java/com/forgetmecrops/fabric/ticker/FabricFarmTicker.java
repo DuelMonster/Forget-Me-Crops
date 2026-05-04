@@ -108,12 +108,12 @@ public class FabricFarmTicker {
             try {
                 for (ServerLevel level : server.getAllLevels()) {
                     String dimId = level.dimension().identifier().toString();
-                    int rem = rediscoveryCountdown.getOrDefault(dimId, Config.frameRediscoveryInterval);
+                    int rem = rediscoveryCountdown.getOrDefault(dimId, Config.getFrameRediscoveryInterval());
                     rem--;
                     if (rem <= 0) {
                         LogUtils.logTrace("[TICK] Running rediscovery pass for {}", dimId);
                         CatchupManager.queueLoadedFrames(level, dimId);
-                        rem = Config.frameRediscoveryInterval;
+                        rem = Config.getFrameRediscoveryInterval();
                     }
                     rediscoveryCountdown.put(dimId, rem);
                     if (!tickSnapshotLogged) { CatchupManager.queueLoadedFrames(level, dimId); }
@@ -124,7 +124,7 @@ public class FabricFarmTicker {
                         FrameScanner scanner = new FrameScanner();
                         for (var anchor : ready) {
                             try {
-                                if (Config.maxSpiralDurationTicks <= DIRECT_SCAN_MAX_SPIRAL_TICKS) {
+                                if (Config.getMaxSpiralDurationTicks() <= DIRECT_SCAN_MAX_SPIRAL_TICKS) {
                                     try { scanner.scanFarm(anchor, level); } catch (Exception t) { LogUtils.logWarn("[TICK] Scan failed for " + anchor, t); }
                                 } else { FrameScanner.submitScan(dimId, anchor, level); }
                             } catch (Exception t) { LogUtils.logWarn("[TICK] Failed to submit/execute scan for " + anchor, t); }

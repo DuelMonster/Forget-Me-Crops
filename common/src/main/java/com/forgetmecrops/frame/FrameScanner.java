@@ -115,8 +115,8 @@ public class FrameScanner {
             LogUtils.logDebug("[SCAN] Anchor presence check failed for " + center, t);
         }
 
-        int rangeX = Math.max(1, Config.scanRangeX);
-        int rangeZ = Math.max(1, Config.scanRangeZ);
+        int rangeX = Math.max(1, Config.getScanRangeX());
+        int rangeZ = Math.max(1, Config.getScanRangeZ());
 
         ItemStack currentHoe = anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy();
         try {
@@ -131,8 +131,8 @@ public class FrameScanner {
                     try {
                         HarvestContext tempCtx = new HarvestContext(anchor, level, ItemStack.EMPTY, anchor.chest, null);
                         com.forgetmecrops.util.hoe.FrameHoeReplacement.tryReplaceBrokenHoe(tempCtx);
-                        if (tempCtx.hoe != null && !tempCtx.hoe.isEmpty()) {
-                            currentHoe = tempCtx.hoe.copy();
+                        if (!tempCtx.getHoe().isEmpty()) {
+                            currentHoe = tempCtx.getHoe().copy();
                         }
                     } catch (Throwable ignored) {}
                 }
@@ -159,7 +159,7 @@ public class FrameScanner {
             BlockState state = level.getBlockState(pos);
             blocksScanned++;
 
-            switch (Config.rotationMode) {
+            switch (Config.getRotationMode()) {
                 case FOLLOW_HARVEST_SPIRAL -> {
                     if (lastDir == null || dir != lastDir) {
                         setFrameRotation(level, center, dirToRotation(dir));
@@ -210,7 +210,7 @@ public class FrameScanner {
                     return cropsFound > 0;
                 }
                 // make sure the HarvestContext.hoe matches the live frame hoe
-                try { ctx.hoe = liveHoe.copy(); } catch (Throwable ignored) {}
+                try { ctx.setHoe(liveHoe); } catch (Throwable ignored) {}
             } catch (Throwable ignored) {}
 
             boolean harvested = false;
@@ -219,8 +219,8 @@ public class FrameScanner {
 
                 if (state.is(Blocks.MELON) || state.is(Blocks.PUMPKIN)) {
                     HarvestUtils.harvestCrop(ctx, pos, state, s -> true, s -> null);
-                    harvested = ctx.harvestedCount > 0;
-                    cropsFound = Math.max(cropsFound, ctx.harvestedCount);
+                    harvested = ctx.getHarvestedCount() > 0;
+                    cropsFound = Math.max(cropsFound, ctx.getHarvestedCount());
                 } else if (state.is(Blocks.MELON_STEM) || state.is(Blocks.PUMPKIN_STEM)) {
                     Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
                     for (Direction d : dirs) {
@@ -228,8 +228,8 @@ public class FrameScanner {
                         BlockState ns = level.getBlockState(npos);
                         if ((ns.is(Blocks.MELON) && state.is(Blocks.MELON_STEM)) || (ns.is(Blocks.PUMPKIN) && state.is(Blocks.PUMPKIN_STEM))) {
                             HarvestUtils.harvestCrop(ctx, npos, ns, s -> true, s -> null);
-                            harvested = ctx.harvestedCount > 0;
-                            cropsFound = Math.max(cropsFound, ctx.harvestedCount);
+                            harvested = ctx.getHarvestedCount() > 0;
+                            cropsFound = Math.max(cropsFound, ctx.getHarvestedCount());
                             break;
                         }
                     }
@@ -252,8 +252,8 @@ public class FrameScanner {
                                             return setAgeSafe(s, 0);
                                         } catch (Throwable tt) { return null; }
                                     });
-                            harvested = ctx.harvestedCount > 0;
-                            cropsFound = Math.max(cropsFound, ctx.harvestedCount);
+                            harvested = ctx.getHarvestedCount() > 0;
+                            cropsFound = Math.max(cropsFound, ctx.getHarvestedCount());
                         }
                     }
                 }
@@ -263,9 +263,9 @@ public class FrameScanner {
 
             if (harvested) anyHarvested = true;
 
-            if (ctx.chestFull) {
+            if (ctx.isChestFull()) {
                 try {
-                    FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
+                    FrameRegistry.setCooldown(dimId, center, Config.getChestFullCooldownTicks());
                 } catch (Throwable ignored) {}
                 ctx.logSummary();
                 return cropsFound > 0;
@@ -273,16 +273,16 @@ public class FrameScanner {
 
             tryAutoPlantAndTill(anchor, ctx, pos, level);
 
-            if (ctx.chestFull) {
+            if (ctx.isChestFull()) {
                 try {
-                    FrameRegistry.setCooldown(dimId, center, Config.chestFullCooldownTicks);
+                    FrameRegistry.setCooldown(dimId, center, Config.getChestFullCooldownTicks());
                 } catch (Throwable ignored) {}
                 ctx.logSummary();
                 return cropsFound > 0;
             }
         }
 
-        if (anyHarvested && Config.rotationMode == RotationMode.STEP_PER_HARVEST) {
+        if (anyHarvested && Config.getRotationMode() == RotationMode.STEP_PER_HARVEST) {
             int newRot = (getFrameRotation(level, center) + 1) & 7;
             setFrameRotation(level, center, newRot);
         }
@@ -403,12 +403,12 @@ public class FrameScanner {
             }
             if (farmlandNeighbors >= 1) {
                 level.setBlock(belowPos, Blocks.FARMLAND.defaultBlockState(), 3);
-                ItemStack before = (ctx.hoe == null || ctx.hoe.isEmpty()) ? (anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy()) : ctx.hoe.copy();
+                ItemStack before = ctx.getHoe().isEmpty() ? (anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy()) : ctx.getHoe().copy();
                 try {
-                    if (ctx.skipNextDamage) { ctx.skipNextDamage = false; }
-                    else { com.forgetmecrops.util.durability.DurabilityLogic.applyDamage(level, ctx.hoe, level.getRandom()); }
+                    if (ctx.isSkipNextDamage()) { ctx.setSkipNextDamage(false); }
+                    else { com.forgetmecrops.util.durability.DurabilityLogic.applyDamage(level, ctx.getHoe(), level.getRandom()); }
                 } catch (Throwable ignored) {}
-                if (ctx.hoe == null || ctx.hoe.isEmpty()) HarvestUtils.handleBrokenHoe(ctx, before);
+                if (ctx.getHoe().isEmpty()) HarvestUtils.handleBrokenHoe(ctx, before);
                 Map<Block, Integer> counts = new HashMap<>();
                 for (Direction d : dirs) {
                     Block rep = CropRegistry.canonicalCropBlock(level.getBlockState(pos.relative(d)).getBlock());
@@ -581,7 +581,7 @@ public class FrameScanner {
             }
             FarmScanTask task = new FarmScanTask(anchor, level, dimId);
             list.add(task);
-            LogUtils.logDebug("[SCAN] Scheduled scan task for {} in {} (will span up to {} ticks)", anchor, dimId, Config.maxSpiralDurationTicks);
+            LogUtils.logDebug("[SCAN] Scheduled scan task for {} in {} (will span up to {} ticks)", anchor, dimId, Config.getMaxSpiralDurationTicks());
         } catch (Throwable t) {
             LogUtils.logWarn("[SCAN] Failed to schedule scan task for " + anchor, t);
         }
@@ -692,7 +692,7 @@ public class FrameScanner {
 
             try {
             if (!FrameRegistry.tryRotation(dimId, pos, gameTime)) {
-                if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Skipped rotation for {} due to cooldown (gametime={})", pos, gameTime); } catch (Throwable ignored) {}
+                if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Skipped rotation for {} due to cooldown (gametime={})", pos, gameTime); } catch (Throwable ignored) {}
                 return;
             }
         } catch (Throwable ignored) {}
@@ -700,7 +700,7 @@ public class FrameScanner {
             try {
             int cur = getFrameRotation(level, pos) & 7;
             if (cur == (newRotation & 7)) {
-                if (Config.debugLogging) try { LogUtils.logDebug("[ROT] No-op rotation for {} (already {})", pos, cur); } catch (Throwable ignored) {}
+                if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] No-op rotation for {} (already {})", pos, cur); } catch (Throwable ignored) {}
                 return;
             }
         } catch (Throwable ignored) {}
@@ -723,7 +723,7 @@ public class FrameScanner {
             } catch (Exception e) {
                 LogUtils.logTrace("[ROT] Could not read game time while applying scheduled rotation", e);
             }
-            try { LogUtils.logDebug("[ROT] applyScheduledRotation pos={} newRot={} mode={} gametime={}", pos, newRotation, Config.rotationMode, gameTime); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[ROT] applyScheduledRotation pos={} newRot={} mode={} gametime={}", pos, newRotation, Config.getRotationMode(), gameTime); } catch (Throwable ignored) {}
 
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(pos));
             for (ItemFrame f : frames) {
@@ -735,7 +735,7 @@ public class FrameScanner {
                             try {
                                 if (p == int.class || p == Integer.class) {
                                     m.invoke(f, newRotation);
-                                    if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
+                                    if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
                                     int got = -999;
                                     try {
                                         got = f.getRotation();
@@ -750,14 +750,14 @@ public class FrameScanner {
                                             }
                                         } catch (Throwable ex2) {}
                                     }
-                                    if (Config.debugLogging) {
+                                    if (Config.isDebugLogging()) {
                                         try { LogUtils.logDebug("[ROT] ItemFrame readback at {} => {}", pos, got); } catch (Throwable ex3) {}
                                     }
                                     return;
                                 }
                                 if (p == byte.class || p == Byte.class) {
                                     m.invoke(f, (byte) newRotation);
-                                    if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
+                                    if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
                                     int got = -999;
                                     try {
                                         got = f.getRotation();
@@ -772,13 +772,13 @@ public class FrameScanner {
                                             }
                                         } catch (Throwable ex2) {}
                                     }
-                                    if (Config.debugLogging) {
+                                    if (Config.isDebugLogging()) {
                                         try { LogUtils.logDebug("[ROT] ItemFrame readback at {} => {}", pos, got); } catch (Throwable ex3) {}
                                     }
                                     return;
                                 }
                             } catch (Throwable t) {
-                                if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Failed to invoke setter " + m.getName() + " on ItemFrame " + pos, t); } catch (Throwable ignored) {}
+                                if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Failed to invoke setter " + m.getName() + " on ItemFrame " + pos, t); } catch (Throwable ignored) {}
                             }
                         }
                     }
@@ -786,7 +786,7 @@ public class FrameScanner {
                         Field fld = f.getClass().getDeclaredField("rotation");
                         fld.setAccessible(true);
                         fld.setInt(f, newRotation & 7);
-                        if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Applied rotation via field on ItemFrame at {} => {}", pos, newRotation & 7); } catch (Throwable ignored) {}
+                        if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Applied rotation via field on ItemFrame at {} => {}", pos, newRotation & 7); } catch (Throwable ignored) {}
                         int got = -999;
                         try {
                             got = f.getRotation();
@@ -801,7 +801,7 @@ public class FrameScanner {
                                 }
                             } catch (Throwable ex2) {}
                         }
-                        if (Config.debugLogging) {
+                        if (Config.isDebugLogging()) {
                             try { LogUtils.logDebug("[ROT] ItemFrame readback at {} => {}", pos, got); } catch (Throwable ex3) {}
                         }
                         return;
@@ -816,13 +816,13 @@ public class FrameScanner {
                     try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
                     try {
                         int rb = FIF.getRotation(be);
-                        if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack={})", pos, newRotation & 7, rb); } catch (Throwable logEx1) {}
+                        if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack={})", pos, newRotation & 7, rb); } catch (Throwable logEx1) {}
                     } catch (Throwable exGet) {
-                        if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack=?)", pos, newRotation & 7); } catch (Throwable logEx2) {}
+                        if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack=?)", pos, newRotation & 7); } catch (Throwable logEx2) {}
                     }
                     return;
                 } catch (Throwable t) {
-                    if (Config.debugLogging) try { LogUtils.logDebug("[ROT] Failed to apply rotation on FIF block-entity at " + pos, t); } catch (Throwable ignored) {}
+                    if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Failed to apply rotation on FIF block-entity at " + pos, t); } catch (Throwable ignored) {}
                 }
             }
         } catch (Throwable t) {

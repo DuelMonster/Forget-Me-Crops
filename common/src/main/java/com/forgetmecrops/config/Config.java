@@ -19,20 +19,20 @@ public class Config {
     private static final Path SERVER_CONFIG_PATH = CONFIG_DIR.resolve("forget_me_crops-server.toml");
     private static final Path CLIENT_CONFIG_PATH = CONFIG_DIR.resolve("forget_me_crops-client.toml");
 
-    public static int tickInterval = 300;
-    public static int frameRediscoveryInterval = 600;
-    public static int scanRangeX = 4;
-    public static int scanRangeZ = 4;
-    public static DurabilityMode durabilityMode = DurabilityMode.NORMAL;
-    public static boolean mendingNegation = true;
-    public static boolean debugLogging = true;
-    public static int chestFullCooldownTicks = 300;
-    public static int maxSpiralDurationTicks = 200;
-    public static boolean harvestParticles = true;
-    public static RotationMode rotationMode = RotationMode.FULL_ROTATION_PER_HARVEST;
+    private static int tickInterval = 300;
+    private static int frameRediscoveryInterval = 600;
+    private static int scanRangeX = 4;
+    private static int scanRangeZ = 4;
+    private static DurabilityMode durabilityMode = DurabilityMode.NORMAL;
+    private static boolean mendingNegation = true;
+    private static boolean debugLogging = true;
+    private static int chestFullCooldownTicks = 300;
+    private static int maxSpiralDurationTicks = 200;
+    private static boolean harvestParticles = true;
+    private static RotationMode rotationMode = RotationMode.FULL_ROTATION_PER_HARVEST;
 
-    public static SeedClutterMode seedClutterMode = SeedClutterMode.REDUCED;
-    public static int seedReservePerType = 80;
+    private static SeedClutterMode seedClutterMode = SeedClutterMode.REDUCED;
+    private static int seedReservePerType = 80;
 
     public static void load() {
         try {
@@ -77,6 +77,35 @@ public class Config {
     public static void applyClientSettings(boolean harvestParticles) {
         Config.harvestParticles = harvestParticles;
     }
+
+    // --- Getters ---
+    public static int getTickInterval() { return tickInterval; }
+    public static int getFrameRediscoveryInterval() { return frameRediscoveryInterval; }
+    public static int getScanRangeX() { return scanRangeX; }
+    public static int getScanRangeZ() { return scanRangeZ; }
+    public static DurabilityMode getDurabilityMode() { return durabilityMode; }
+    public static boolean isMendingNegation() { return mendingNegation; }
+    public static boolean isDebugLogging() { return debugLogging; }
+    public static int getChestFullCooldownTicks() { return chestFullCooldownTicks; }
+    public static int getMaxSpiralDurationTicks() { return maxSpiralDurationTicks; }
+    public static boolean isHarvestParticles() { return harvestParticles; }
+    public static RotationMode getRotationMode() { return rotationMode; }
+    public static SeedClutterMode getSeedClutterMode() { return seedClutterMode; }
+    public static int getSeedReservePerType() { return seedReservePerType; }
+
+    // --- Setters (used by config UI screens) ---
+    public static void setTickInterval(int v) { tickInterval = v; }
+    public static void setScanRangeX(int v) { scanRangeX = v; }
+    public static void setScanRangeZ(int v) { scanRangeZ = v; }
+    public static void setDurabilityMode(DurabilityMode v) { durabilityMode = v; }
+    public static void setMendingNegation(boolean v) { mendingNegation = v; }
+    public static void setDebugLogging(boolean v) { debugLogging = v; }
+    public static void setChestFullCooldownTicks(int v) { chestFullCooldownTicks = v; }
+    public static void setMaxSpiralDurationTicks(int v) { maxSpiralDurationTicks = v; }
+    public static void setRotationMode(RotationMode v) { rotationMode = v; }
+    public static void setSeedClutterMode(SeedClutterMode v) { seedClutterMode = v; }
+    public static void setSeedReservePerType(int v) { seedReservePerType = v; }
+    public static void setHarvestParticles(boolean v) { harvestParticles = v; }
 
     public static void logEffectiveConfig() {
         if (debugLogging) {

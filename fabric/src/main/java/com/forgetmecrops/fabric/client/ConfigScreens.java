@@ -37,30 +37,30 @@ public final class ConfigScreens {
         // Server settings category
         ConfigCategory server = builder.getOrCreateCategory(Component.literal(ConfigDescriptors.CATEGORY_SERVER));
 
-        server.addEntry(entryBuilder.startIntField(Component.literal(ConfigDescriptors.TICK_INTERVAL_LABEL), Config.tickInterval)
+        server.addEntry(entryBuilder.startIntField(Component.literal(ConfigDescriptors.TICK_INTERVAL_LABEL), Config.getTickInterval())
                 .setDefaultValue(ConfigDescriptors.TICK_INTERVAL_DEFAULT)
                 .setMin(ConfigDescriptors.TICK_INTERVAL_MIN)
-                .setSaveConsumer(v -> Config.tickInterval = v)
+                .setSaveConsumer(v -> Config.setTickInterval(v))
                 .setTooltip(Component.literal(ConfigDescriptors.TICK_INTERVAL_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startIntField(Component.literal(ConfigDescriptors.SCAN_RANGE_X_LABEL), Config.scanRangeX)
+        server.addEntry(entryBuilder.startIntField(Component.literal(ConfigDescriptors.SCAN_RANGE_X_LABEL), Config.getScanRangeX())
                 .setDefaultValue(ConfigDescriptors.SCAN_RANGE_X_DEFAULT)
                 .setMin(ConfigDescriptors.SCAN_RANGE_X_MIN)
-                .setSaveConsumer(v -> Config.scanRangeX = v)
+                .setSaveConsumer(v -> Config.setScanRangeX(v))
                 .setTooltip(Component.literal(ConfigDescriptors.SCAN_RANGE_X_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startIntField(Component.literal(ConfigDescriptors.SCAN_RANGE_Z_LABEL), Config.scanRangeZ)
+        server.addEntry(entryBuilder.startIntField(Component.literal(ConfigDescriptors.SCAN_RANGE_Z_LABEL), Config.getScanRangeZ())
                 .setDefaultValue(ConfigDescriptors.SCAN_RANGE_Z_DEFAULT)
                 .setMin(ConfigDescriptors.SCAN_RANGE_Z_MIN)
-                .setSaveConsumer(v -> Config.scanRangeZ = v)
+                .setSaveConsumer(v -> Config.setScanRangeZ(v))
                 .setTooltip(Component.literal(ConfigDescriptors.SCAN_RANGE_Z_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startEnumSelector(Component.literal(ConfigDescriptors.DURABILITY_MODE_LABEL), DurabilityMode.class, Config.durabilityMode)
+        server.addEntry(entryBuilder.startEnumSelector(Component.literal(ConfigDescriptors.DURABILITY_MODE_LABEL), DurabilityMode.class, Config.getDurabilityMode())
                 .setDefaultValue(ConfigDescriptors.DURABILITY_MODE_DEFAULT)
-                .setSaveConsumer(v -> Config.durabilityMode = v)
+                .setSaveConsumer(v -> Config.setDurabilityMode(v))
                 .setTooltip(Component.literal("")
                         .append(Component.literal("Modes:\n").withStyle(ChatFormatting.YELLOW))
                         .append(Component.literal("  NORMAL").withStyle(ChatFormatting.GREEN))
@@ -72,33 +72,33 @@ public final class ConfigScreens {
                         .append(Component.literal("\n")).append(Component.literal(ConfigDescriptors.DURABILITY_MODE_TOOLTIP).withStyle(ChatFormatting.GRAY)))
                 .build());
 
-        server.addEntry(entryBuilder.startBooleanToggle(Component.literal(ConfigDescriptors.MENDING_NEGATION_LABEL), Config.mendingNegation)
-                .setSaveConsumer(v -> Config.mendingNegation = v)
+        server.addEntry(entryBuilder.startBooleanToggle(Component.literal(ConfigDescriptors.MENDING_NEGATION_LABEL), Config.isMendingNegation())
+                .setSaveConsumer(v -> Config.setMendingNegation(v))
                 .setTooltip(Component.literal(ConfigDescriptors.MENDING_NEGATION_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startBooleanToggle(Component.literal(ConfigDescriptors.DEBUG_LOGGING_LABEL), Config.debugLogging)
-                .setSaveConsumer(v -> Config.debugLogging = v)
+        server.addEntry(entryBuilder.startBooleanToggle(Component.literal(ConfigDescriptors.DEBUG_LOGGING_LABEL), Config.isDebugLogging())
+                .setSaveConsumer(v -> Config.setDebugLogging(v))
                 .setTooltip(Component.literal(ConfigDescriptors.DEBUG_LOGGING_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startIntField(Component.literal(ConfigDescriptors.CHEST_FULL_COOLDOWN_LABEL), Config.chestFullCooldownTicks)
+        server.addEntry(entryBuilder.startIntField(Component.literal(ConfigDescriptors.CHEST_FULL_COOLDOWN_LABEL), Config.getChestFullCooldownTicks())
                 .setDefaultValue(ConfigDescriptors.CHEST_FULL_COOLDOWN_DEFAULT)
                 .setMin(ConfigDescriptors.CHEST_FULL_COOLDOWN_MIN)
-                .setSaveConsumer(v -> Config.chestFullCooldownTicks = v)
+                .setSaveConsumer(v -> Config.setChestFullCooldownTicks(v))
                 .setTooltip(Component.literal(ConfigDescriptors.CHEST_FULL_COOLDOWN_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startIntField(Component.literal(ConfigDescriptors.MAX_SPIRAL_DURATION_LABEL), Config.maxSpiralDurationTicks)
+        server.addEntry(entryBuilder.startIntField(Component.literal(ConfigDescriptors.MAX_SPIRAL_DURATION_LABEL), Config.getMaxSpiralDurationTicks())
                 .setDefaultValue(ConfigDescriptors.MAX_SPIRAL_DEFAULT)
                 .setMin(ConfigDescriptors.MAX_SPIRAL_MIN)
-                .setSaveConsumer(v -> Config.maxSpiralDurationTicks = v)
+                .setSaveConsumer(v -> Config.setMaxSpiralDurationTicks(v))
                 .setTooltip(Component.literal(ConfigDescriptors.MAX_SPIRAL_TOOLTIP))
                 .build());
 
-        server.addEntry(entryBuilder.startEnumSelector(Component.literal(ConfigDescriptors.ROTATION_MODE_LABEL), RotationMode.class, Config.rotationMode)
+        server.addEntry(entryBuilder.startEnumSelector(Component.literal(ConfigDescriptors.ROTATION_MODE_LABEL), RotationMode.class, Config.getRotationMode())
                 .setDefaultValue(ConfigDescriptors.ROTATION_MODE_DEFAULT)
-                .setSaveConsumer(v -> Config.rotationMode = v)
+                .setSaveConsumer(v -> Config.setRotationMode(v))
                 .setTooltip(Component.literal("")
                         .append(Component.literal("Modes:\n").withStyle(ChatFormatting.YELLOW))
                         .append(Component.literal("  STEP_PER_HARVEST").withStyle(ChatFormatting.AQUA))
@@ -110,9 +110,9 @@ public final class ConfigScreens {
                         .append(Component.literal("\n")).append(Component.literal(ConfigDescriptors.ROTATION_MODE_TOOLTIP).withStyle(ChatFormatting.GRAY)))
                 .build());
 
-        server.addEntry(entryBuilder.startEnumSelector(Component.literal(ConfigDescriptors.SEED_CLUTTER_LABEL), SeedClutterMode.class, Config.seedClutterMode)
+        server.addEntry(entryBuilder.startEnumSelector(Component.literal(ConfigDescriptors.SEED_CLUTTER_LABEL), SeedClutterMode.class, Config.getSeedClutterMode())
                 .setDefaultValue(ConfigDescriptors.SEED_CLUTTER_DEFAULT)
-                .setSaveConsumer(v -> Config.seedClutterMode = v)
+                .setSaveConsumer(v -> Config.setSeedClutterMode(v))
                 .setTooltip(Component.literal("")
                         .append(Component.literal("Modes:\n").withStyle(ChatFormatting.YELLOW))
                         .append(Component.literal("  NORMAL").withStyle(ChatFormatting.GREEN))
@@ -124,17 +124,17 @@ public final class ConfigScreens {
                         .append(Component.literal("\n")).append(Component.literal(ConfigDescriptors.SEED_CLUTTER_TOOLTIP).withStyle(ChatFormatting.GRAY)))
                 .build());
 
-        server.addEntry(entryBuilder.startIntField(Component.literal(ConfigDescriptors.SEED_RESERVE_LABEL), Config.seedReservePerType)
+        server.addEntry(entryBuilder.startIntField(Component.literal(ConfigDescriptors.SEED_RESERVE_LABEL), Config.getSeedReservePerType())
                 .setDefaultValue(ConfigDescriptors.SEED_RESERVE_DEFAULT)
                 .setMin(ConfigDescriptors.SEED_RESERVE_MIN)
-                .setSaveConsumer(v -> Config.seedReservePerType = v)
+                .setSaveConsumer(v -> Config.setSeedReservePerType(v))
                 .setTooltip(Component.literal(ConfigDescriptors.SEED_RESERVE_TOOLTIP))
                 .build());
 
         // Client settings category
         ConfigCategory client = builder.getOrCreateCategory(Component.literal(ConfigDescriptors.CATEGORY_CLIENT));
-        client.addEntry(entryBuilder.startBooleanToggle(Component.literal(ConfigDescriptors.HARVEST_PARTICLES_LABEL), Config.harvestParticles)
-                .setSaveConsumer(v -> Config.harvestParticles = v)
+        client.addEntry(entryBuilder.startBooleanToggle(Component.literal(ConfigDescriptors.HARVEST_PARTICLES_LABEL), Config.isHarvestParticles())
+                .setSaveConsumer(v -> Config.setHarvestParticles(v))
                 .setTooltip(Component.literal(ConfigDescriptors.HARVEST_PARTICLES_TOOLTIP))
                 .build());
 

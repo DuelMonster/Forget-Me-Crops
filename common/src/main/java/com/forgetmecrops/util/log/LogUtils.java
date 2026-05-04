@@ -27,13 +27,13 @@ public final class LogUtils {
     }
 
     public static void logDebug(String format, Object... args) {
-        if (Config.debugLogging) {
+        if (Config.isDebugLogging()) {
             LOG.debug("[{}] " + format, mergeArgs(args));
         }
     }
 
     public static void logDebug(String format, Throwable t) {
-        if (Config.debugLogging) {
+        if (Config.isDebugLogging()) {
             String msg = "[" + ModCommon.MOD_NAME + "] " + format;
             LOG.debug(msg, t);
         }
@@ -47,7 +47,7 @@ public final class LogUtils {
      * This method uses reflection to support both Log4j2 and Logback (best-effort).
      */
     public static void applyConfiguredLogging() {
-        if (!Config.debugLogging) return;
+        if (!Config.isDebugLogging()) return;
         try {
             Class<?> configuratorClass = Class.forName("org.apache.logging.log4j.core.config.Configurator");
             Class<?> levelClass = Class.forName("org.apache.logging.log4j.Level");

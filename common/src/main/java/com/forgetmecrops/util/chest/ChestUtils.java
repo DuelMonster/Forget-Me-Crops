@@ -101,8 +101,8 @@ public class ChestUtils {
         if (chest == null || item == null) return false;
         if (respectSeedReserve && isSeedItem(item) && !CropRegistry.isSeedAlsoCropFruit(item)) {
             int existing = countItem(chest, item);
-            if (existing <= Config.seedReservePerType) {
-                try { LogUtils.logDebug("[CHEST] removeOne: refusing to remove {} because existing {} <= reserve {}", item, existing, Config.seedReservePerType); } catch (Throwable ignored) {}
+            if (existing <= Config.getSeedReservePerType()) {
+                try { LogUtils.logDebug("[CHEST] removeOne: refusing to remove {} because existing {} <= reserve {}", item, existing, Config.getSeedReservePerType()); } catch (Throwable ignored) {}
                 return false;
             }
         }
