@@ -22,6 +22,11 @@ public final class LabelTooltipEnumListEntry<T extends Enum<?>> extends EnumList
     // Same label-lane hitbox trick as the other LabelTooltip entry classes
     private final LabelHitbox hitbox = new LabelHitbox();
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static <T extends Enum<?>> Function<Enum, Component> legacyEnumNameProvider(Function<T, Component> enumNameProvider) {
+        return e -> enumNameProvider.apply((T) e);
+    }
+
     /**
      * Creates an enum list entry with label-only tooltip behavior.
      *
@@ -33,12 +38,13 @@ public final class LabelTooltipEnumListEntry<T extends Enum<?>> extends EnumList
      * @param enumNameProvider translates an enum constant to its display Component
      * @param tooltipSupplier  provides the tooltip shown over the label area
      */
+    @SuppressWarnings("deprecation")
     public LabelTooltipEnumListEntry(Component fieldName,
                                      Class<T> enumClass,
                                      T value,
                                      T defaultValue,
                                      Consumer<T> saveCallback,
-                                     Function<Enum, Component> enumNameProvider,
+                                     Function<T, Component> enumNameProvider,
                                      Supplier<Optional<Component[]>> tooltipSupplier) {
         super(
                 fieldName,
@@ -47,7 +53,7 @@ public final class LabelTooltipEnumListEntry<T extends Enum<?>> extends EnumList
                 Component.translatable("text.cloth-config.reset_value"),
                 () -> defaultValue,
                 saveCallback,
-                enumNameProvider,
+                legacyEnumNameProvider(enumNameProvider),
                 tooltipSupplier
         );
     }

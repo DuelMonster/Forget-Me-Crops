@@ -493,7 +493,7 @@ public class FrameScanner {
             Map<Block, Integer> counts = new HashMap<>();
             for (Direction d : HORIZ_DIRS) {
                 Block rep = CropRegistry.canonicalCropBlock(level.getBlockState(pos.relative(d)).getBlock());
-                if (rep != null && CropRegistry.isCropBlock(rep)) counts.merge(rep, 1, Integer::sum);
+                if (rep != null && CropRegistry.isCropBlock(rep)) counts.put(rep, counts.getOrDefault(rep, 0) + 1);
             }
             tryPlantConsensus(counts, anchor, level, pos);
         }
@@ -502,7 +502,7 @@ public class FrameScanner {
             Map<Block, Integer> counts = new HashMap<>();
             for (Direction d : HORIZ_DIRS) {
                 Block b = level.getBlockState(pos.relative(d)).getBlock();
-                if (b == Blocks.NETHER_WART) counts.merge(b, 1, Integer::sum);
+                if (b == Blocks.NETHER_WART) counts.put(b, counts.getOrDefault(b, 0) + 1);
             }
             tryPlantConsensus(counts, anchor, level, pos);
         }
@@ -524,7 +524,7 @@ public class FrameScanner {
                 Map<Block, Integer> counts = new HashMap<>();
                 for (Direction d : HORIZ_DIRS) {
                     Block rep = CropRegistry.canonicalCropBlock(level.getBlockState(pos.relative(d)).getBlock());
-                    if (rep != null && CropRegistry.isCropBlock(rep)) counts.merge(rep, 1, Integer::sum);
+                    if (rep != null && CropRegistry.isCropBlock(rep)) counts.put(rep, counts.getOrDefault(rep, 0) + 1);
                 }
                 tryPlantConsensus(counts, anchor, level, pos);
             }

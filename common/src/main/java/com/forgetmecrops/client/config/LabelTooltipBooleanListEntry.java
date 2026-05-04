@@ -18,8 +18,17 @@ import java.util.function.Supplier;
  * </p>
  */
 public final class LabelTooltipBooleanListEntry extends BooleanListEntry {
+    @FunctionalInterface
+    public interface BoolConsumer {
+        void accept(boolean value);
+    }
+
     // The hitbox that tracks the label lane position during each render pass
     private final LabelHitbox hitbox = new LabelHitbox();
+
+    private static Consumer<Boolean> boxedCallback(BoolConsumer saveCallback) {
+        return v -> saveCallback.accept(v != null && v);
+    }
 
     /**
      * Creates a boolean toggle entry with label-only tooltip behavior.
@@ -29,16 +38,17 @@ public final class LabelTooltipBooleanListEntry extends BooleanListEntry {
      * @param saveCallback    called when the player saves the config screen
      * @param tooltipSupplier provides the tooltip components to show over the label area
      */
+    @SuppressWarnings("deprecation")
     public LabelTooltipBooleanListEntry(Component fieldName,
                                         boolean value,
-                                        Consumer<Boolean> saveCallback,
+                                        BoolConsumer saveCallback,
                                         Supplier<Optional<Component[]>> tooltipSupplier) {
         super(
                 fieldName,
                 value,
                 Component.translatable("text.cloth-config.reset_value"),
                 null,
-                saveCallback,
+                boxedCallback(saveCallback),
                 tooltipSupplier
         );
     }

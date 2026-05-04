@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component;
 
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import java.util.function.Supplier;
 
 /**
@@ -21,6 +22,10 @@ public final class LabelTooltipIntegerListEntry extends IntegerListEntry {
     // Tracks the label lane per-render so tooltip hit-testing is always accurate
     private final LabelHitbox hitbox = new LabelHitbox();
 
+    private static Consumer<Integer> boxedCallback(IntConsumer saveCallback, int defaultValue) {
+        return v -> saveCallback.accept(v == null ? defaultValue : v);
+    }
+
     /**
      * Creates an integer field entry with label-only tooltip behavior and a configured minimum.
      *
@@ -31,18 +36,19 @@ public final class LabelTooltipIntegerListEntry extends IntegerListEntry {
      * @param saveCallback    called when the player saves the config screen
      * @param tooltipSupplier provides the tooltip components to show over the label area
      */
+    @SuppressWarnings("deprecation")
     public LabelTooltipIntegerListEntry(Component fieldName,
                                         int value,
                                         int defaultValue,
                                         int minimum,
-                                        Consumer<Integer> saveCallback,
+                                        IntConsumer saveCallback,
                                         Supplier<Optional<Component[]>> tooltipSupplier) {
         super(
                 fieldName,
                 value,
                 Component.translatable("text.cloth-config.reset_value"),
                 () -> defaultValue,
-                saveCallback,
+                boxedCallback(saveCallback, defaultValue),
                 tooltipSupplier
         );
         setMinimum(minimum);
