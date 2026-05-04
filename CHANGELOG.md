@@ -8,6 +8,12 @@
 - Remove redundant null checks on non-null context objects in `HarvestUtils` and `FarmScanTask`.
 - Harden `Config.configFileForKey` to use literal file name strings, eliminating a potential null-deref SpotBugs warning.
 - Fix `FrameDiscovery` debug log to use resolved `be.getClass().getName()` instead of conditional null check.
+- Related-mod install tasks now default to optional behavior and use loader-specific subdirectories for Fabric and NeoForge dependencies.
+- Fixed empty-farm repair sweep behavior so chest-backed replanting occurs during scheduled spiral scans.
+- Simplified `FarmScanTask` to a single spiral pass (removed constructor maturity pre-scan and end-of-task neighbour-only repair pass).
+- Added scan-pass player feedback: planting/tilling/harvest sounds, spiral trail dust particles, and crop-colored harvest dust burst particles.
+- Tuned harvest dust burst behavior to rise higher with tighter horizontal spread.
+- Restored dirt/grass repair tiling by including adjacent tillable repair targets in BFS farm position membership.
 
 ## 0.11.0
 

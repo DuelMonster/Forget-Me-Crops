@@ -23,9 +23,10 @@ Farms stay active as long as their chunks are loaded, so vanilla chunk loaders a
 - Self-repairs: retills dirt/grass back into farmland, replants empty patches
 - Replaces a broken hoe from chest stock automatically
 - Detects when the frame or chest is removed and unregisters cleanly
-- Pre-scan maturity check — skips the spiral pass entirely if nothing is ripe, keeping idle farms quiet
+- Single-pass spiral scan combines harvesting, replanting, and farm repair actions
 - Incremental scanning spreads work across multiple ticks to keep lag spikes small
 - BFS-based connected-farm discovery avoids cross-contaminating neighboring farms
+- In-world feedback during scan work: planting/tilling/harvest sounds plus dust/harvest particles
 - Fortune and Silk Touch enchantments are respected for drop calculations
 - Full NeoForge native config + built-in config screen
 - Fabric Mod Menu config screen when Mod Menu is installed
@@ -39,9 +40,10 @@ Farms stay active as long as their chunks are loaded, so vanilla chunk loaders a
 2. If a hoe is present and the chest has space, a `FarmScanTask` is created.
 3. The task discovers the farm area with a BFS pass, then sweeps it in an outward spiral.
 4. Mature crops are harvested and drops inserted into the chest; the seed/replant item is consumed from the drops (or chest) and the crop is immediately replanted.
-5. Any empty farmland, soul sand, or dirt patches found during the pass are repaired in a neighbour pass at the end of the spiral.
+5. The same spiral pass also repairs farm gaps in-line: empty farmland/soul-sand tiles are replanted and adjacent dirt/grass tiles are retilled and replanted.
 6. The item frame rotates as work progresses so you can see which ring is currently being processed.
-7. When the task finishes (or the chest fills), it cleans up and the anchor goes back on its cooldown timer.
+7. Scan work produces local feedback (tilling/plant/harvest sounds, spiral dust, and harvest dust bursts) so activity is visible during the pass.
+8. When the task finishes (or the chest fills), it cleans up and the anchor goes back on its cooldown timer.
 
 ---
 
@@ -136,7 +138,7 @@ On **NeoForge**, the built-in config screen is available from the Mods list.
 
 | Option             | Default | What it does                                          |
 |--------------------|---------|-------------------------------------------------------|
-| `harvestParticles` | `true`  | Toggles the coloured item-burst particles on harvest. |
+| `harvestParticles` | `true`  | Toggles scan visual particles (spiral dust + harvest burst particles). |
 
 ### Durability Mode
 

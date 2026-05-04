@@ -106,7 +106,7 @@ When `animating == true` for a frame entry, `scheduleRotation` skips adding new 
 `FrameScanner.bfsDiscoverFarm(center, level, rangeX, rangeZ)` builds a connected set of farm tiles using breadth-first search from the anchor position. Traversal rules:
 
 - A position is a valid farm tile if `isFarmPosition(level, pos)` returns true.
-- `isFarmPosition` accepts: crop blocks, melon/pumpkin stems, melon/pumpkin fruit, farmland (with or without a crop above), soul sand (with or without nether wart above).
+- `isFarmPosition` accepts: crop blocks, melon/pumpkin stems, melon/pumpkin fruit, farmland (with or without a crop above), soul sand (with or without nether wart above), and air-over-dirt/grass repair tiles that are adjacent to farmland.
 - Traversal stops at the configured range limits `[center ± rangeX, center ± rangeZ]`.
 - Air gaps and ambiguous border tiles are not bridged — this prevents adjacent farms from leaking into each other.
 
@@ -124,9 +124,7 @@ The spiral is used in preference to a simple row/column sweep because it natural
 
 Per-tick, the task processes `positionsPerTick` spiral positions. `positionsPerTick` is computed at construction time as `ceil(totalPositions / maxSpiralDurationTicks)`. The task self-removes when `currentIndex >= totalPositions` or when `ctx.chestFull` is set.
 
-**Pre-scan maturity check:** before the spiral begins, the constructor scans all candidate positions to check whether any mature crops or harvestable fruit exist. If none are found, the task sets `hasMature = false` and `tick()` returns immediately on the first call. This prevents the spiral, rotation animation, and neighbour repair pass from running on idle farms.
-
-**Neighbour repair pass:** once `currentIndex >= totalPositions`, the task runs one additional repair sweep over the full scan rectangle. This handles empty farmland, soul sand, and dirt/grass patches that were not part of the original BFS candidate set. The pass runs exactly once per task (`neighborPassDone` guard).
+The current implementation is a **single-pass** model: harvest checks, replanting, and till/repair logic all run inside the main spiral iteration. There is no constructor-time maturity pre-scan and no separate end-of-task neighbour repair sweep.
 
 #### Anchor re-validation per tick
 
@@ -160,6 +158,19 @@ If an air gap is found and the block below is `DIRT` or `GRASS_BLOCK`:
 3. One durability point is applied to the hoe via `DurabilityLogic.applyDamage(...)`.
 4. If the hoe breaks, `HarvestUtils.handleBrokenHoe(ctx, before)` is called.
 5. A consensus replant pass is then run for the newly created farmland tile.
+
+### Scan Feedback Effects
+
+Scan actions generate local feedback effects in-world:
+
+- Harvesting plays the harvested block's break sound.
+- Replanting plays the placed crop block's place sound.
+- Retilling dirt/grass to farmland plays hoe-till audio.
+- Hoe breaks play item-break sound and item particles at the frame anchor.
+- Spiral traversal emits subtle gray dust particles.
+- Harvest events emit additional crop-colored dust bursts that rise higher than crop height.
+
+All visual feedback is gated by client config `harvestParticles`.
 
 ---
 
@@ -357,7 +368,7 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 
 | Option             | Default | Type    | Description                              |
 |--------------------|---------|---------|------------------------------------------|
-| `harvestParticles` | `true`  | boolean | Enable coloured harvest particle effects |
+| `harvestParticles` | `true`  | boolean | Enable scan visual particles (spiral trail + harvest burst) |
 
 ### `durabilityMode`
 
