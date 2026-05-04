@@ -21,6 +21,8 @@
 - Fixed TOML string parsing for quoted enum values so `rotationMode` and other string-backed options load correctly instead of silently falling back.
 - Fixed `FULL_ROTATION_PER_HARVEST` timing to start with spiral scan progression and complete exactly one paced `0..7` cycle over the configured scan duration.
 - Config UI: tooltips for all option types (integer fields, boolean toggles, and enum selectors) now appear only when hovering the option label text, not when hovering the value widget or reset button. Implemented via per-loader `LabelHitbox` helper and `LabelTooltipIntegerListEntry` / `LabelTooltipBooleanListEntry` / `LabelTooltipEnumListEntry` custom entry subclasses; `ConfigEntryBuilder` is no longer used in either loader's config screen.
+- Config UI refactor: moved Cloth Config screen construction into shared `com.forgetmecrops.client.config.ConfigScreen` (common module) with shared `ConfigTooltipFactory`, `LabelHitbox`, and `LabelTooltip*ListEntry` classes.
+- Removed now-redundant loader wrappers (`ConfigScreens` and `ClothConfigBridge` in Fabric/NeoForge); loader entrypoints now delegate directly to `ConfigScreen.create(...)`.
 - Maintenance refactor/cleanup pass: deduplicated replant helper logic in `HarvestUtils`, centralized anchor resolution helpers, and removed a now-unused durability import from `FrameScanner`.
 
 ## 0.11.0

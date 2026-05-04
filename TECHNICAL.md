@@ -13,8 +13,8 @@ ForgetMeCrops is structured as a Gradle multi-module project:
 | Module    | Role                                                                         |
 |-----------|------------------------------------------------------------------------------|
 | `common`  | All game logic — scanning, harvesting, registry, config, helpers             |
-| `fabric`  | Fabric glue — ticker, event hooks, Mod Menu screen, FIF mixin                |
-| `neoforge`| NeoForge glue — ticker, event hooks, native config registration              |
+| `fabric`  | Fabric glue — ticker, event hooks, Mod Menu integration, FIF mixin            |
+| `neoforge`| NeoForge glue — ticker, event hooks, config-screen SPI registration           |
 
 All gameplay decisions live in `common`. The platform modules only wire up tickers and platform-specific config APIs.
 
@@ -25,6 +25,7 @@ All gameplay decisions live in `common`. The platform modules only wire up ticke
 | `com.forgetmecrops.frame`            | `FrameScanner`, `FrameRegistry`, `FrameDiscovery`, `FarmScanTask`, `SpiralStep`, `CatchupManager` |
 | `com.forgetmecrops.harvest`          | `HarvestUtils`, `HarvestContext`, `CropRegistry`                                  |
 | `com.forgetmecrops.config`           | `Config`, `ConfigDescriptors`                                                     |
+| `com.forgetmecrops.client.config`    | Shared config UI classes: `ConfigScreen`, tooltip builders, label-hitbox entries |
 | `com.forgetmecrops.enums`            | `DurabilityMode`, `RotationMode`, `SeedClutterMode`                               |
 | `com.forgetmecrops.util.chest`       | `ChestUtils` — insert/remove helpers with reserve enforcement                     |
 | `com.forgetmecrops.util.durability`  | `DurabilityLogic` — enchantment-aware hoe damage                                  |
@@ -334,7 +335,7 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 ## Fabric Platform Notes
 
 - Ticker: `ServerTickEvents.END_SERVER_TICK` drives the per-tick scan and rotation flush.
-- Config screen: a Cloth Config `Screen` provided when Mod Menu is installed. All option rows use custom entry subclasses (`LabelTooltipIntegerListEntry`, `LabelTooltipBooleanListEntry`, `LabelTooltipEnumListEntry`) that share a `LabelHitbox` helper — tooltips are suppressed unless the cursor is over the option label text. Writes back to the same TOML files as the file-based config loader. `ConfigEntryBuilder` is not used; entries are instantiated directly so tooltip and default-value behaviour are fully under project control.
+- Config screen: Mod Menu opens `com.forgetmecrops.client.config.ConfigScreen.create(parent)` from `common`. All option rows use shared custom entry subclasses (`LabelTooltipIntegerListEntry`, `LabelTooltipBooleanListEntry`, `LabelTooltipEnumListEntry`) with `LabelHitbox` lane hit-testing so tooltips are suppressed unless the cursor is over the option label lane.
 - FIF mixin: accessor mixin targets the FIF chunk holder collection for safe compile-time-resolved field access.
 - Metadata: `fabric.mod.json` version is set from the Gradle `mod_version` property to avoid `${version}` appearing as `unspecified` in release jars.
 - Debug logging: frame-discovery changes are logged only when the discovered count changes or on periodic summaries, and slow-run warnings are rate-limited.
@@ -342,8 +343,8 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 ## NeoForge Platform Notes
 
 - Ticker: `ServerTickEvent.Post` drives the per-tick scan.
-- Config: registers native `ModConfigSpec` client and server configs using the same file names (`forget_me_crops-client.toml`, `forget_me_crops-server.toml`). A `ModConfigEvent.LOADING` handler syncs the NeoForge config values into the shared `Config` fields that all common gameplay code reads.
-- Config screen: a Cloth Config `Screen` registered via `IConfigScreenFactory` SPI so the Configure button appears in NeoForge's Mods list. Uses the same custom entry subclasses and `LabelHitbox` infrastructure as the Fabric screen — tooltips are suppressed outside the option label area.
+- Config files: uses the same shared TOML loader/saver as Fabric (`Config.load()` / `Config.save()` writing `forget_me_crops-client.toml` and `forget_me_crops-server.toml`).
+- Config screen: registered via `IConfigScreenFactory` SPI so the Configure button appears in NeoForge's Mods list. Delegates to the same `com.forgetmecrops.client.config.ConfigScreen` used by Fabric.
 
 ---
 
@@ -423,6 +424,8 @@ Current scope for seed filtering (clutter/reserve logic):
 | `common/.../util/chest/ChestUtils.java`                                  | Chest insert/remove with reserve enforcement               |
 | `common/.../util/durability/DurabilityLogic.java`                        | Enchantment-aware hoe damage                               |
 | `common/.../config/Config.java`                                          | Runtime config state and TOML I/O                          |
+| `common/.../client/config/ConfigScreen.java`                             | Shared Cloth Config screen builder for both loaders        |
+| `common/.../client/config/ConfigTooltipFactory.java`                     | Shared tooltip content suppliers for config entries        |
 | `common/.../platform/adapter/FIF.java`                                   | FastItemFrames adapter interface                           |
 
 ---

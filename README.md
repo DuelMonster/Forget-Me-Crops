@@ -29,7 +29,7 @@ Farms stay active as long as their chunks are loaded, so vanilla chunk loaders a
 - BFS-based connected-farm discovery avoids cross-contaminating neighboring farms
 - In-world feedback during scan work: planting/tilling/harvest sounds plus dust/harvest particles
 - Fortune and Silk Touch enchantments are respected for drop calculations
-- Full NeoForge native config + built-in config screen
+- Shared Cloth Config screen implementation for both loaders
 - Fabric Mod Menu config screen when Mod Menu is installed
 - Works alongside [FastItemFrames by Fuzss](https://modrinth.com/mod/fastitemframes)
 
@@ -117,9 +117,9 @@ The built-in NeoForge config screen is available from the Mods list in the main 
 Config files are written to `config/forget_me_crops-server.toml` and `config/forget_me_crops-client.toml` in your instance directory.
 
 On **Fabric**, if Mod Menu is installed, these can also be edited in-game via the mod's Configure button.
-On **NeoForge**, the built-in config screen is available from the Mods list.
+On **NeoForge**, the Mods list Configure button opens the same shared Cloth Config screen.
 
-In both loaders the config screen uses custom entry widgets for every option so that tooltips only appear when the mouse is over the option label — they do not pop up over the value field or reset button.
+Both loaders delegate to the same `ConfigScreen` builder in `common`, with custom entry widgets for every option so tooltips only appear when the mouse is over the option label lane (not over the value field or reset button).
 
 ### Server Config
 
