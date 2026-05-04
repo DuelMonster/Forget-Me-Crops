@@ -74,9 +74,9 @@ public final class ConfigTooltipFactory {
                 .append(modeLabel("forgetmecrops.enum.rotation_mode.single_step", ChatFormatting.AQUA))
                 .append(Component.literal(" - Advance one rotation step per full farm harvest\n").withStyle(ChatFormatting.GRAY))
                 .append(modeLabel("forgetmecrops.enum.rotation_mode.full_rotation", ChatFormatting.GOLD))
-                .append(Component.literal(" - Perform a full 0..7 rotation cycle per harvest\n").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(" - Perform a full 0..7 rotation cycle per harvest (default)\n").withStyle(ChatFormatting.GRAY))
                 .append(modeLabel("forgetmecrops.enum.rotation_mode.follow_rotation", ChatFormatting.GREEN))
-                .append(Component.literal(" - Rotate to follow the spiral scan progression (default)\n").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(" - Rotate to follow the spiral scan progression\n").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal("\n"))
                 .append(Component.translatable("forgetmecrops.config.rotationMode.tooltip").withStyle(ChatFormatting.GRAY));
         return () -> Optional.of(new Component[]{c});
@@ -95,7 +95,7 @@ public final class ConfigTooltipFactory {
                 .append(modeLabel("forgetmecrops.enum.seed_clutter_mode.normal", ChatFormatting.GREEN))
                 .append(Component.literal(" - Default seed handling\n").withStyle(ChatFormatting.GRAY))
                 .append(modeLabel("forgetmecrops.enum.seed_clutter_mode.reduced", ChatFormatting.GOLD))
-                .append(Component.literal(" - Reduce seed clutter by conserving seeds when replanting\n").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(" - Reduce seed clutter by conserving seeds when replanting (default)\n").withStyle(ChatFormatting.GRAY))
                 .append(modeLabel("forgetmecrops.enum.seed_clutter_mode.none", ChatFormatting.RED))
                 .append(Component.literal(" - Disable seed-clutter rules; do not automatically manage extra seeds\n").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal("\n"))

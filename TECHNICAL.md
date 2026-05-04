@@ -350,6 +350,7 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 - Ticker: `ServerTickEvents.END_SERVER_TICK` drives the per-tick scan and rotation flush.
 - Config screen: Mod Menu opens `com.forgetmecrops.client.config.ConfigScreen.create(parent)` from `common`. All option rows use shared custom entry subclasses (`LabelTooltipIntegerListEntry`, `LabelTooltipBooleanListEntry`, `LabelTooltipEnumListEntry`) with `LabelHitbox` lane hit-testing so tooltips are suppressed unless the cursor is over the option label lane.
 - Tooltip rendering: enum mode tooltips pull mode names from locale keys in `ConfigTooltipFactory` (`forgetmecrops.enum.*`) so users see translated player-facing labels instead of enum identifiers.
+- Localization tooltips for all config options include explicit default values (from `ConfigDefaults` / `Config` defaults) so users can see baseline behavior without opening external docs.
 - FIF mixin: accessor mixin targets the FIF chunk holder collection for safe compile-time-resolved field access.
 - Metadata: `fabric.mod.json` version is set from the Gradle `mod_version` property to avoid `${version}` appearing as `unspecified` in release jars.
 - Debug logging: frame-discovery changes are logged only when the discovered count changes or on periodic summaries, and slow-run warnings are rate-limited.
