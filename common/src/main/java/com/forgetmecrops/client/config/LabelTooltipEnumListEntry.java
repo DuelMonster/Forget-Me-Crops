@@ -10,11 +10,29 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * Restricts enum entry tooltips to the field label hitbox so they do not trigger over action buttons.
+ * LabelTooltipEnumListEntry: An enum picker that only shows its tooltip over the label!
+ * <p>
+ * Extends Cloth Config's {@link EnumListEntry} with the same label-hitbox tooltip restriction
+ * as the boolean and integer variants. Used for RotationMode, DurabilityMode, and SeedClutterMode
+ * — all of which have rich mode-description tooltips that you really only want to read when
+ * you're hovering the label text, not accidentally when cycling through values.
+ * </p>
  */
 public final class LabelTooltipEnumListEntry<T extends Enum<?>> extends EnumListEntry<T> {
+    // Same label-lane hitbox trick as the other LabelTooltip entry classes
     private final LabelHitbox hitbox = new LabelHitbox();
 
+    /**
+     * Creates an enum list entry with label-only tooltip behavior.
+     *
+     * @param fieldName        the display label on the left side of the row
+     * @param enumClass        the enum class to cycle through (e.g. RotationMode.class)
+     * @param value            current selected value
+     * @param defaultValue     value to reset to when the reset button is clicked
+     * @param saveCallback     called when the player saves the config screen
+     * @param enumNameProvider translates an enum constant to its display Component
+     * @param tooltipSupplier  provides the tooltip shown over the label area
+     */
     public LabelTooltipEnumListEntry(Component fieldName,
                                      Class<T> enumClass,
                                      T value,

@@ -16,7 +16,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(TitleScreen.class)
 public class MixinTitleScreen {
     /**
-     * Injects a log message at the start of the title screen's init method.
+     * Injects at the start of TitleScreen.init() to log the detected platform and MC version.
+     * A small but helpful diagnostic on every title-screen load: lets players know what mod
+     * loader and Minecraft version they're running. Emotional bonus: proves the mod loaded.
      */
     @Inject(at = @At("HEAD"), method = "init()V")
     private void init(CallbackInfo info) {

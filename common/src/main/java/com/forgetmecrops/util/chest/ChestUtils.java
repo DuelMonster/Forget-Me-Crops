@@ -12,9 +12,21 @@ import com.forgetmecrops.harvest.CropRegistry;
 import java.util.List;
 
 /**
- * ChestUtils: Simple, loader-agnostic helpers for container operations used by forgetmecrops.
+ * ChestUtils: The mod's polite chest butler — handles all the tedious inventory bookkeeping!
+ * <p>
+ * Provides helpers for checking free space, inserting drops with stack merging,
+ * removing individual items while respecting seed reserves, finding and extracting
+ * hoes for replacement, and counting item totals. Everything the harvest pipeline
+ * needs to interact with a Container without repeating the same slot-loop boilerplate
+ * in twelve different places.
+ * </p>
+ * <p>
+ * All modification methods call setChanged() on BlockEntity-backed containers so
+ * changes actually persist to disk. We are responsible adults. Mostly.
+ * </p>
  */
 public class ChestUtils {
+    // Utility class. The chest butler does not live inside the chest.
     private ChestUtils() {}
     /**
      * Check whether the given container has any free space.
@@ -158,6 +170,12 @@ public class ChestUtils {
         return net.minecraft.world.item.ItemStack.EMPTY;
     }
 
+    /**
+     * Returns true if the item is a seed or crop fruit that we track reserves for.
+     * This is the gatekeeper list for seed-reserve protection — only items in this list
+     * can trigger the "don't remove below reserve count" logic in removeOne().
+     * If we ever add mod-compat crop seeds, this list needs expanding.
+     */
     private static boolean isSeedItem(Item item) {
         if (item == null) return false;
         return item == Items.WHEAT_SEEDS || item == Items.BEETROOT_SEEDS || item == Items.CARROT || item == Items.POTATO

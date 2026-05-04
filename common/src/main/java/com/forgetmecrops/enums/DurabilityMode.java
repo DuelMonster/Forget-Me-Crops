@@ -12,25 +12,32 @@ import java.util.Locale;
  * </p>
  */
 public enum DurabilityMode {
-    /** Normal durability handling (default). */
+    /** Normal durability — tools wear down over time, just like the farmer's will to keep farming manually.
+     *  The Unbreaking enchantment is respected here because we're not monsters. */
     NORMAL,
-    /** Ignore the Unbreaking enchantment when calculating durability usage. */
+    /** Ignore Unbreaking entirely — every harvest costs durability regardless of enchantments.
+     *  For masochists, purists, or players who enjoy watching their hoe die. */
     IGNORE_UNBREAKING,
-    /** No durability loss; tools do not degrade. */
+    /** Zero durability loss. Your hoe is immortal. An agricultural legend. Treat it accordingly. */
     NONE;
 
     /**
-     * Return the string value used in config files for this mode.
-     * @return the config string for this DurabilityMode
+     * Returns the config-file string for this mode — the key that players will inevitably typo
+     * at least once before getting it right.
+     *
+     * @return the TOML-safe string representation of this DurabilityMode
      */
     public String configValue() {
         return name();
     }
 
     /**
-     * Parse a config string into DurabilityMode, defaulting to NORMAL on invalid input.
-     * @param value the string value read from config
-     * @return the corresponding DurabilityMode, or NORMAL if unknown
+     * Parses a config-file string back into a DurabilityMode. Forgiving of case differences.
+     * Falls back to NORMAL on invalid input, because we assume most players want their
+     * tools to break like normal tools, not survive the heat death of the universe.
+     *
+     * @param value the raw string from the TOML config
+     * @return the matching DurabilityMode, or NORMAL if parsing fails
      */
     public static DurabilityMode fromConfigValue(String value) {
         try {

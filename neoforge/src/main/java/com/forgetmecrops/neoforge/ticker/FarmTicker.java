@@ -39,15 +39,22 @@ import com.forgetmecrops.platform.adapter.FastItemFrameAdapterImpl;
 public class FarmTicker {
     /** Non-instantiable utility class; all members are static. */
     private FarmTicker() {}
+    /** True once the first tick snapshot has been logged (per session). Used for one-time startup logs. */
     private static boolean tickSnapshotLogged = false;
+    /** Number of ticks to spread the initial chunk-load catchup queue over. */
     private static final int CATCHUP_TICKS = 40;
+    /** Maximum spiral ticks to allow per direct (non-catchup) single-frame scan. */
     private static final int DIRECT_SCAN_MAX_SPIRAL_TICKS = 1;
+    /** Per-dimension countdown (ticks) until the next periodic rediscovery pass runs. */
     private static final java.util.Map<String, Integer> rediscoveryCountdown = new java.util.HashMap<>();
+
     /**
-     * Initialize NeoForge listeners for chunk load/unload and server tick processing.
-     * Emotional aside: behaves like Fabric's ticker but speaks NeoForge's dialect.
+     * Registers all NeoForge event listeners that drive farm discovery and scanning.
+     * Same logical flow as the Fabric ticker, but using NeoForge's event bus API:
+     * chunk load enqueues discovery candidates, chunk unload cleans up,
+     * server tick drains the catchup queue and fires due scans, and level unload clears everything.
      *
-     * @param bus event bus to register ticker listeners on
+     * @param bus the NeoForge mod event bus to register listeners on
      */
     public static void init(IEventBus bus) {
         bus.addListener(FarmTicker::onChunkLoad);
@@ -56,6 +63,11 @@ public class FarmTicker {
         bus.addListener(FarmTicker::onLevelUnload);
     }
 
+    /**
+     * Fires when a level (dimension) is unloading — clears the entire FrameRegistry and all active
+     * scan tasks for that dimension. We do a full clear rather than per-dimension cleanup because
+     * world unload usually means a session restart; a clean slate is safer.
+     */
     private static void onLevelUnload(LevelEvent.Unload event) {
         try {
             LogUtils.logInfo("[TICK] world unload — clearing entire FrameRegistry and active scans.");
@@ -73,6 +85,11 @@ public class FarmTicker {
         }
     }
 
+    /**
+     * Fires when a chunk is unloading. Unregisters all vanilla ItemFrame anchors and
+     * FIF block-entity anchors found in the unloading chunk's AABB.
+     * Unregistering prevents the registry from accumulating phantom entries for gone chunks.
+     */
     private static void onChunkUnload(ChunkEvent.Unload event) {
         try {
             var levelAccessor = event.getLevel();
@@ -105,6 +122,11 @@ public class FarmTicker {
         }
     }
 
+    /**
+     * Fires when a chunk loads. Scans the chunk for vanilla ItemFrame entities and
+     * FIF block-entities, and enqueues discovered positions in CatchupManager for
+     * gradual validation across subsequent ticks (rather than validating all at once).
+     */
     private static void onChunkLoad(ChunkEvent.Load event) {
         try {
             var levelAccessor = event.getLevel();

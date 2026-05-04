@@ -18,21 +18,37 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import com.forgetmecrops.platform.adapter.FastItemFrameAdapterImpl;
 
 /**
- * CatchupManager: a small helper that queues discovered candidate positions (vanilla frames
- * and FIF block-entities) for gradual processing so discovery work is spread across ticks.
+ * CatchupManager: The backlog handler that keeps first-tick discovery from melting the server!
+ * <p>
+ * When a chunk loads or the world starts for the first time, there may be many existing
+ * item-frame anchors and FastItemFrames block-entities waiting to be discovered. Rather than
+ * validating them all in a single tick (which would be extremely rude to TPS), CatchupManager
+ * queues their positions for gradual processing spread across many ticks.
+ * </p>
+ * <p>
+ * Maintains separate ConcurrentLinkedQueues for vanilla ItemFrame candidates and FIF
+ * block-entity candidates per dimension. The ticker drains these queues at a controlled rate
+ * so even heavily populated worlds don't cause a startup TPS spike. Your server will thank you.
+ * The crops might even wave goodbye as they're harvested.
+ * </p>
  */
 public final class CatchupManager {
+    // Utility class. The catchup manager catches up; it doesn't catch itself.
     private CatchupManager() {}
 
+    // Per-dimension queues for vanilla ItemFrame positions awaiting validation
     private static final Map<String, Queue<BlockPos>> vanillaQueues = new ConcurrentHashMap<>();
+    // Per-dimension queues for FastItemFrames block-entity positions awaiting validation
     private static final Map<String, Queue<BlockPos>> fifQueues = new ConcurrentHashMap<>();
 
     /**
-     * Enqueue vanilla item-frame positions discovered during chunk events.
+     * Enqueues a list of vanilla ItemFrame positions discovered during a chunk-load event.
+     * They'll be validated gradually by the ticker's drain loop — not all at once.
+     * Positions are added to a ConcurrentLinkedQueue so concurrent chunk events don't collide.
      *
-     * @param level source level
-     * @param dimId dimension id
-     * @param positions candidate frame positions
+     * @param level     the source server level (used by drain callers, stored implicitly via dimId)
+     * @param dimId     dimension identifier
+     * @param positions list of candidate frame positions to validate later
      */
     public static void enqueueVanillaPositions(ServerLevel level, String dimId, List<BlockPos> positions) {
         if (positions == null || positions.isEmpty() || dimId == null) return;
@@ -42,11 +58,12 @@ public final class CatchupManager {
     }
 
     /**
-     * Enqueue FastItemFrames block-entity positions discovered during chunk events.
+     * Enqueues a list of FastItemFrames block-entity positions discovered during a chunk-load event.
+     * Same gradual-processing pattern as vanilla positions — they drain in a controlled way.
      *
-     * @param level source level
-     * @param dimId dimension id
-     * @param positions candidate FIF positions
+     * @param level     the source server level
+     * @param dimId     dimension identifier
+     * @param positions list of candidate FIF block-entity positions
      */
     public static void enqueueFifPositions(ServerLevel level, String dimId, List<BlockPos> positions) {
         if (positions == null || positions.isEmpty() || dimId == null) return;
@@ -56,10 +73,14 @@ public final class CatchupManager {
     }
 
     /**
-     * Queues currently loaded vanilla and FIF candidates for gradual catch-up processing.
+     * Queues ALL currently loaded frames in the given level for gradual catch-up processing.
+     * Called during first-world-load or periodic rediscovery passes.
+     * Vanilla frames are enqueued via position list; FIF block-entities are discovered by iterating
+     * loaded chunks. Both paths add positions to their respective queues for deferred validation.
+     * This method does NOT validate them immediately — that's the ticker's job.
      *
-     * @param level source level
-     * @param dimId dimension id
+     * @param level the server level to scan for existing frames
+     * @param dimId the dimension identifier for queue scoping
      */
     public static void queueLoadedFrames(ServerLevel level, String dimId) {
         try {

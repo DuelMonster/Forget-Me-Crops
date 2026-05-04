@@ -22,31 +22,50 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.ChunkSource;
 
 /**
- * Default implementation of FastItemFrame adapter helpers.
- *
- * Centralizes reflective access to FastItemFrames block-entities and provides
- * convenience helpers used across Fabric/NeoForge/common code paths.
+ * FastItemFrameAdapterImpl: The reflection-powered detective for FastItemFrames integration!
+ * <p>
+ * Centralizes all the gnarly reflective access to the FastItemFrames mod's block-entities.
+ * Performs a lazy, one-time API probe on first use (to avoid heavy classloading during init
+ * or chunk-load handlers), tries a list of known fully-qualified class name candidates,
+ * and falls back to package-prefix scanning if needed. Gives up gracefully if FIF isn't
+ * installed — the farm works fine without it, just without FIF support.
+ * </p>
+ * <p>
+ * Once the probe succeeds, discovered API method references are cached and all subsequent
+ * calls use them directly. The probe is synchronized to handle concurrent chunk-load events.
+ * Uses the INSTANCE singleton for adapter interface calls; static methods for direct helpers.
+ * </p>
  */
 public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
 
-    /** Singleton instance for reflective FastItemFrames access. */
+    /** Singleton instance for all reflective FastItemFrames adapter operations. */
     public static final FastItemFrameAdapterImpl INSTANCE = new FastItemFrameAdapterImpl();
 
-    /** Utility: prevent external instantiation (use INSTANCE) */
+    /** Utility: external instantiation blocked; use INSTANCE for all calls. */
     private FastItemFrameAdapterImpl() {}
 
     // --- API-first reflective bindings (preferred if available) ---
+    /** True if the one-time API probe found and bound the FastItemFrames API class successfully. */
     private static volatile boolean apiAvailable = false;
     /** Whether a probe attempt has already been performed (successful or not). */
     private static volatile boolean probeAttempted = false;
+    /** The runtime class for the FastItemFrames block-entity, once probed. null if not installed. */
     private static Class<?> apiClass = null;
+    /** Reflective reference to FIF's getDisplayedItem() equivalent (may vary by version/loader). */
     private static java.lang.reflect.Method apiGetDisplayedItem = null;
+    /** Reflective reference to FIF's getItems() multi-slot accessor (optional). */
     private static java.lang.reflect.Method apiGetItems = null;
+    /** Reflective reference to FIF's getRotation() method for frame orientation. */
     private static java.lang.reflect.Method apiGetRotation = null;
+    /** Reflective reference to FIF's setRotation() method for frame orientation. */
     private static java.lang.reflect.Method apiSetRotation = null;
+    /** Reflective reference to FIF's setItem() method. */
     private static java.lang.reflect.Method apiSetItem = null;
+    /** Reflective reference to FIF's setStack() or equivalent item-swap method. */
     private static java.lang.reflect.Method apiSetStack = null;
+    /** Reflective reference to FIF's markUpdated() or sync method. */
     private static java.lang.reflect.Method apiMarkUpdated = null;
+    /** Reflective reference to the internal items field, used as a last-resort accessor. */
     private static java.lang.reflect.Field apiItemsField = null;
 
     // API probe removed from static init to avoid heavy classloading during

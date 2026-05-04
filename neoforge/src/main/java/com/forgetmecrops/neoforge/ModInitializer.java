@@ -20,19 +20,40 @@ import com.forgetmecrops.config.Config;
 import com.forgetmecrops.ForgetMeCrops;
 
 /**
- * NeoForge mod initializer: bootstraps Forget-Me-Crops on the NeoForge loader,
- * registers config handlers, and wires the NeoForge farm ticker.
+ * NeoForge ModInitializer: The {@code @Mod}-annotated front door of the mod on NeoForge!
+ * <p>
+ * Handles all NeoForge-specific bootstrap work: registers event listeners on the mod
+ * event bus, starts the NeoForge farm ticker, and (on client environments) registers
+ * the config-screen factory via dynamic proxy to enable the mods-list "Config" button.
+ * The reflection dance is unfortunate but necessary for cross-version compatibility.
+ * </p>
+ * <p>
+ * The actual gameplay initialization (Config.load, ForgetMeCrops.init) runs during
+ * {@link net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent} so Minecraft is
+ * in a known safe state. Don't initialize farming before Minecraft is ready. It knows.
+ * </p>
  */
 @Mod(com.forgetmecrops.ModCommon.MOD_ID)
 public final class ModInitializer {
 
+    /**
+     * NeoForge mod constructor: registers event listeners and initializes the mod.
+     * Called once by FML during mod construction. Registers the common-setup listener
+     * (which runs after FML is ready), starts the farm ticker on the global NeoForge event bus,
+     * and on client environments, registers a dynamic proxy for the config-screen factory.
+     *
+     * @param modEventBus the mod-specific event bus (used for FML lifecycle events)
+     * @param container   the mod container (unused here but required by FML)
+     */
     @SuppressWarnings("null")
     public ModInitializer(IEventBus modEventBus, ModContainer container) {
         // Use the shared `Config` files (forgetmecrops-client.toml / forgetmecrops-server.toml)
         // to remain consistent with the Fabric module. Avoid registering an
         // additional NeoForge ModConfigSpec to prevent duplicate/conflicting
         // configuration sources that make runtime changes non-deterministic.
+        // Register the common setup handler (runs after FML setup, when Minecraft is ready)
         modEventBus.addListener(this::commonSetup);
+        // Start the farm ticker on the global NeoForge event bus (chunk load/unload, server tick events)
         FarmTicker.init(net.neoforged.neoforge.common.NeoForge.EVENT_BUS);
 
         boolean isClient = true;
@@ -117,6 +138,14 @@ public final class ModInitializer {
         }
     }
 
+    /**
+     * FML common setup event handler: runs after mod construction when Minecraft is in a safe state.
+     * Logs the mod version, loads the shared config from disk, applies programmatic debug-logging settings,
+     * and then runs the loader-agnostic ForgetMeCrops.init() to fully initialize the mod.
+     * This is where the actual farming setup happens on NeoForge.
+     *
+     * @param event the FMLCommonSetupEvent (unused but required by FML)
+     */
     private void commonSetup(FMLCommonSetupEvent event) {
         LogUtils.logInfo("{} v{} loaded for NeoForge", com.forgetmecrops.ModCommon.MOD_NAME, com.forgetmecrops.ModCommon.MOD_VERSION);
         try { Config.load(); } catch (Throwable t) { LogUtils.logWarn("Failed to load shared config", t); }

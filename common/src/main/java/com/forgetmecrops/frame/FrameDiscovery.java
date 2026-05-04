@@ -23,19 +23,34 @@ import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 /**
- * Centralized discovery and validation helpers for item-frame based anchors.
+ * FrameDiscovery: The talent scout that finds and validates item-frame farm anchors!
+ * <p>
+ * Centralizes all the logic for determining whether a vanilla ItemFrame or a FastItemFrames
+ * block-entity qualifies as a valid farm anchor. That means: facing up, holding a hoe (or
+ * empty for inactive registration), positioned above a container, with appropriate farmland
+ * or Nether Wart soul sand nearby, and not waterlogged in a conflicting way.
+ * </p>
+ * <p>
+ * Also contains the static BFS-based farm area scanners used to detect nearby farmland,
+ * crop blocks, Nether Wart farms, and waterlogged chests. If FrameRegistry is HR,
+ * FrameDiscovery is the background-check service that decides who gets hired as an anchor.
+ * </p>
  */
 public class FrameDiscovery {
 
     private FrameDiscovery() {}
 
     /**
-     * Inspect a vanilla `ItemFrame` and register it as an anchor if valid.
+     * Validates and registers a vanilla {@link ItemFrame} entity as a farm anchor (if it qualifies).
+     * Checks: direction must be UP, frame must be above a Container block-entity, nearby farmland
+     * or Nether Wart soul sand must be present, and the chest must not be in a conflicting waterlogged state.
+     * An empty frame still gets registered as an inactive anchor so it can be activated when a hoe is placed.
+     * A non-hoe item in the frame disqualifies it immediately — we're not here to manage any old decoration.
      *
-     * @param dimId dimension identifier
-     * @param level server level containing the frame
-     * @param f the ItemFrame entity to inspect
-     * @return true if the frame was registered
+     * @param dimId dimension identifier string
+     * @param level the server level containing the frame
+     * @param f     the ItemFrame entity to validate
+     * @return true if the frame passed all checks and was registered
      */
     public static boolean registerVanillaFrameIfValid(String dimId, ServerLevel level, ItemFrame f) {
         try {
@@ -89,13 +104,20 @@ public class FrameDiscovery {
     }
 
     /**
-     * Inspect a FastItemFrame block-entity and register it as an anchor if valid.
+     * Validates and registers a FastItemFrames (FIF) block-entity as a farm anchor.
+     * Runs the same gauntlet as the vanilla frame path: held item must be a hoe (or empty for
+     * inactive registration), the block below must be a Container, nearby farmland/Nether Wart
+     * must be present, and the waterlogged chest check must not disqualify it.
+     * <p>
+     * Additionally emits extensive debug snapshots (game time, entity identity, chunk-load state)
+     * to help diagnose FIF timing issues — because async loading order is genuinely cursed.
+     * </p>
      *
      * @param dimId dimension identifier
-     * @param level server level containing the frame
-     * @param be the block-entity backing the FIF
-     * @param pos position of the frame
-     * @return true if the FIF anchor was registered
+     * @param level the server level containing the FIF block-entity
+     * @param be    the block-entity to inspect
+     * @param pos   position of the FIF block-entity
+     * @return true if the FIF block-entity was validated and registered as an anchor
      */
     public static boolean registerFIFIfValid(String dimId, ServerLevel level, BlockEntity be, BlockPos pos) {
         try {
@@ -170,13 +192,15 @@ public class FrameDiscovery {
     }
 
     /**
-     * Return whether there are farmland crops near the given chest position.
+     * Returns whether there are crop blocks rooted in farmland near the given chest position.
+     * Crops are expected one block above the chest-level scan row, so this checks y+1 offsets.
+     * Used to disqualify anchors that appear above chest-level farmland without Nether Wart context.
      *
-        * @param level server level for lookup
-        * @param chestPos position to inspect around
-        * @param rX search radius along the X axis
-        * @param rZ search radius along the Z axis
-     * @return true if a farmland crop is nearby
+     * @param level    the server level for block lookups
+     * @param chestPos the chest position to center the scan on
+     * @param rX       search radius in the X direction
+     * @param rZ       search radius in the Z direction
+     * @return true if any recognized crop block is found in the scan area
      */
     public static boolean isNearbyFarmlandCrop(ServerLevel level, BlockPos chestPos, int rX, int rZ) {
         for (int dx = -rX; dx <= rX; dx++) for (int dz = -rZ; dz <= rZ; dz++) {
@@ -189,6 +213,17 @@ public class FrameDiscovery {
         return false;
     }
 
+    /**
+     * Returns whether there is tilled farmland soil at the chest level near the given position.
+     * Just checks for the farmland block (not whether it has any crops planted).
+     * Used as an early indicator that this area might be a legitimate crop farm.
+     *
+     * @param level    the server level for block lookups
+     * @param chestPos the chest position to center the scan on
+     * @param rX       search radius in the X direction
+     * @param rZ       search radius in the Z direction
+     * @return true if any farmland block is found at the same Y as the chest
+     */
     public static boolean isNearbyFarmlandSoil(ServerLevel level, BlockPos chestPos, int rX, int rZ) {
         for (int dx = -rX; dx <= rX; dx++) for (int dz = -rZ; dz <= rZ; dz++) {
             if (level.getBlockState(chestPos.offset(dx, 0, dz)).is(Blocks.FARMLAND)) return true;
@@ -196,6 +231,18 @@ public class FrameDiscovery {
         return false;
     }
 
+    /**
+     * Returns whether this chest position is adjacent to a Nether Wart farm.
+     * Checks for soul sand (which is the planting medium) at chest level, plus nether_wart
+     * blocks one level above or at the same level as a fallback.
+     * Having soul sand with no Nether Wart planted yet still counts — the farmer is prepared.
+     *
+     * @param level    the server level for block lookups
+     * @param chestPos the chest position to scan around
+     * @param rX       X radius
+     * @param rZ       Z radius
+     * @return true if soul sand or nether wart is detected nearby
+     */
     private static boolean isNearbyNetherWartFarm(ServerLevel level, BlockPos chestPos, int rX, int rZ) {
         for (int dx = -rX; dx <= rX; dx++) for (int dz = -rZ; dz <= rZ; dz++) {
             BlockPos basePos = chestPos.offset(dx, 0, dz);
@@ -209,6 +256,18 @@ public class FrameDiscovery {
         return false;
     }
 
+    /**
+     * Resolves the most useful Container from a chest block-entity at the given position.
+     * For double chests ({@link ChestBlockEntity}), this calls the Minecraft combined-container
+     * factory so both halves are accessible as a single inventory.
+     * For any other container type (hopper, barrel, etc.), returns the block-entity directly.
+     * Returns null only if the block-entity is not a Container at all.
+     *
+     * @param level    the server level for block state lookups
+     * @param chestPos position of the chest block-entity
+     * @param chestBe  the block-entity to resolve
+     * @return the best Container interface for this position, or null if none applicable
+     */
     private static Container resolveAnchorContainer(ServerLevel level, BlockPos chestPos, BlockEntity chestBe) {
         if (!(chestBe instanceof Container baseContainer)) {
             return null;

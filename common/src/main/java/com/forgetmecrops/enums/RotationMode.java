@@ -12,25 +12,30 @@ import java.util.Locale;
  * </p>
  */
 public enum RotationMode {
-    /** Advance one rotation step per full farm harvest. */
+    /** Take exactly one rotation step per harvest. One click. Understated. Dignified. Professional. */
     SINGLE_STEP,
-    /** Perform exactly one full 0..7 rotation cycle per full farm harvest. */
+    /** Spin the entire 0-to-7 rotation cycle per harvest. Maximum drama. Maximum flair. Highly recommended. */
     FULL_ROTATION,
-    /** Rotate to follow the spiral scan progression during harvest. */
+    /** Follow the spiral scan progression as it sweeps the farm — the frame dances in sync with the crops! */
     FOLLOW_ROTATION;
 
     /**
-     * Return the string value used in config files for this mode.
-     * @return the config string for this RotationMode
+     * Returns the config-file string for this mode — exactly what will appear in forgetmecrops-server.toml.
+     * Keep it clean; players will read this and judge us.
+     *
+     * @return the TOML-friendly lowercase string representation of this mode
      */
     public String configValue() {
         return name();
     }
 
     /**
-     * Parse the config string into a RotationMode, defaulting to FOLLOW_ROTATION on errors.
-     * @param value the string value read from config
-     * @return the corresponding RotationMode, or FOLLOW_ROTATION if unknown
+     * Parses a raw config-file string back into a RotationMode. Case-insensitive, mercifully.
+     * If the string is unrecognizable garbage, returns FOLLOW_ROTATION as the sensible default —
+     * because even misconfigured farms deserve to keep spinning.
+     *
+     * @param value the raw config string read from the TOML file (we'll uppercase it for you)
+     * @return the matching RotationMode, or FOLLOW_ROTATION if we can't figure out what you meant
      */
     public static RotationMode fromConfigValue(String value) {
         try {

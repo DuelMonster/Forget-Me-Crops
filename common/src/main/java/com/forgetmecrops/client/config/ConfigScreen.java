@@ -14,16 +14,45 @@ import net.minecraft.network.chat.Component;
 import java.util.Locale;
 
 /**
- * Shared Cloth Config screen builder used by both Fabric and NeoForge loaders.
+ * ConfigScreen: The in-game control panel for all of Forget-Me-Crops' settings!
+ * <p>
+ * Builds the full Cloth Config screen with all server and client settings organized
+ * into sensible categories. Called by both the Fabric ModMenu entrypoint and the
+ * NeoForge config-screen factory — all loader-specific code does is hand us a parent
+ * Screen, and we build the whole thing from there.
+ * </p>
+ * <p>
+ * Uses custom LabelTooltip*ListEntry wrappers that show rich tooltip text when hovering
+ * the label side, not just the widget side. Because good config UI deserves good tooltips,
+ * and players shouldn't have to guess what "FOLLOW_ROTATION" means.
+ * </p>
  */
 public final class ConfigScreen {
-        private ConfigScreen() {}
+        /** Non-instantiable utility class; use create() static method instead. */
+    private ConfigScreen() {}
 
     /**
-     * Build the config screen.
+     * Converts an enum constant name into a human-readable localized display string.
+     * For example: NORMAL → "forgetmecrops.enum.durability_mode.normal" → "Normal".
+     * Lowercases the enum name and appends the prefix to construct a translation key.
      *
-     * @param parent parent screen passed to the Cloth Config builder
-     * @return generated config screen
+     * @param prefix the translation key prefix (e.g., "forgetmecrops.enum.durability_mode.")
+     * @param enumValue the enum constant to humanize
+     * @return a Component with the localized enum name
+     */
+    private static Component localizedEnumName(String prefix, Enum<?> enumValue) {
+        String key = prefix + enumValue.name().toLowerCase(Locale.ROOT);
+        return Component.translatable(key);
+    }
+
+    /**
+     * Builds and returns the config screen for Forget-Me-Crops.
+     * Constructs the Cloth Config builder with all server and client settings organized
+     * into categories, then returns a fully-formed Screen ready to display to the player.
+     * Called by both Fabric ModMenu and NeoForge config-screen factory integrations.
+     *
+     * @param parent the parent screen (to return to when the config screen closes)
+     * @return the generated config screen
      */
     public static Screen create(Screen parent) {
         ConfigBuilder builder = ConfigBuilder.create()
@@ -65,8 +94,8 @@ public final class ConfigScreen {
                 Config.getDurabilityMode(),
                 ConfigDefaults.DURABILITY_MODE_DEFAULT,
                 Config::setDurabilityMode,
-                enumValue -> localizedEnumName("forgetmecrops.enum.durability_mode.", enumValue),
-                ConfigTooltipFactory.durabilityMode()
+                enumValue -> localizedEnumName("forgetmecrops.enum.durability_mode.", enumValue),  // Humanizes enum names for display
+                ConfigTooltipFactory.durabilityMode()  // Provides rich tooltip for the option
         ));
 
         server.addEntry(new LabelTooltipBooleanListEntry(
@@ -141,8 +170,4 @@ public final class ConfigScreen {
         builder.setSavingRunnable(Config::save);
         return builder.build();
     }
-
-        private static Component localizedEnumName(String keyPrefix, Enum<?> enumValue) {
-                return Component.translatable(keyPrefix + enumValue.name().toLowerCase(Locale.ROOT));
-        }
 }

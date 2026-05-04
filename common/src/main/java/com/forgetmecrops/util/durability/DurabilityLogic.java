@@ -9,9 +9,22 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * DurabilityLogic: helper for applying damage to hoes (moved to util.durability).
+ * DurabilityLogic: The accountant who decides exactly how much wear your hoe takes each harvest!
+ * <p>
+ * Implements the configured durability consumption rules: NORMAL (realistic wear with
+ * Unbreaking probability roll and Mending respect), IGNORE_UNBREAKING (pessimistic wear
+ * every single time regardless of enchantments), and NONE (your hoe is immortal — enjoy).
+ * Also gracefully destroys the hoe stack when the damage counter reaches maximum,
+ * which triggers the broken-hoe replacement flow upstream.
+ * </p>
+ * <p>
+ * Mending negation is checked upstream in the applyDamage method itself (via Config.isMendingNegation()),
+ * and Unbreaking probability is calculated here using the level's random source when available,
+ * or ThreadLocalRandom as a fallback. We try to be correct. The hoe tries to survive.
+ * </p>
  */
 public class DurabilityLogic {
+    // Utility class. The durability accountant does not take damage personally.
     private DurabilityLogic() {}
 
     /**
@@ -63,25 +76,30 @@ public class DurabilityLogic {
             LogUtils.logDebug("[DURABILITY] Could not read enchantments", t);
         }
 
+        // Mending negation check: if the hoe has Mending AND we're configured to negate it,
+        // we still skip damage (the negation already cancels; the upstream caller handles it).
         boolean hasMending = mendingLevel > 0;
         if (Config.isMendingNegation() && hasMending) return;
 
+        // Ask shouldDamageHoe whether damage applies given the mode and enchantment combo
         if (!shouldDamageHoe(Config.getDurabilityMode(), unbreakingLevel > 0, hasMending)) return;
 
         try {
             int max = hoe.getMaxDamage();
-            if (max <= 0) return;
+            if (max <= 0) return; // unbreakable item (Gold Sword behavior etc.)
 
             int current = hoe.getDamageValue();
             boolean applyDamage = true;
+            // Unbreaking probability roll: 1/(level+1) chance of taking damage per use,
+            // same formula vanilla uses for tools. NORMAL mode only.
             if (Config.getDurabilityMode() == DurabilityMode.NORMAL && unbreakingLevel > 0) {
                 if (level != null) {
                     if (level.getRandom().nextInt(unbreakingLevel + 1) != 0) {
-                        applyDamage = false;
+                        applyDamage = false; // luck out this tick — hoe lives to harvest another day
                     }
                 } else {
                     if (ThreadLocalRandom.current().nextInt(unbreakingLevel + 1) != 0) {
-                        applyDamage = false;
+                        applyDamage = false; // fallback random when level is null (edge case but possible)
                     }
                 }
             }
@@ -92,6 +110,7 @@ public class DurabilityLogic {
 
             int next = current + 1;
             if (next >= max) {
+                // Hoe has reached its final tick — destroy the stack to trigger replacement flow
                 try { LogUtils.logDebug("[DURABILITY] applyDamage: next >= max -> destroying stack"); } catch (Throwable ignored) {}
                 hoe.setCount(0);
             } else {

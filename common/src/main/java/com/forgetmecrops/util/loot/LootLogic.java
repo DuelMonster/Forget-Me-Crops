@@ -17,13 +17,34 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * LootLogic: The loot goblin of the farm. Figures out what drops when you break a block, and makes sure fortune and silk touch are respected.
+ * LootLogic: The loot goblin of the farm — keeper of drop tables and enchantment respect!
+ * <p>
+ * Figures out exactly what falls out of a crop block when you break it, accounting for
+ * Fortune (more drops!) and Silk Touch (fancy whole-block drops for melons!). Uses
+ * Minecraft's native loot context system to get platform-accurate results.
+ * </p>
+ * <p>
+ * Why not just call Block.getDrops() directly? Because Fortune needs a tool with the right
+ * enchantment level injected into the loot context, and Silk Touch requires special-casing
+ * for things like melons. LootLogic handles all of that so callers don't have to.
+ * Your wheat will thank you for the Fortune III treatment.
+ * </p>
  */
 public class LootLogic {
 
-    /** Utility class: do not instantiate. */
+    // Utility class. The loot goblin works alone and does not accept company.
     private LootLogic() {}
 
+    /**
+     * Builds a synthetic iron hoe ItemStack with the given Fortune level applied.
+     * Used to inject the correct Fortune enchantment into the loot context so the
+     * native block-drop logic applies the right bonuses. Fortune level is clamped to [0, 3]
+     * because Fortune IV hoes are not a thing, despite what some players believe.
+     *
+     * @param level the server level (needed for enchantment registry access)
+     * @param fortune the Fortune level to bake in (clamped 0–3)
+     * @return an iron hoe with Fortune applied, or a plain iron hoe if fortune is 0
+     */
     private static ItemStack fortuneHoe(ServerLevel level, int fortune) {
         int clamped = Math.min(Math.max(fortune, 0), 3);
         ItemStack hoe = new ItemStack(Items.IRON_HOE);

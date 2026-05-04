@@ -4,15 +4,32 @@ import com.forgetmecrops.util.log.LogUtils;
 import java.util.Locale;
 
 /**
- * PlatformReflective: shared reflection helpers used by platform implementations.
- *
- * This centralizes the reflection-heavy fallbacks (enchantment extraction,
- * loot/blocks drops, and block-entity item setters) so platform helpers can
- * remain thin and avoid duplicating complex reflective code.
+ * PlatformReflective: The dark arts department of platform integration!
+ * <p>
+ * Houses all the reflection-heavy fallback helpers that both Fabric and NeoForge platform
+ * implementations share: enchantment extraction from ItemStacks, block-drop calculation
+ * via LootContext, and block-entity item writing via reflective field/method probing.
+ * These methods exist because the Minecraft API surface changes enough between versions
+ * and loaders that direct method calls can't always be relied upon across all targets.
+ * </p>
+ * <p>
+ * Why in common? Because it doesn't depend on any loader-specific API. It's platform
+ * code that happens to be fully loader-agnostic. Confusing? Yes. Practical? Very.
+ * </p>
  */
 public final class PlatformReflective {
     private PlatformReflective() {}
 
+    /**
+     * Extracts the enchantment map from an ItemStack via reflection.
+     * Probes {@code EnchantmentHelper.getEnchantments(ItemStack)} (the name is consistent
+     * across versions) and converts the result into a {@code Map<String, Integer>} keyed
+     * by description ID. Returns an empty map if anything goes wrong — no enchantments
+     * means Fortune 0, which is still a valid (if sad) fall-through outcome.
+     *
+     * @param stack the ItemStack to read enchantments from
+     * @return map of enchantment description IDs to levels; empty if unavailable
+     */
     public static java.util.Map<String, Integer> extractEnchantments(net.minecraft.world.item.ItemStack stack) {
         try {
             Class<?> enchHelper = Class.forName("net.minecraft.world.item.enchantment.EnchantmentHelper");
@@ -62,6 +79,20 @@ public final class PlatformReflective {
         return java.util.Collections.emptyMap();
     }
 
+    /**
+     * Calculates block drops via reflective LootContext API access.
+     * Navigates the {@code LootContext.Builder}, binds BLOCK_STATE / ORIGIN / TOOL
+     * loot parameters, and calls {@code Block.getDrops()} with the assembled context.
+     * This reflective path exists to avoid direct loader-specific API calls in common code.
+     * Returns an empty list (not null) on any failure — the harvest still proceeds but the loot
+     * table is bypassed, meaning the crop is tilled without yielding drops. Not ideal, but safe.
+     *
+     * @param level the current Level (must be a ServerLevel; client calls return empty)
+     * @param pos   the block position to calculate drops for
+     * @param state the BlockState of the block being broken
+     * @param tool  the tool ItemStack used (affects fortune/silk-touch etc.)
+     * @return list of ItemStack drops, or empty list if loot context build fails
+     */
     public static java.util.List<net.minecraft.world.item.ItemStack> getBlockDropsReflective(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.item.ItemStack tool) {
         if (level == null || state == null) return java.util.Collections.emptyList();
         try {

@@ -12,25 +12,33 @@ import java.util.Locale;
  * </p>
  */
 public enum SeedClutterMode {
-    /** Normal seed handling; default behavior. */
+    /** Standard seed handling — seeds flow freely into the chest, no restrictions, maximum chaos.
+     *  Great for players who enjoy an inbox full of 847 wheat seeds. */
     NORMAL,
-    /** Reduce seed clutter by being more conservative when replanting. */
+    /** Trim excess seeds so the chest doesn't become a seed warehouse.
+     *  Tidiness is next to godliness, and this mode enforces that politely. */
     REDUCED,
-    /** Disable seed clutter handling; do not replant automatically. */
+    /** Skip seed management entirely — no replanting, just raw chaotic harvesting.
+     *  You're on your own. Good luck out there. */
     NONE;
 
     /**
-     * Return the string value used in config files for this mode.
-     * @return the config string for this SeedClutterMode
+     * Returns the config-file string for this mode — what players will see (and occasionally
+     * misspell) in their forgetmecrops-server.toml.
+     *
+     * @return the config-safe string representation of this SeedClutterMode
      */
     public String configValue() {
         return name();
     }
 
     /**
-     * Parse the config string into an enum value, falling back to REDUCED on error.
-     * @param value the string value read from config
-     * @return the corresponding SeedClutterMode, or REDUCED if unknown
+     * Parses a config string back into a SeedClutterMode. Tolerates case differences like a
+     * gracious host. Falls back to REDUCED on errors because some seed management is better
+     * than none — your chest deserves at least a little dignity.
+     *
+     * @param value the raw config string (we'll uppercase it so you don't have to)
+     * @return the matching SeedClutterMode, or REDUCED if parsing fails
      */
     public static SeedClutterMode fromConfigValue(String value) {
         try {

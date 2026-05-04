@@ -9,11 +9,26 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * Restricts boolean toggle tooltips to the field label hitbox so they do not trigger over the toggle or reset button.
+ * LabelTooltipBooleanListEntry: A boolean toggle that only shows its tooltip over the label!
+ * <p>
+ * Extends Cloth Config's {@link BooleanListEntry} and adds a {@link LabelHitbox} to restrict
+ * tooltip display to the left-side label area. That way hovering the toggle button itself
+ * doesn't accidentally trigger the big descriptive tooltip. Tooltips in the right place:
+ * good UX is in the details.
+ * </p>
  */
 public final class LabelTooltipBooleanListEntry extends BooleanListEntry {
+    // The hitbox that tracks the label lane position during each render pass
     private final LabelHitbox hitbox = new LabelHitbox();
 
+    /**
+     * Creates a boolean toggle entry with label-only tooltip behavior.
+     *
+     * @param fieldName       the display label shown on the left side of the row
+     * @param value           the current boolean value to initialize the toggle with
+     * @param saveCallback    called when the player saves the config screen
+     * @param tooltipSupplier provides the tooltip components to show over the label area
+     */
     public LabelTooltipBooleanListEntry(Component fieldName,
                                         boolean value,
                                         Consumer<Boolean> saveCallback,

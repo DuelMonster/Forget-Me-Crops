@@ -9,14 +9,26 @@ import com.forgetmecrops.fabric.ticker.FarmTicker;
 import com.forgetmecrops.util.log.LogUtils;
 
 /**
- * Fabric bootstrap: wires up the mod on Fabric and initializes core systems.
+ * Fabric ModInitializer: The very first thing Fabric runs when Forget-Me-Crops loads!
+ * <p>
+ * Loads config from disk, applies any programmatic debug-logging level changes,
+ * kicks off the loader-agnostic ForgetMeCrops.init(), and registers the Fabric farm ticker.
+ * This is the moment the mod wakes up, stretches, and starts watching your crops.
+ * </p>
+ * <p>
+ * Registered as a {@code main} entrypoint in fabric.mod.json. Fabric calls this once
+ * during startup; make it count.
+ * </p>
  */
 public class ModInitializer implements net.fabricmc.api.ModInitializer {
-    /** Public no-arg constructor used by the mod loader. */
+    /** Public no-arg constructor used by the Fabric mod loader entrypoint system. */
     public ModInitializer() {}
     /**
-     * Fabric entrypoint: load config, init common logic, and start the farm ticker.
-     * Emotional aside: this is the tiny handshake that starts all the farming drama.
+     * Fabric entrypoint: the very first thing called when the mod loads on Fabric.
+     * Loads config from disk (or creates defaults), applies debug-logging configuration,
+     * runs the common mod initialization (ForgetMeCrops.init), and starts the Fabric
+     * farm ticker (chunk discovery + per-tick harvest scheduling).
+     * This is where it all begins. Welcome to the farming drama.
      */
     @Override
     public void onInitialize() {

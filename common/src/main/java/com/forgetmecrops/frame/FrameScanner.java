@@ -41,35 +41,51 @@ import java.util.Set;
 import java.util.Iterator;
 
 /**
- * FrameScanner: The intrepid explorer of your blocky world!
+ * FrameScanner: The intrepid explorer of your blocky agricultural world!
+ * <p>
+ * This is the class that actually walks the spiral, harvests the crops, manages frame rotations,
+ * checks anchor validity, and generally does the heavy lifting that makes the whole mod worth using.
+ * Contains the spiral generator, the per-anchor scan logic, BFS farm discovery, and enough
+ * reflection-powered hoe-reading code to make a regular programmer weep quietly.
+ * </p>
+ * <p>
+ * Also holds the {@link FarmScanTask} infrastructure for tick-sliced scanning — because running
+ * the full spiral in a single tick is the fastest way to a "server is lagging" complaint.
+ * </p>
  */
 public class FrameScanner {
-    /** Maximum frames processed per run. */
+    /** Maximum number of anchors processed in a single scan run. Prevents any one tick from becoming a lag monster. */
     public static final int MAX_FRAMES_PER_RUN = 24;
 
-    /** The four horizontal directions used for neighbour checks throughout scanning. */
+    /** The four cardinal horizontal directions: N/E/S/W.
+     *  Extracted as a constant because allocating a fresh Direction[] array on every spiral step is wasteful and rude. */
     static final Direction[] HORIZ_DIRS = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
 
-    /** Default constructor. */
+    /** Default constructor. Required even though most of FrameScanner's interesting things are static methods. */
     public FrameScanner() {}
 
     /**
-     * Anchor: represents a registered frame anchor with its chest and stored hoe.
+     * Anchor: A registered farm anchor — the cornerstone of every automated harvest operation.
+     * <p>
+     * Bundles together the item-frame position, its linked chest container, and the stored hoe.
+     * Without an Anchor, the scanner doesn't know where to start, where to drop loot, or what
+     * to use for harvesting. The Anchor knows all three. It's the whole reason we're here.
+     * </p>
      */
     public static class Anchor {
-        /** The associated chest/container (may be null). */
+        /** The chest/container linked to this anchor. All harvested drops end up here. */
         public final Container chest;
-        /** The position of the item frame anchor. */
+        /** The block position of the item frame acting as the anchor. This is ground zero for the spiral. */
         public final BlockPos framePos;
-        /** The stored hoe ItemStack for this anchor. */
+        /** The hoe currently associated with this anchor. The actual farming instrument. May be EMPTY if inactive. */
         public final ItemStack hoe;
 
         /**
-         * Create a new Anchor.
+         * Creates a new Anchor — the cornerstone of a farm operation.
          *
-         * @param chest associated container (may be null)
-         * @param framePos position of the item frame
-         * @param hoe stored hoe ItemStack
+         * @param chest    the linked container where harvested crops will be deposited
+         * @param framePos the block position of the anchoring item frame
+         * @param hoe      the hoe to use for this farm; may be ItemStack.EMPTY if no hoe is present yet
          */
         public Anchor(Container chest, BlockPos framePos, ItemStack hoe) {
             this.chest = chest;
@@ -292,6 +308,16 @@ public class FrameScanner {
         return cropsFound > 0;
     }
 
+    /**
+     * Generates the flat outward spiral of BlockPos steps from the given center.
+     * Walks in ever-expanding rings (N→E→S→W), staying within the configured scan ranges.
+     * Out-of-range positions are skipped so the list stays tight and iteration is efficient.
+     *
+     * @param center the anchor frame position (spiral origin)
+     * @param rangeX east-west radius in blocks
+     * @param rangeZ north-south radius in blocks
+     * @return ordered list of {@link SpiralStep}s from center outward
+     */
     static List<SpiralStep> generateSpiral(BlockPos center, int rangeX, int rangeZ) {
         List<SpiralStep> spiral = new ArrayList<>();
         int x = 0, z = 0;
@@ -322,6 +348,11 @@ public class FrameScanner {
         return spiral;
     }
 
+    /**
+     * Converts a unit-step (dx, dz) into the corresponding cardinal Direction.
+     * Used by the spiral generator to tag each step with the direction it was
+     * moving in, so FOLLOW_ROTATION mode can align the frame to match.
+     */
     static Direction getSpiralDirection(int dx, int dz) {
         if (dx == 1 && dz == 0) return Direction.EAST;
         if (dx == -1 && dz == 0) return Direction.WEST;
@@ -330,6 +361,14 @@ public class FrameScanner {
         return Direction.NORTH;
     }
 
+    /**
+     * Maps a cardinal Direction to the corresponding item-frame rotation value (0–7 in steps of 2).
+     * Frame rotation 0 = north, 2 = east, 4 = south, 6 = west.
+     * Used by FOLLOW_ROTATION and FULL_ROTATION modes to align the frame during scanning.
+     *
+     * @param dir the direction the scanner is currently moving
+     * @return the frame rotation value (0, 2, 4, or 6)
+     */
     static int dirToRotation(Direction dir) {
         return switch (dir) {
             case NORTH -> 0;
@@ -359,8 +398,15 @@ public class FrameScanner {
     }
 
     /**
-     * Pick the dominant block from a neighbor-count map, consume one seed from the chest, and place it at pos.
-     * Returns true if a block was placed.
+     * Picks the dominant crop type from the neighbor-count map and attempts to plant one seed at the position.
+     * Falls back to a chest-inventory scan if no neighbor consensus exists.
+     * Returns true if a block was successfully placed (seed consumed from chest).
+     *
+     * @param counts  map of block → neighbor-count vote tallies (may be empty)
+     * @param anchor  the farm anchor providing the chest inventory
+     * @param level   the level in which to place the block
+     * @param pos     the position to plant at
+     * @return true if a crop was planted, false if no seed was available or no crop was determined
      */
     static boolean tryPlantConsensus(Map<Block, Integer> counts, Anchor anchor, Level level, BlockPos pos) {
         Block chosen = null;
@@ -379,6 +425,17 @@ public class FrameScanner {
         return true;
     }
 
+    /**
+     * When no neighbor-crop consensus can be determined, scans the anchor's chest inventory
+     * to find whichever seed type has the most stock, and returns the corresponding crop block.
+     * Prefers whichever seed the chest has the most of. For farms that just got established,
+     * this avoids the scanner being paralyzed by lack of nearby neighbors.
+     *
+     * @param anchor the anchor whose chest to check
+     * @param level  the level (for reading the soil block below pos)
+     * @param pos    the air position to potentially plant at
+     * @return the crop block best supported by the chest's current inventory, or null
+     */
     private static Block chooseChestFallbackCrop(Anchor anchor, Level level, BlockPos pos) {
         if (anchor == null || anchor.chest == null || level == null || pos == null) return null;
 
@@ -418,6 +475,16 @@ public class FrameScanner {
         return bestBlock;
     }
 
+    /**
+     * Checks the given position for empty farmland (auto-plant), empty soul sand (auto-plant Nether Wart),
+     * or un-tilled dirt/grass adjacent to farmland (auto-till + plant). For each case, the appropriate
+     * seed is consumed from the chest and the block is planted. Hoe durability is applied for tilling.
+     *
+     * @param anchor the farm anchor providing the chest and hoe
+     * @param ctx    the harvest context (for hoe and level state)
+     * @param pos    the position to inspect and potentially plant at
+     * @param level  the level in which to operate
+     */
     static void tryAutoPlantAndTill(Anchor anchor, HarvestContext ctx, BlockPos pos, Level level) {
         BlockState cur = level.getBlockState(pos);
         BlockPos belowPos = pos.below();
@@ -466,6 +533,17 @@ public class FrameScanner {
 
 
 
+    /**
+     * BFS-discovers all connected farm positions from the center point within the scan range.
+     * Seeds from a 3×3 area around the center (to handle frames positioned above non-crop blocks),
+     * then expands to all reachable {@link #isFarmPosition} positions within rangeX/rangeZ.
+     *
+     * @param center the anchor frame position (BFS origin)
+     * @param level  the level to check blocks in
+     * @param rangeX east-west maximum extent
+     * @param rangeZ north-south maximum extent
+     * @return all BlockPos positions determined to be part of this farm
+     */
     static List<BlockPos> bfsDiscoverFarm(BlockPos center, Level level, int rangeX, int rangeZ) {
         List<BlockPos> result = new ArrayList<>();
         Set<Long> visited = new HashSet<>();
@@ -558,6 +636,14 @@ public class FrameScanner {
         }
     }
 
+    /**
+     * Reads the {@code age} property of a crop block state without throwing.
+     * Tries CropBlock.AGE first (clean API), then falls back to scanning block-state
+     * properties by name. Returns -1 if the state has no age property.
+     *
+     * @param state the block state to read from
+     * @return the age value, or -1 if not a crop or if the read fails
+     */
     public static int getAgeSafe(BlockState state) {
         if (state == null) return -1;
         try {
@@ -576,6 +662,15 @@ public class FrameScanner {
         return -1;
     }
 
+    /**
+     * Sets the {@code age} property on a crop block state without throwing.
+     * Tries CropBlock.AGE first, then scans by property name. Returns null if the
+     * property doesn't exist or the set fails — callers must guard against null returns.
+     *
+     * @param state the block state to modify
+     * @param age   the age value to set
+     * @return the new block state with age set, or null if the operation failed
+     */
     public static BlockState setAgeSafe(BlockState state, int age) {
         if (state == null) return null;
         try {
@@ -595,6 +690,14 @@ public class FrameScanner {
         return null;
     }
 
+    /**
+     * Returns the maximum {@code age} value for the given crop block state — i.e., the
+     * age at which the crop is fully mature. Determined by inspecting the age property's
+     * possible value set. Defaults to 3 for Nether Wart and sweet berries; 7 for everything else.
+     *
+     * @param state the block state of the crop
+     * @return the maturity threshold age value
+     */
     static int getMaturityThreshold(BlockState state) {
         if (state == null) return 7;
         try {
@@ -667,6 +770,15 @@ public class FrameScanner {
 
         if (list.isEmpty()) activeScans.remove(dimId);
     }
+    /**
+     * Gets the current rotation (0–7) of the item frame at the given position.
+     * Tries the entity's accessor method first, falls back to field reflection, then FIF block-entity.
+     * Returns 0 if nothing works. Always masked to 3 bits.
+     *
+     * @param level the level to search for the frame entity
+     * @param pos   the frame position
+     * @return the frame rotation (0–7), or 0 if unresolvable
+     */
     static int getFrameRotation(Level level, BlockPos pos) {
         try {
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(pos));
@@ -699,6 +811,15 @@ public class FrameScanner {
         return 0;
     }
 
+    /**
+     * Reads the hoe ItemStack currently held by the item frame (or FIF block-entity) at pos.
+     * Tries vanilla ItemFrame entities first; falls back to FIF's extractHeldItem.
+     * Returns {@link ItemStack#EMPTY} if no hoe is found or if anything goes wrong.
+     *
+     * @param level the level to search for the frame
+     * @param pos   the frame position
+     * @return a copy of the held hoe stack, or EMPTY
+     */
     public static ItemStack readHoeFromFrame(Level level, BlockPos pos) {
         try {
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class,
@@ -721,10 +842,25 @@ public class FrameScanner {
         return ItemStack.EMPTY;
     }
 
+    /**
+     * Sets the frame rotation at pos to newRotation (0–7) via the rotation-scheduling system.
+     * Delegates to {@link #setFrameRotation(Level, BlockPos, int, boolean)} with bypassCooldown=false.
+     */
     static void setFrameRotation(Level level, BlockPos pos, int newRotation) {
         setFrameRotation(level, pos, newRotation, false);
     }
 
+    /**
+     * Sets the frame rotation at pos, optionally bypassing the rotation-rate cooldown.
+     * Normal path: checks cooldown via FrameRegistry.tryRotation, schedules via scheduleRotation.
+     * Bypass path: directly applies the rotation immediately (used for animation step completions).
+     * Both paths no-op if the frame is already at the requested rotation.
+     *
+     * @param level          the level containing the frame
+     * @param pos            the frame position
+     * @param newRotation    the target rotation (0–7)
+     * @param bypassCooldown if true, skip the cooldown check and apply immediately
+     */
     static void setFrameRotation(Level level, BlockPos pos, int newRotation, boolean bypassCooldown) {
         long gameTime = -1L;
         try { gameTime = level != null ? level.getGameTime() : -1L; } catch (Throwable ignored) {}
@@ -766,6 +902,15 @@ public class FrameScanner {
         }
     }
 
+    /**
+     * Directly applies a pre-scheduled rotation to the item frame entity (or FIF block-entity) at pos.
+     * Tries all known rotation setter methods/fields via reflection in a best-effort loop.
+     * If the entity is no longer there or the reflection fails, nothing happens and no exception escapes.
+     *
+     * @param level       the level containing the frame
+     * @param pos         the frame position
+     * @param newRotation the rotation to apply (0–7, masked to 3 bits internally)
+     */
     @SuppressWarnings("null")
     static void applyScheduledRotation(Level level, BlockPos pos, int newRotation) {
         if (level == null || pos == null) return;

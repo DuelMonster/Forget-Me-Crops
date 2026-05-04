@@ -11,30 +11,50 @@ import net.minecraft.world.item.ItemStack;
 import java.util.*;
 
 /**
- * FrameRegistry: tracks discovered item-frame anchors per-dimension and schedules when they are due to run.
+ * FrameRegistry: The master ledger of every known item-frame anchor in every loaded dimension!
+ * <p>
+ * Tracks all discovered anchors per dimension, manages their scan schedules, batches
+ * pending frame rotations per tick, and maintains a chunk index so cleanup on chunk unload
+ * is efficient. Think of it as the farm's HR department — it knows where everyone is,
+ * when they're due to run, and who urgently needs a new hoe.
+ * </p>
+ * <p>
+ * Thread safety: all public methods are synchronized. The ticker and catchup manager
+ * both interact with the registry from different contexts, and synchronized maps
+ * are a small price to pay for not losing anchors to a race condition.
+ * </p>
  */
 public class FrameRegistry {
+    // Utility class. The registry manages itself; it does not need to be instantiated.
     private FrameRegistry() {}
 
+    // Per-dimension map of known anchor positions to their FrameEntry metadata
     private static final Map<String, Map<BlockPos, FrameEntry>> framesByDimension = new HashMap<>();
+    // Chunk key -> set of anchor positions discovered in that chunk; used for chunk-unload cleanup
     private static final Map<String, Set<BlockPos>> CHUNK_INDEX = new HashMap<>();
+    // Per-dimension map of frame positions -> desired rotation values waiting to be flushed this tick
     private static final Map<String, Map<BlockPos, Integer>> PENDING_ROTATIONS = new HashMap<>();
 
     /**
-     * Internal registry entry representing a discovered frame anchor.
+     * FrameEntry: One frame anchor's complete dossier in the registry.
+     * <p>
+     * Tracks anchor metadata, activity state, scan countdown timer, last-seen wall-clock time,
+     * rotation history, and whether a full animation sequence is currently running.
+     * It's basically a sticky note that says "this frame exists, runs in N ticks, and is currently spinning."
+     * </p>
      */
     public static class FrameEntry {
-        /** Anchor metadata for this registered frame. */
+        /** The anchor describing this frame's position, linked chest, and current hoe. The whole picture. */
         public final FrameScanner.Anchor anchor;
-        /** Whether this anchor is currently active. */
+        /** True if the anchor is currently active (has a valid hoe and should be scheduled to scan). */
         public boolean active;
-        /** Ticks until the next scheduled run for this anchor. */
+        /** Countdown in server ticks until this anchor is next eligible to run a farm scan. */
         public int ticksUntilNextRun;
-        /** Last time this anchor was seen (ms since epoch). */
+        /** Wall-clock timestamp (ms) of the last time this frame was seen. Used for staleness detection. */
         public long lastSeenMs;
-        /** Last game time at which a rotation was recorded (-1 if none). */
+        /** Game time of the last rotation event recorded for this frame; -1 if none has occurred this session. */
         public long lastRotationGameTime = -1L;
-        /** Whether a full rotation animation is currently active for this frame. */
+        /** True while a full-rotation animation sequence is in progress; scheduled rotations are blocked during animation. */
         public boolean animating = false;
 
         FrameEntry(FrameScanner.Anchor anchor) {
@@ -48,11 +68,14 @@ public class FrameRegistry {
 
     /**
      * Register or refresh a frame anchor in the registry.
+     * If the frame is already known, refreshes its lastSeenMs timestamp and clamps its scan countdown.
+     * If it's new, creates a fresh FrameEntry with the default tick interval before first scan.
+     * Either way, updates the chunk index so chunk-unload cleanup knows to find it here.
      *
-     * @param dimensionId dimension identifier
-     * @param framePos position of the frame anchor
-     * @param chest associated container (may be null)
-     * @param hoe stored hoe ItemStack (may be ItemStack.EMPTY)
+     * @param dimensionId dimension identifier string (e.g. "minecraft:overworld")
+     * @param framePos    position of the frame anchor in the world
+     * @param chest       the linked container receiving harvested crops (may be null for inactive frames)
+     * @param hoe         the hoe held in the frame; empty = inactive anchor that can be activated later
      */
     public static synchronized void registerFrame(String dimensionId, BlockPos framePos, Container chest, ItemStack hoe) {
         Map<BlockPos, FrameEntry> map = framesByDimension.computeIfAbsent(dimensionId, k -> new HashMap<>());
@@ -84,10 +107,12 @@ public class FrameRegistry {
     }
 
     /**
-     * Unregister a frame anchor from the registry.
+     * Removes a frame anchor from the registry entirely.
+     * Called when the frame entity or FIF block-entity is gone and we're sure it's not coming back.
+     * Also called on validation failure during scan (bad chest, missing frame, etc.).
      *
      * @param dimensionId dimension identifier
-     * @param framePos position of the frame anchor to remove
+     * @param framePos    position of the anchor to remove
      */
     public static synchronized void unregisterFrame(String dimensionId, BlockPos framePos) {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
@@ -101,11 +126,13 @@ public class FrameRegistry {
     }
 
     /**
-     * Activate frames discovered in a chunk scan.
+     * Adds newly discovered frame positions to the chunk index without touching registry entries.
+     * Called after a chunk-load catchup scan to ensure the chunk index knows about
+     * all detected frame positions (even those not yet fully validated/activated).
      *
-     * @param dimensionId dimension identifier
-     * @param chunkKey chunk key computed from a BlockPos
-     * @param discoveredFrames list of frame positions discovered in the chunk
+     * @param dimensionId      dimension identifier
+     * @param chunkKey         chunk key (from {@code computeChunkKey(framePos)})
+     * @param discoveredFrames frame positions found during the catchup scan
      */
     public static synchronized void activateChunkFrames(String dimensionId, long chunkKey, List<BlockPos> discoveredFrames) {
         String chunkRegistryKey = chunkRegistryKey(dimensionId, chunkKey);
@@ -114,12 +141,15 @@ public class FrameRegistry {
     }
 
     /**
-     * Reconcile chunk-indexed frames with a fresh discovery list.
+     * Reconciles the chunk index against a fresh discovery scan: deactivates any previously known
+     * anchors that are no longer in the discovered list, then adds the new ones to the index.
+     * Used during rediscovery passes to quietly retire stale anchors without unregistering them
+     * — deactivated anchors won't be scheduled but are kept in case they come back.
      *
-     * @param dimensionId dimension identifier
-     * @param chunkKey chunk key
-     * @param discoveredFrames list of discovered frame positions
-     * @return list of positions that were deactivated
+     * @param dimensionId      dimension identifier
+     * @param chunkKey         chunk key
+     * @param discoveredFrames freshly discovered frame positions in this chunk
+     * @return list of positions that were deactivated (present before, absent now)
      */
     public static synchronized List<BlockPos> reconcileChunkFrames(String dimensionId, long chunkKey, List<BlockPos> discoveredFrames) {
         String chunkRegistryKey = chunkRegistryKey(dimensionId, chunkKey);
@@ -178,6 +208,16 @@ public class FrameRegistry {
      * @param framePos frame position
      * @param ticks cooldown in ticks
      */
+    /**
+     * Set a temporary cooldown before this anchor is eligible to scan again.
+     * Typically applied when the linked chest is full, a hoe replacement fails, or
+     * any other condition that means retrying immediately would be pointless.
+     * Also marks the frame as active in case it was previously inactive.
+     *
+     * @param dimensionId dimension identifier
+     * @param framePos    frame position
+     * @param ticks       cooldown duration in ticks (clamped to ≥0)
+     */
     public static synchronized void setCooldown(String dimensionId, BlockPos framePos, int ticks) {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
         if (map == null) return;
@@ -189,11 +229,14 @@ public class FrameRegistry {
     }
 
     /**
-     * Update the stored hoe for a registered frame anchor.
+     * Swaps the stored hoe on an existing registry entry for a new one.
+     * Rebuilds the FrameEntry (Anchor is immutable) while preserving all other state like
+     * the existing scan countdown, last-seen time, and rotation history.
+     * If the frame had no hoe and now has one, sets ticksUntilNextRun to 0 for an immediate scan.
      *
      * @param dimensionId dimension identifier
-     * @param framePos frame position
-     * @param hoe replacement hoe ItemStack
+     * @param framePos    frame position
+     * @param hoe         the new hoe stack to store (empty = anchor goes inactive)
      */
     public static synchronized void updateHoe(String dimensionId, BlockPos framePos, ItemStack hoe) {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
@@ -229,12 +272,14 @@ public class FrameRegistry {
     }
 
     /**
-     * Record a rotation attempt time for a registered frame.
+     * Records the game time of a rotation event for cooldown tracking. Always returns true
+     * if the entry exists — the return value indicates whether to proceed, not whether the
+     * rotation was blocked. Rotation-rate gating is a concern of the caller.
      *
      * @param dimensionId dimension identifier
-     * @param framePos frame position
-     * @param gameTime game time of the attempt
-     * @return true if the frame exists and the time was recorded
+     * @param framePos    frame position
+     * @param gameTime    the game time to record
+     * @return true if the entry was found (and time was updated); true even if not found (no-block)
      */
     public static synchronized boolean tryRotation(String dimensionId, BlockPos framePos, long gameTime) {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
@@ -246,12 +291,15 @@ public class FrameRegistry {
     }
 
     /**
-     * Schedule a rotation to be applied (batched per-tick).
+     * Queues a rotation to be flushed to the frame entity at the end of the current tick batch.
+     * Batching rotations prevents per-frame entity lookups during time-critical scan loops.
+     * If the frame is currently animating, the rotation is silently dropped —
+     * the animation sequence manages its own rotation steps and doesn't appreciate interference.
      *
-     * @param dimensionId dimension identifier
-     * @param framePos frame position
-     * @param rotation rotation value (0-7)
-     * @param requestGameTime game time of the request
+     * @param dimensionId     dimension identifier
+     * @param framePos        frame position
+     * @param rotation        the rotation to apply (0–7, masked internally)
+     * @param requestGameTime the game time this rotation was requested (for staleness tracking)
      */
     public static synchronized void scheduleRotation(String dimensionId, BlockPos framePos, int rotation, long requestGameTime) {
         Map<BlockPos, FrameEntry> frames = framesByDimension.get(dimensionId);
@@ -272,7 +320,10 @@ public class FrameRegistry {
     }
 
     /**
-     * Mark/unmark a frame as currently animating. When animating, scheduled rotations are ignored.
+     * Marks or unmarks a frame as currently playing a full rotation animation.
+     * While animating=true, scheduled rotation updates are suppressed for this frame —
+     * the animation sequence is in charge and doesn't want any outside interference.
+     * On animation start, any queued pending rotation is removed to avoid a mid-animation glitch.
      */
     public static synchronized void setAnimating(String dimensionId, BlockPos framePos, boolean animating) {
         Map<BlockPos, FrameEntry> map = framesByDimension.get(dimensionId);
@@ -293,7 +344,11 @@ public class FrameRegistry {
         }
     }
 
-    /** Clear all registry data across all dimensions. */
+    /**
+     * Clears the entire registry — all dimensions, all anchors, all chunk index entries.
+     * Called on server stop/world unload to ensure a fresh state on next startup.
+     * The agricultural HR department is officially closed for business. Everyone go home.
+     */
     public static synchronized void clearAll() {
         framesByDimension.clear();
         CHUNK_INDEX.clear();
@@ -323,12 +378,18 @@ public class FrameRegistry {
     }
 
     /**
-     * Advance internal timers and collect anchors that are ready to run this tick.
-     * Applies pending auto-replacements and flushes scheduled rotations.
+     * Advances all active frame countdown timers by one tick and returns any anchors
+     * whose timer has reached zero (i.e., due for a scan this tick). Also:
+     * - Attempts auto-replacement for frames with no hoe (chest may have received one)
+     * - Flushes all queued pending rotations to their respective frame entities
+     * <p>
+     * The auto-replacement pass is best-effort: it tries each broken-hoe frame once per tick
+     * without blocking scan collection. The replacement either sticks or it doesn't.
+     * </p>
      *
      * @param dimensionId dimension identifier
-     * @param level server level context
-     * @return list of anchors ready to run this tick
+     * @param level       the server level for block/entity lookups during rotation flush
+     * @return list of anchors ready to scan this tick (in no particular order)
      */
     public static synchronized List<FrameScanner.Anchor> tickAndCollectReady(String dimensionId, net.minecraft.server.level.ServerLevel level) {
         List<FrameScanner.Anchor> ready = new ArrayList<>();

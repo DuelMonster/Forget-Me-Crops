@@ -32,9 +32,36 @@ import com.forgetmecrops.util.log.LogUtils;
 import com.forgetmecrops.config.Config;
 import com.forgetmecrops.enums.SeedClutterMode;
 
+/**
+ * HarvestUtils: The actual farming code — where the crops meet their fate!
+ * <p>
+ * Contains all the logic for breaking mature crops, collecting and filtering loot,
+ * applying seed clutter policies, inserting drops into the chest, triggering replants,
+ * applying hoe durability, playing harvest sounds and particles, and gracefully recovering
+ * from broken hoes. If FrameScanner is the explorer and FrameRegistry is the ledger,
+ * HarvestUtils is the one actually getting its hands dirty.
+ * </p>
+ * <p>
+ * Also contains particle and sound helpers for that satisfying audiovisual feedback
+ * that makes automated farming feel alive instead of robotic. Because even robots
+ * deserve nice harvest animations.
+ * </p>
+ */
 public class HarvestUtils {
+    // Utility class. HarvestUtils doesn't harvest itself.
     private HarvestUtils() {}
 
+    /**
+     * Harvests a single mature crop block: gets the drops, filters seeds, inserts loot into the
+     * chest, applies hoe durability, handles replanting, and plays the satisfying harvest effects.
+     * The single most important method in the mod. Everything else is in service of this.
+     *
+     * @param ctx           harvest context (anchor, level, hoe, chest, state bags)
+     * @param pos           position of the block to harvest
+     * @param state         current block state at pos
+     * @param isMature      predicate that returns true if a given state is mature enough to harvest
+     * @param getReplantState function that returns the replanted block state, or null if non-replantable
+     */
     public static void harvestCrop(HarvestContext ctx, BlockPos pos, BlockState state, Function<BlockState, Boolean> isMature, Function<BlockState, BlockState> getReplantState) {
         if (ctx.level == null || ctx.getHoe().isEmpty() || ctx.chest == null) return;
 
@@ -99,6 +126,16 @@ public class HarvestUtils {
         ctx.incrementHarvested();
     }
 
+    /**
+     * Places the replanted block state at the given position, resetting it to age=1.
+     * Age 1 (not 0) because starting the regrowth at a very young but non-zero age
+     * lets the crop start growing immediately without the awkward freshly-planted look.
+     *
+     * @param ctx            the harvest context (for level access)
+     * @param pos            position to replant at
+     * @param state          the original harvested state (passed to getReplantState)
+     * @param getReplantState function that produces the replanted block state
+     */
     private static void applyReplantState(HarvestContext ctx, BlockPos pos, BlockState state,
                                           Function<BlockState, BlockState> getReplantState) {
         BlockState replanted = null;
@@ -112,6 +149,15 @@ public class HarvestUtils {
         try { ctx.level.setBlock(pos, replanted, 3); } catch (Throwable ignored) {}
     }
 
+    /**
+     * Pre-replant seed clutter filter: for NONE mode, strips all seeds from the drop list
+     * before replanting occurs. Seeds that are also crop fruits (carrot, potato, Nether Wart)
+     * are exempt because removing them would mean losing the harvest entirely. That would be bad.
+     *
+     * @param drops          the drop list to filter (modified in-place)
+     * @param seedItem       the seed item for this crop type
+     * @param seedIsCropFruit true if the seed is also the harvestable fruit
+     */
     private static void applyPreReplantSeedClutterPolicy(List<ItemStack> drops, Item seedItem, boolean seedIsCropFruit) {
         if (seedItem == null) return;
         if (Config.getSeedClutterMode() == SeedClutterMode.NONE) {
@@ -120,6 +166,15 @@ public class HarvestUtils {
         }
     }
 
+    /**
+     * Post-replant seed clutter filter: for REDUCED mode, halves all seed stacks in the drop list.
+     * Applied after the replant seed is taken so we only reduce the excess going into the chest.
+     * Fruit-seeds are exempt. Seeds that halve to zero are removed entirely.
+     *
+     * @param drops          the drop list to filter (modified in-place)
+     * @param seedItem       the seed item for this crop type
+     * @param seedIsCropFruit true if the seed is also the harvestable fruit
+     */
     private static void applyPostReplantSeedClutterPolicy(List<ItemStack> drops, Item seedItem, boolean seedIsCropFruit) {
         if (seedItem == null) return;
         if (Config.getSeedClutterMode() == SeedClutterMode.REDUCED) {
@@ -135,12 +190,25 @@ public class HarvestUtils {
         }
     }
 
+    /**
+     * Plays the hoe-break sound and emits item-particle debris at the frame position.
+     * Called from the main harvest loop when a hoe's stack count drops to zero, before
+     * the replacement attempt. Because a hoe dying silently would be disrespectful.
+     *
+     * @param ctx     the harvest context (for level and anchor)
+     * @param oldHoe  the broken hoe stack (used for particle item type)
+     */
     public static void handleBrokenHoe(HarvestContext ctx, ItemStack oldHoe) {
         LogUtils.logDebug("[HOE] Hoe broke during harvest. Previous: {}", oldHoe);
         try { playHoeBreakEffects(ctx, oldHoe); } catch (Throwable ignored) {}
         FrameHoeReplacement.tryReplaceBrokenHoe(ctx);
     }
 
+    /**
+     * Plays the hoe-break sound effect and a burst of item particles at the frame.
+     * The particles use the actual broken hoe's item texture for dramatic effect.
+     * If the level or anchor is unavailable, it bails out quietly — no crash for missing drama.
+     */
     private static void playHoeBreakEffects(HarvestContext ctx, ItemStack brokenHoe) {
         try { if (ctx.level == null || ctx.anchor == null) return; } catch (Throwable ignored) {}
         FrameScanner.Anchor anchor = resolveAnchor(ctx);
@@ -159,6 +227,14 @@ public class HarvestUtils {
         } catch (Throwable ignored) {}
     }
 
+    /**
+     * Plays the block-placement sound for the replanted crop.
+     * Called after a crop block is set so the farm sounds alive and not suspiciously quiet.
+     *
+     * @param level        the level in which to play the sound
+     * @param pos          the position the crop was planted at
+     * @param plantedState the planted block state (used to get the correct sound type)
+     */
     public static void playPlantSound(net.minecraft.world.level.Level level, BlockPos pos, BlockState plantedState) {
         if (level == null || pos == null || plantedState == null) return;
         try {
@@ -167,6 +243,14 @@ public class HarvestUtils {
         } catch (Throwable ignored) {}
     }
 
+    /**
+     * Plays the tilling sound effect at the given position.
+     * Uses HOE_TILL sound via reflective resolution (handles both wrapped and unwrapped SoundEvent
+     * across API versions), with a fallback to gravel-hit if the proper sound can't be found.
+     *
+     * @param level the level in which to play the sound
+     * @param pos   the tilled position
+     */
     public static void playTillingSound(net.minecraft.world.level.Level level, BlockPos pos) {
         if (level == null || pos == null) return;
         try {
@@ -175,6 +259,14 @@ public class HarvestUtils {
         } catch (Throwable ignored) {}
     }
 
+    /**
+     * Emits a subtle trailing dust particle at a crop position during spiral scanning.
+     * Gives visual feedback that the scanner is walking through the farm.
+     * Only fires if harvest particles are enabled in config. Gracefully skips if level is wrong type.
+     *
+     * @param level   the level (must be a ServerLevel to send particles)
+     * @param cropPos the position to emit the particle at
+     */
     public static void emitSpiralTrailParticles(net.minecraft.world.level.Level level, BlockPos cropPos) {
         if (!Config.isHarvestParticles() || level == null || cropPos == null) return;
         if (!(level instanceof ServerLevel server)) return;
@@ -194,6 +286,15 @@ public class HarvestUtils {
         } catch (Throwable ignored) {}
     }
 
+    /**
+     * Emits a burst of colored dust particles when a crop is harvested.
+     * Color is chosen based on crop type (wheat = golden, beetroot = deep red, carrot = orange, etc.)
+     * for satisfying type-specific harvest feedback. Two separate bursts for a fuller effect.
+     *
+     * @param level          the level (must be ServerLevel)
+     * @param cropPos        the harvested position
+     * @param harvestedState the block state of the harvested crop (for color selection)
+     */
     private static void emitHarvestBurstParticles(net.minecraft.world.level.Level level, BlockPos cropPos, BlockState harvestedState) {
         if (!(level instanceof ServerLevel server) || cropPos == null || harvestedState == null) return;
         try {
@@ -217,6 +318,10 @@ public class HarvestUtils {
         } catch (Throwable ignored) {}
     }
 
+    /**
+     * Plays the break sound for the harvested crop block at the given position.
+     * Volume and pitch are slightly randomized for natural variation.
+     */
     private static void playHarvestBreakSound(HarvestContext ctx, BlockPos pos, BlockState harvestedState) {
         try {
             SoundEvent sound = harvestedState.getSoundType().getBreakSound();
@@ -224,6 +329,11 @@ public class HarvestUtils {
         } catch (Throwable ignored) {}
     }
 
+    /**
+     * Resolves the HOE_TILL SoundEvent with fallback compatibility for different MC API wrapping styles.
+     * Some versions wrap SoundEvent in a Holder; others expose it directly.
+     * We probe both .value() and .get() before giving up and returning GRAVEL_HIT.
+     */
     private static SoundEvent resolveHoeTillSound() {
         try {
             Object value = SoundEvents.HOE_TILL;
@@ -241,6 +351,14 @@ public class HarvestUtils {
         return SoundEvents.GRAVEL_HIT;
     }
 
+    /**
+     * Returns an [r, g, b] color array representing the dominant visual color of the given crop.
+     * Used to choose the harvest particle color. Each crop has a bespoke color chosen
+     * to match its real-world look. The default (gray) is for anything we don't recognize.
+     *
+     * @param block the harvested crop block
+     * @return float[3] with r, g, b values in [0.0, 1.0]
+     */
     private static float[] dominantDustColor(Block block) {
         if (block == null) return new float[]{0.78F, 0.78F, 0.78F};
         if (block == Blocks.WHEAT) return new float[]{0.86F, 0.78F, 0.28F};
@@ -254,6 +372,10 @@ public class HarvestUtils {
         return new float[]{0.78F, 0.78F, 0.78F};
     }
 
+    /**
+     * Packs r/g/b float components (0.0–1.0) into a packed ARGB int with alpha=255.
+     * Used to create the {@link DustParticleOptions} packed color argument.
+     */
     private static int toColor(float r, float g, float b) {
         int ri = Mth.clamp((int)(r * 255.0F), 0, 255);
         int gi = Mth.clamp((int)(g * 255.0F), 0, 255);
@@ -261,6 +383,10 @@ public class HarvestUtils {
         return (255 << 24) | (ri << 16) | (gi << 8) | bi;
     }
 
+    /**
+     * Resolves the ITEM_BREAK SoundEvent with the same reflective fallback strategy as resolveHoeTillSound.
+     * Returns null (not a default) if not found, because the hoe-break visual can survive without sound.
+     */
     private static SoundEvent resolveItemBreakSound() {
         try {
             Object value = SoundEvents.ITEM_BREAK;
@@ -278,6 +404,14 @@ public class HarvestUtils {
         return null;
     }
 
+    /**
+     * Advances the frame's rotation by one step for visual feedback during harvest.
+     * Reads the current rotation from the item frame entity (or FIF block-entity),
+     * increments by 1 modulo 8, and schedules the rotation update via FrameRegistry
+     * so it doesn't immediately conflict with the tick cycle.
+     *
+     * @param ctx the harvest context (for anchor and level)
+     */
     public static void spinFrame(HarvestContext ctx) {
         try {
             FrameScanner.Anchor anchor = null;
@@ -312,6 +446,13 @@ public class HarvestUtils {
         } catch (Throwable ignored) {}
     }
 
+    /**
+     * Pushes the current hoe ItemStack state from the context back into the item frame.
+     * Called after every harvest (not just on hoe replacement) so the frame's displayed
+     * item stays in sync with damage value changes. The frame is the ground truth.
+     *
+     * @param ctx the harvest context containing the current hoe state
+     */
     private static void syncFrameHoe(HarvestContext ctx) {
         LogUtils.logDebug("[HOE] syncFrameHoe called. Current hoe: {}", ctx.getHoe());
         try {

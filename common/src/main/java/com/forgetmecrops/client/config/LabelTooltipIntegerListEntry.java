@@ -9,11 +9,28 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * Restricts integer field tooltips to the field label hitbox so they do not trigger over the text field or reset button.
+ * LabelTooltipIntegerListEntry: An integer field that only shows its tooltip over the label!
+ * <p>
+ * Extends Cloth Config's {@link IntegerListEntry} with label-hitbox tooltip restriction.
+ * Used for numeric options like tick interval, scan range, and chest cooldown — all of
+ * which have tooltips explaining valid ranges that you want to read before changing,
+ * not accidentally while typing a value into the field.
+ * </p>
  */
 public final class LabelTooltipIntegerListEntry extends IntegerListEntry {
+    // Tracks the label lane per-render so tooltip hit-testing is always accurate
     private final LabelHitbox hitbox = new LabelHitbox();
 
+    /**
+     * Creates an integer field entry with label-only tooltip behavior and a configured minimum.
+     *
+     * @param fieldName       the display label on the left side of the row
+     * @param value           the current integer value to initialize the field with
+     * @param defaultValue    value to reset to when the reset button is clicked
+     * @param minimum         the minimum allowed value (enforced by setMinimum)
+     * @param saveCallback    called when the player saves the config screen
+     * @param tooltipSupplier provides the tooltip components to show over the label area
+     */
     public LabelTooltipIntegerListEntry(Component fieldName,
                                         int value,
                                         int defaultValue,

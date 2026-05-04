@@ -30,37 +30,72 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Incremental tick-based farm scanner. One instance is created per scan trigger
- * and advanced each server tick until the spiral is exhausted.
+ * FarmScanTask: The hardworking farm-scan robot that politely refuses to do all its work in one tick!
+ * <p>
+ * One instance is created per scan trigger and then advanced a little each server tick
+ * (configurable via maxSpiralDurationTicks) until the full spiral is exhausted or the
+ * chest fills up. Spreading the work across many ticks prevents any one scan from
+ * causing a TPS spike on large farms. Your server's tick rate will appreciate the thoughtfulness.
+ * </p>
+ * <p>
+ * Lifecycle: create → call {@code tick()} each server tick → dispose when it returns true.
+ * Simple. Elegant. Like a Roomba, but for crops. And spirals.
+ * </p>
  */
 class FarmScanTask {
+    // --- Core identity: which anchor we're scanning and in which world ---
     final Anchor anchor;
     final Level level;
-    final BlockPos center;
-    final HarvestContext ctx;
-    final String dimId;
+    final BlockPos center;   // the frame's position — the spiral's origin point
+    final HarvestContext ctx; // shared harvest context: holds hoe, chest, and accumulated result flags
+    final String dimId;      // dimension identifier for FrameRegistry lookups
 
+    // --- Spiral precomputation data structures ---
+    /** Maps each ring index (0 = center, 1 = innermost ring, etc.) to the BlockPos list in that ring. */
     final Map<Integer, List<BlockPos>> ringMap = new HashMap<>();
+    /** Flat ordered list of (pos, direction) steps in spiral order, pre-generated at construction time. */
     final List<SpiralStep> spiralPositions = new ArrayList<>();
+    /** Maximum ring radius computed from scanRangeX and scanRangeZ config values. */
     final int computedMaxRing;
+    /** Total number of positions in the spiral — pre-calculated so we know when we're done. */
     final int totalPositions;
+
+    // --- Tick-by-tick progress tracking ---
+    /** Index into spiralPositions for the next position to process this tick. */
     int currentIndex = 0;
+    /** How many positions to process per tick (from Config.maxSpiralDurationTicks / totalPositions). */
     final int positionsPerTick;
+    /** Set to true as soon as any harvest occurs; used to trigger rotation animation. */
     boolean anyHarvested = false;
+    /** Ring number of the most recently harvested position — for direction tracking. */
     int lastHarvestedRing = -1;
+    /** Last spiral direction — tracked for animation step calculation. */
     Direction lastDirection = null;
+    /** Remaining animation steps for mid-scan visual feedback. */
     int animationStepsRemaining = 0;
     final Map<Integer, List<Integer>> ringFullIndices = new HashMap<>();
     final Map<Integer, Integer> indexToPosInRing = new HashMap<>();
     int lastComputedRotation = -1;
     int tickCounter = 0;
     int numberOfTicksNeeded = 0;
+    /** True once the full post-scan animation has been queued (prevents double-scheduling). */
     boolean fullAnimationScheduled = false;
     int animationInterval = 1;
     int fullAnimationTickCounter = 0;
+    /** Ordered sequence of frame-rotation steps for the full end-of-scan animation. */
     final List<Integer> fullAnimationSequence = new ArrayList<>();
     int fullAnimationIndex = 0;
 
+    /**
+     * Creates a new FarmScanTask for the given anchor.
+     * Pre-generates the full spiral position list and computes per-tick budgets.
+     * Also reads the current hoe state directly from the item frame (live snapshot)
+     * to ensure we're working with the most up-to-date tool.
+     *
+     * @param anchor the farm anchor this scan is centered on
+     * @param level  the level in which the scan is executing
+     * @param dimId  dimension key for FrameRegistry lookups
+     */
     FarmScanTask(Anchor anchor, Level level, String dimId) {
         this.anchor = anchor;
         this.level = level;

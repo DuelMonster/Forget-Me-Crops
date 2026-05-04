@@ -10,15 +10,31 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Config: The grand spellbook of Forget-Me-Crops (now in `config` package).
+ * Config: The grand spellbook of Forget-Me-Crops — all settings in one convenient static class!
+ * <p>
+ * Stores every configuration option as static fields (because the mod only ever runs one
+ * configuration at a time, and instance management would just add ceremony for no benefit).
+ * Handles TOML file loading and saving to separate server and client config files, validates
+ * all values with sensible bounds, and provides getters for reads plus setters for the
+ * in-game Cloth Config UI to push changes back through.
+ * </p>
+ * <p>
+ * The server/client file split is intentional: server settings affect gameplay mechanics
+ * that should ideally match across all players on a server, while client settings are
+ * purely about visual preferences and don't need to be synchronized. Vibes, basically.
+ * </p>
  */
 public class Config {
+    // Required for the Config() constructor pattern used by ForgetMeCrops.CONFIG; does nothing on its own
     public Config() {}
 
+    // The paths to each config file. Server and client get separate files so they can have separate
+    // lifecycles — server settings are serious business; client settings are just vibes.
     private static final Path CONFIG_DIR = Path.of("config");
     private static final Path SERVER_CONFIG_PATH = CONFIG_DIR.resolve("forgetmecrops-server.toml");
     private static final Path CLIENT_CONFIG_PATH = CONFIG_DIR.resolve("forgetmecrops-client.toml");
 
+    // Server-side gameplay settings with their working defaults (copied from ConfigDefaults for boot safety)
     private static int tickInterval = 300;
     private static int frameRediscoveryInterval = 150;
     private static int scanRangeX = 4;
@@ -31,9 +47,15 @@ public class Config {
     private static boolean harvestParticles = true;
     private static RotationMode rotationMode = RotationMode.FULL_ROTATION;
 
+    // Seed economy settings — how many seeds to keep and when to stop hoarding
     private static SeedClutterMode seedClutterMode = SeedClutterMode.REDUCED;
     private static int seedReservePerType = 80;
 
+    /**
+     * Loads both server and client config files from disk (creating them with defaults if absent).
+     * Call this during mod initialization before anything reads config values.
+     * If loading fails, the working defaults stay in place — things will still work, just unconfigured.
+     */
     public static void load() {
         try {
             Files.createDirectories(CONFIG_DIR);
@@ -45,6 +67,12 @@ public class Config {
         }
     }
 
+    /**
+     * Saves the current settings back to both config files on disk.
+     * Called by the config screen's save runnable when the player closes the UI.
+     * If saving fails, it's logged and the in-memory state remains — the player's changes
+     * survive this session but won't persist through a restart. Slightly tragic.
+     */
     public static void save() {
         try {
             Files.createDirectories(CONFIG_DIR);
@@ -55,6 +83,23 @@ public class Config {
         }
     }
 
+    /**
+     * Bulk-applies all server settings in one call. Typically invoked after reading the TOML file
+     * so that all fields update atomically rather than one-by-one. Avoids partial-state weirdness.
+     *
+     * @param tickInterval            ticks between farm scans
+     * @param frameRediscoveryInterval ticks between frame rediscovery passes
+     * @param scanRangeX              east-west scan radius in blocks
+     * @param scanRangeZ              north-south scan radius in blocks
+     * @param durabilityMode          how much wear tools take per harvest
+     * @param mendingNegation         if true, Mending-enchanted hoes still take damage
+     * @param debugLogging            if true, emit verbose DEBUG logs
+     * @param chestFullCooldownTicks  ticks to wait before retrying a full chest
+     * @param maxSpiralDurationTicks  max ticks for one spiral scan pass
+     * @param rotationMode            how the frame rotates during harvest
+     * @param seedClutterMode         how excess seeds are managed in the chest
+     * @param seedReservePerType      minimum seeds to keep per crop type before discarding extras
+     */
     public static void applyServerSettings(int tickInterval, int frameRediscoveryInterval, int scanRangeX, int scanRangeZ, DurabilityMode durabilityMode,
                                            boolean mendingNegation, boolean debugLogging,
                                            int chestFullCooldownTicks, int maxSpiralDurationTicks,
@@ -74,26 +119,39 @@ public class Config {
         Config.seedReservePerType = seedReservePerType;
     }
 
+    /**
+     * Applies the client-side visual preference settings. Currently just harvest particles.
+     * Could grow larger over time if we add more client-only options. For now: do you want sparkles?
+     *
+     * @param harvestParticles true to show harvest dust/particle effects; false for a quiet, minimalist harvest
+     */
     public static void applyClientSettings(boolean harvestParticles) {
         Config.harvestParticles = harvestParticles;
     }
 
-    // --- Getters ---
+    // --- Getters: what the rest of the mod reads when it needs a setting ---
+    // All static: one config, one truth, one farm to rule them all.
     public static int getTickInterval() { return tickInterval; }
+    /** Returns the frame rediscovery interval in ticks. After this many ticks, frames are re-scanned for validity. */
     public static int getFrameRediscoveryInterval() { return frameRediscoveryInterval; }
     public static int getScanRangeX() { return scanRangeX; }
     public static int getScanRangeZ() { return scanRangeZ; }
     public static DurabilityMode getDurabilityMode() { return durabilityMode; }
+    /** True if Mending should be negated — i.e., Mending-enchanted hoes still lose durability each harvest. */
     public static boolean isMendingNegation() { return mendingNegation; }
+    /** True if verbose debug logging is enabled. Your console will know everything. */
     public static boolean isDebugLogging() { return debugLogging; }
     public static int getChestFullCooldownTicks() { return chestFullCooldownTicks; }
     public static int getMaxSpiralDurationTicks() { return maxSpiralDurationTicks; }
+    /** True if harvest dust particles and effects should be shown. For the farmers who want the drama. */
     public static boolean isHarvestParticles() { return harvestParticles; }
     public static RotationMode getRotationMode() { return rotationMode; }
     public static SeedClutterMode getSeedClutterMode() { return seedClutterMode; }
+    /** Returns the minimum number of seeds to keep per crop type before excess are discarded. */
     public static int getSeedReservePerType() { return seedReservePerType; }
 
-    // --- Setters (used by config UI screens) ---
+    // --- Setters: used by the in-game config UI to push changes back through ---
+    // These intentionally skip the server-side applyServerSettings bulk path for individual field updates.
     public static void setTickInterval(int v) { tickInterval = v; }
     public static void setScanRangeX(int v) { scanRangeX = v; }
     public static void setScanRangeZ(int v) { scanRangeZ = v; }
@@ -107,12 +165,24 @@ public class Config {
     public static void setSeedReservePerType(int v) { seedReservePerType = v; }
     public static void setHarvestParticles(boolean v) { harvestParticles = v; }
 
+    /**
+     * Dumps the current effective config to INFO if debug logging is on.
+     * Useful at startup for confirming the config loaded the way you intended it to.
+     * Warning: if you're confused about a behavior, this is the first place to look.
+     */
     public static void logEffectiveConfig() {
         if (debugLogging) {
             LogUtils.logInfo("Debug config enabled: tickInterval={}, scanRangeX={}, scanRangeZ={}, rotationMode={}, seedClutterMode={}, seedReservePerType={}, harvestParticles=()", tickInterval, scanRangeX, scanRangeZ, rotationMode, seedClutterMode, seedReservePerType, harvestParticles);
         }
     }
 
+    /**
+     * Reads the server config file from disk, or creates a fresh one with defaults if missing.
+     * Each key is parsed individually with fallback to the current default, so adding new keys
+     * to a future version won't break existing user configs — unknown keys are simply ignored.
+     *
+     * @throws IOException if the file read or creation fails (handled by load() which logs and continues)
+     */
     private static void loadServer() throws IOException {
         if (!Files.exists(SERVER_CONFIG_PATH)) {
             writeToml(SERVER_CONFIG_PATH, serverConfigValues(), serverHeader());
@@ -133,6 +203,13 @@ public class Config {
         seedReservePerType = nonNegativeInt(values, "seedReservePerType", seedReservePerType);
     }
 
+    /**
+     * Reads the client config file from disk, or creates a fresh one with defaults if missing.
+     * Client settings are separate from server settings so singleplayer and multiplayer can have
+     * independent visual preferences without one overwriting the other.
+     *
+     * @throws IOException if the file read or creation fails (handled by load() which logs and continues)
+     */
     private static void loadClient() throws IOException {
         if (!Files.exists(CLIENT_CONFIG_PATH)) {
             writeToml(CLIENT_CONFIG_PATH, clientConfigValues(), clientHeader());
@@ -142,6 +219,11 @@ public class Config {
         harvestParticles = booleanValue(values, "harvestParticles", harvestParticles);
     }
 
+    /**
+     * Returns an ordered map of all server-side config keys and their current values.
+     * Used both for writing a fresh config file and for knowing which fields to save on demand.
+     * Order matters — LinkedHashMap preserves insertion order for clean TOML output.
+     */
     private static Map<String, Object> serverConfigValues() {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("tickInterval", tickInterval);
@@ -159,20 +241,32 @@ public class Config {
         return values;
     }
 
+    /** Returns the single client-side config key (harvestParticles) and its current value. */
     private static Map<String, Object> clientConfigValues() {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("harvestParticles", harvestParticles);
         return values;
     }
 
+    /** Returns the TOML header comment lines for the server config file. */
     private static List<String> serverHeader() {
         return List.of("# Forget-Me-Crops server config", "# Gameplay and server-side debug behavior.", "");
     }
 
+    /** Returns the TOML header comment lines for the client config file. */
     private static List<String> clientHeader() {
         return List.of("# Forget-Me-Crops client config", "# Client-side visual preferences.", "");
     }
 
+    /**
+     * Writes a flat TOML file with the given header lines followed by one key = value per entry.
+     * Values are formatted via formatTomlValue so strings get quoted and booleans/ints are bare.
+     *
+     * @param path        where to write the file (will be created or overwritten)
+     * @param values      ordered map of key → value to write
+     * @param headerLines comment lines to prepend (typically two summary lines + a blank)
+     * @throws IOException if the write fails
+     */
     private static void writeToml(Path path, Map<String, Object> values, List<String> headerLines) throws IOException {
         StringBuilder builder = new StringBuilder();
         for (String headerLine : headerLines) builder.append(headerLine).append(System.lineSeparator());
@@ -182,6 +276,15 @@ public class Config {
         Files.writeString(path, builder.toString());
     }
 
+    /**
+     * Parses a flat TOML file into a string-keyed map. Strips comments, trims whitespace,
+     * ignores blank lines and TOML section headers ([...]), and splits on the first {@code =}.
+     * This is intentionally minimal — the config schema is flat, so full TOML parsing isn't needed.
+     *
+     * @param path the TOML file to read
+     * @return map of key → raw string value (still needs type conversion by callers)
+     * @throws IOException if the file read fails
+     */
     private static Map<String, String> readToml(Path path) throws IOException {
         Map<String, String> values = new LinkedHashMap<>();
         for (String rawLine : Files.readAllLines(path)) {
@@ -196,6 +299,11 @@ public class Config {
         return values;
     }
 
+    /**
+     * Strips inline TOML comments from a line, respecting quoted string boundaries.
+     * A {@code #} character inside a quoted value is not treated as a comment marker.
+     * Simple but correct for the flat config format we use.
+     */
     private static String stripComments(String line) {
         boolean quoted = false;
         StringBuilder out = new StringBuilder();
@@ -208,11 +316,20 @@ public class Config {
         return out.toString();
     }
 
+    /**
+     * Formats a config value for TOML output: strings get double-quoted, booleans/ints are bare.
+     * Used when writing fresh config files. Nothing fancy, because the config format isn't fancy.
+     */
     private static String formatTomlValue(Object value) {
         if (value instanceof String stringValue) return '"' + stringValue + '"';
         return String.valueOf(value);
     }
 
+    /**
+     * Reads a string value from the parsed TOML map, stripping surrounding double-quotes.
+     * Returns the fallback if the key is absent. No TOML 1.0 escape sequences are handled —
+     * config values are simple ASCII strings, so this is fine.
+     */
     private static String stringValue(Map<String, String> values, String key, String fallback) {
         String rawValue = values.get(key);
         if (rawValue == null) return fallback;
@@ -224,6 +341,10 @@ public class Config {
         return trimmed;
     }
 
+    /**
+     * Reads a boolean value from the parsed TOML map. Logs a warning and uses the fallback
+     * if the value isn't exactly "true" or "false" (case-insensitive).
+     */
     private static boolean booleanValue(Map<String, String> values, String key, boolean fallback) {
         String rawValue = values.get(key);
         if (rawValue == null) return fallback;
@@ -233,14 +354,20 @@ public class Config {
         return fallback;
     }
 
+    /** Reads a positive integer (≥1) config value; uses fallback for missing or out-of-range values. */
     private static int positiveInt(Map<String, String> values, String key, int fallback) {
         return boundedInt(values, key, fallback, 1);
     }
 
+    /** Reads a non-negative integer (≥0) config value; uses fallback for missing or out-of-range values. */
     private static int nonNegativeInt(Map<String, String> values, String key, int fallback) {
         return boundedInt(values, key, fallback, 0);
     }
 
+    /**
+     * Core integer reader: parses the raw string, enforces a minimum, logs a warning on failure.
+     * Used by both positiveInt and nonNegativeInt so they don't duplicate this logic.
+     */
     private static int boundedInt(Map<String, String> values, String key, int fallback, int minValue) {
         String rawValue = values.get(key);
         if (rawValue == null) return fallback;
@@ -253,6 +380,7 @@ public class Config {
         return fallback;
     }
 
+    /** Maps a config key to its owning TOML file name (for cleaner warning messages). */
     private static String configFileForKey(String key) {
         return "harvestParticles".equals(key) ? "forgetmecrops-client.toml" : "forgetmecrops-server.toml";
     }

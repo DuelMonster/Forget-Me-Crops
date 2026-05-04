@@ -25,13 +25,42 @@ import java.util.Map;
 import com.forgetmecrops.frame.CatchupManager;
 import com.forgetmecrops.platform.adapter.FastItemFrameAdapterImpl;
 
+/**
+ * FarmTicker (Fabric): The punctual scheduler that keeps your crops harvested on time!
+ * <p>
+ * Listens for Fabric server-tick, chunk-load/unload, and server-lifecycle events.
+ * On chunk load, discovered item-frame and FIF candidates are enqueued in CatchupManager
+ * for gradual processing across many ticks. On each server tick, the catchup queue is
+ * drained a little and due anchor scans are triggered. On chunk unload, orphaned anchors
+ * are cleaned up from the registry.
+ * </p>
+ * <p>
+ * The gradual catchup queue (drained over ~{@code CATCHUP_TICKS} ticks) ensures that world
+ * startup doesn't spike the server with simultaneous discovery work for every loaded chunk.
+ * Thoughtful engineering for the sake of server TPS.
+ * </p>
+ */
 public class FarmTicker {
+    // Utility class. The ticker ticks; it does not instantiate.
     private FarmTicker() {}
+    // True once the first tick snapshot has been logged (per session). Used for one-time startup logs.
     private static boolean tickSnapshotLogged = false;
+    // Number of ticks to spread the initial chunk-load catchup queue over.
     private static final int CATCHUP_TICKS = 40;
+    // Max spiral ticks to allow in a direct (non-catchup) single-frame scan pass
     private static final int DIRECT_SCAN_MAX_SPIRAL_TICKS = 1;
+    // Per-dimension countdown (in ticks) until the next full frame rediscovery pass
     private static final java.util.Map<String, Integer> rediscoveryCountdown = new java.util.HashMap<>();
 
+    /**
+     * Registers all Fabric lifecycle event listeners that drive farm discovery and scanning.
+     * <ul>
+     *   <li>CHUNK_LOAD — enqueues vanilla ItemFrame and FIF block-entity positions for gradual discovery</li>
+     *   <li>CHUNK_UNLOAD — unregisters anchors in the unloading chunk from the FrameRegistry</li>
+     *   <li>SERVER_STOPPING — clears the FrameRegistry so next load starts clean</li>
+     *   <li>SERVER_END_TICK — drains the catchup queue, triggers due scans, applies rediscovery passes</li>
+     * </ul>
+     */
     public static void init() {
         ServerChunkEvents.CHUNK_LOAD.register((ServerLevel level, LevelChunk chunk) -> {
             try {
