@@ -18,6 +18,8 @@
 - Expanded BFS farm traversal to include connected air-over-dirt/grass repair tiles across the farm area (within configured scan bounds), improving full-farm retill coverage.
 - Fixed scheduled scan continuity when a frame is empty: scan now attempts chest-driven hoe replacement inline instead of immediately aborting.
 - Fixed anchor resumption latency after chest-driven hoe replacement by scheduling immediate scan run (`ticksUntilNextRun = 0`) when an anchor transitions from no hoe to has hoe.
+- Fixed TOML string parsing for quoted enum values so `rotationMode` and other string-backed options load correctly instead of silently falling back.
+- Fixed `FULL_ROTATION_PER_HARVEST` timing to start with spiral scan progression and complete exactly one paced `0..7` cycle over the configured scan duration.
 - Maintenance refactor/cleanup pass: deduplicated replant helper logic in `HarvestUtils`, centralized anchor resolution helpers, and removed a now-unused durability import from `FrameScanner`.
 
 ## 0.11.0

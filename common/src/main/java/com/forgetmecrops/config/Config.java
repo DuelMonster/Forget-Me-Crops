@@ -20,12 +20,12 @@ public class Config {
     private static final Path CLIENT_CONFIG_PATH = CONFIG_DIR.resolve("forget_me_crops-client.toml");
 
     private static int tickInterval = 300;
-    private static int frameRediscoveryInterval = 600;
+    private static int frameRediscoveryInterval = 150;
     private static int scanRangeX = 4;
     private static int scanRangeZ = 4;
     private static DurabilityMode durabilityMode = DurabilityMode.NORMAL;
     private static boolean mendingNegation = true;
-    private static boolean debugLogging = true;
+    private static boolean debugLogging = false;
     private static int chestFullCooldownTicks = 300;
     private static int maxSpiralDurationTicks = 200;
     private static boolean harvestParticles = true;
@@ -214,7 +214,14 @@ public class Config {
     }
 
     private static String stringValue(Map<String, String> values, String key, String fallback) {
-        return values.getOrDefault(key, fallback);
+        String rawValue = values.get(key);
+        if (rawValue == null) return fallback;
+
+        String trimmed = rawValue.trim();
+        if (trimmed.length() >= 2 && trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
+            return trimmed.substring(1, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 
     private static boolean booleanValue(Map<String, String> values, String key, boolean fallback) {

@@ -54,6 +54,7 @@ class FarmScanTask {
     int numberOfTicksNeeded = 0;
     boolean fullAnimationScheduled = false;
     int animationInterval = 1;
+    int fullAnimationTickCounter = 0;
     final List<Integer> fullAnimationSequence = new ArrayList<>();
     int fullAnimationIndex = 0;
 
@@ -173,7 +174,13 @@ class FarmScanTask {
         tickCounter++;
         if (animationStepsRemaining > 0) {
             try {
-                boolean shouldApply = !fullAnimationScheduled || (fullAnimationScheduled && (tickCounter % animationInterval == 0));
+                boolean shouldApply;
+                if (!fullAnimationScheduled) {
+                    shouldApply = true;
+                } else {
+                    fullAnimationTickCounter++;
+                    shouldApply = (fullAnimationTickCounter % animationInterval == 0);
+                }
                 if (shouldApply) {
                     if (!fullAnimationSequence.isEmpty() && fullAnimationIndex < fullAnimationSequence.size()) {
                         int next = fullAnimationSequence.get(fullAnimationIndex);
@@ -193,7 +200,13 @@ class FarmScanTask {
             fullAnimationScheduled = false;
             try { fullAnimationSequence.clear(); } catch (Throwable ignored) {}
             fullAnimationIndex = 0;
+            fullAnimationTickCounter = 0;
             try { LogUtils.logDebug("[ROT] Full animation complete for {} — cleared sequence", center); } catch (Throwable ignored) {}
+        }
+
+        // FULL_ROTATION_PER_HARVEST should begin with the scan progression, not only after a mature crop is found.
+        if (Config.getRotationMode() == RotationMode.FULL_ROTATION_PER_HARVEST && currentIndex == 0 && !fullAnimationScheduled) {
+            startFullRotationAnimation();
         }
 
         int endIndex = Math.min(totalPositions - 1, currentIndex + positionsPerTick - 1);
@@ -310,24 +323,6 @@ class FarmScanTask {
                     case STEP_PER_HARVEST -> {
                     }
                     case FULL_ROTATION_PER_HARVEST -> {
-                        if (!fullAnimationScheduled) {
-                            fullAnimationScheduled = true;
-                            tickCounter = 0;
-                            // Prepare a deterministic 8-step rotation sequence starting from current rotation
-                            try {
-                                int start = FrameScanner.getFrameRotation(level, center) & 7;
-                                fullAnimationSequence.clear();
-                                for (int s = 1; s <= 8; s++) fullAnimationSequence.add((start + s) & 7);
-                                fullAnimationIndex = 0;
-                                animationStepsRemaining = fullAnimationSequence.size();
-                                animationInterval = Math.max(1, (int) Math.ceil((double) numberOfTicksNeeded / (double) fullAnimationSequence.size()));
-                                try { LogUtils.logDebug("[ROT] Prepared full animation sequence for {} start={} seq={}", center, start, fullAnimationSequence); } catch (Throwable ignored) {}
-                            } catch (Throwable ignored) {
-                                animationStepsRemaining = 8;
-                                animationInterval = Math.max(1, (int) Math.ceil((double) numberOfTicksNeeded / 8.0));
-                            }
-                            try { FrameRegistry.setAnimating(dimId, center, true); } catch (Throwable ignored) {}
-                        }
                     }
                     case FOLLOW_HARVEST_SPIRAL -> {
                     }
@@ -401,6 +396,35 @@ class FarmScanTask {
         }
 
         return state.is(Blocks.FARMLAND) || state.is(Blocks.SOUL_SAND);
+    }
+
+    private void startFullRotationAnimation() {
+        fullAnimationScheduled = true;
+        fullAnimationTickCounter = 0;
+        // Prepare a deterministic 8-step rotation sequence starting from current rotation.
+        try {
+            int start = FrameScanner.getFrameRotation(level, center) & 7;
+            fullAnimationSequence.clear();
+            for (int s = 1; s <= 8; s++) fullAnimationSequence.add((start + s) & 7);
+            fullAnimationIndex = 0;
+            animationStepsRemaining = fullAnimationSequence.size();
+            int remainingScanTicks = Math.max(1, numberOfTicksNeeded - tickCounter + 1);
+            animationInterval = Math.max(1, (int) Math.ceil((double) remainingScanTicks / (double) fullAnimationSequence.size()));
+
+            // Apply the first step immediately so animation starts with the active spiral.
+            if (animationStepsRemaining > 0 && !fullAnimationSequence.isEmpty()) {
+                int first = fullAnimationSequence.get(fullAnimationIndex);
+                FrameScanner.setFrameRotation(level, center, first, true);
+                fullAnimationIndex++;
+                animationStepsRemaining--;
+            }
+            try { LogUtils.logDebug("[ROT] Prepared full animation sequence for {} start={} seq={}", center, start, fullAnimationSequence); } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+            animationStepsRemaining = 8;
+            int remainingScanTicks = Math.max(1, numberOfTicksNeeded - tickCounter + 1);
+            animationInterval = Math.max(1, (int) Math.ceil((double) remainingScanTicks / 8.0));
+        }
+        try { FrameRegistry.setAnimating(dimId, center, true); } catch (Throwable ignored) {}
     }
 }
 
