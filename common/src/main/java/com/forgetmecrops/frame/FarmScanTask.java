@@ -141,16 +141,30 @@ class FarmScanTask {
                 return true;
             }
 
-            // Ensure a hoe is present on the frame at tick start; abort the scan if removed.
+            // Ensure a hoe is present on the frame at tick start; if removed, try to replace it from chest.
             try {
                 ItemStack liveHoe = FrameScanner.readHoeFromFrame(level, center);
                 if (liveHoe == null || liveHoe.isEmpty()) {
-                    try { LogUtils.logDebug("[SCAN] Hoe removed from frame at {} during scheduled scan; aborting.", center); } catch (Throwable ignored) {}
-                    ctx.logSummary();
-                    return true;
+                    try { LogUtils.logDebug("[SCAN] Hoe removed from frame at {} during scheduled scan; attempting replacement from chest.", center); } catch (Throwable ignLog1) {}
+                    try {
+                        FrameHoeReplacement.tryReplaceBrokenHoe(ctx);
+                        ItemStack replacedHoe = FrameScanner.readHoeFromFrame(level, center);
+                        if (replacedHoe == null || replacedHoe.isEmpty()) {
+                            try { LogUtils.logDebug("[SCAN] Failed to replace hoe from chest for {} during scheduled scan; aborting.", center); } catch (Throwable ignLog2) {}
+                            ctx.logSummary();
+                            return true;
+                        }
+                        try { ctx.setHoe(replacedHoe); } catch (Throwable ignSetHoe) {}
+                        try { FrameRegistry.updateHoe(dimId, center, ctx.getHoe().copy()); } catch (Throwable ignUpdateReg) {}
+                    } catch (Throwable ignReplace) {
+                        try { LogUtils.logDebug("[SCAN] Hoe replacement attempt failed for {} during scheduled scan; aborting.", center); } catch (Throwable ignLog3) {}
+                        ctx.logSummary();
+                        return true;
+                    }
+                } else {
+                    try { ctx.setHoe(liveHoe); } catch (Throwable ignSet) {}
+                    try { FrameRegistry.updateHoe(dimId, center, ctx.getHoe().copy()); } catch (Throwable ignUpd) {}
                 }
-                try { ctx.setHoe(liveHoe); } catch (Throwable ignored) {}
-                try { FrameRegistry.updateHoe(dimId, center, ctx.getHoe().copy()); } catch (Throwable ignored) {}
             } catch (Throwable ignored) {}
         } catch (Throwable t) {
             LogUtils.logDebug("[SCAN] Anchor re-check failed for " + center, t);

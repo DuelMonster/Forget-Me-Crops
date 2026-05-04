@@ -205,8 +205,13 @@ public class FrameRegistry {
         FrameEntry replacement = new FrameEntry(newAnchor);
         replacement.active = old.active || (hoe != null && !hoe.isEmpty());
         if (hoe != null && !hoe.isEmpty()) {
-            // Preserve configured cadence instead of forcing an immediate run
-            replacement.ticksUntilNextRun = Config.getTickInterval();
+            boolean oldHadHoe = old.anchor != null && old.anchor.hoe != null && !old.anchor.hoe.isEmpty();
+            if (!oldHadHoe) {
+                // Hoe became available (e.g. chest auto-replacement): run immediately.
+                replacement.ticksUntilNextRun = 0;
+            } else {
+                replacement.ticksUntilNextRun = Math.max(0, old.ticksUntilNextRun);
+            }
         } else {
             replacement.ticksUntilNextRun = old.ticksUntilNextRun;
         }
