@@ -204,6 +204,7 @@ class FarmScanTask {
                 try {
                     BlockState state = level.getBlockState(pos);
                     ctx.incrementBlocksScanned();
+                    try { HarvestUtils.emitSpiralTrailParticles(level, pos); } catch (Throwable ignored) {}
 
                     // Temporary detailed debug: log per-position block/maturity and chest-space checks
                     try {

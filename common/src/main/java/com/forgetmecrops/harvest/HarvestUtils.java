@@ -2,10 +2,12 @@ package com.forgetmecrops.harvest;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ItemParticleOption;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
@@ -14,6 +16,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.server.level.ServerLevel;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
@@ -90,7 +93,11 @@ public class HarvestUtils {
             try { ctx.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3); } catch (Throwable ignored) {}
         }
 
-        if (Config.isHarvestParticles()) ctx.level.levelEvent(2001, pos, Block.getId(state));
+        playHarvestBreakSound(ctx, pos, state);
+        if (Config.isHarvestParticles()) {
+            ctx.level.levelEvent(2001, pos, Block.getId(state));
+            emitHarvestBurstParticles(ctx.level, pos, state);
+        }
         ctx.incrementHarvested();
     }
 
@@ -139,6 +146,108 @@ public class HarvestUtils {
             ItemStack particlesFrom = (brokenHoe == null || brokenHoe.isEmpty()) ? new ItemStack(Items.WOODEN_HOE) : brokenHoe.copy();
             try { if (ctx.level instanceof net.minecraft.server.level.ServerLevel server) { server.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, particlesFrom), ((FrameScanner.Anchor)ctx.anchor).framePos.getX() + 0.5, ((FrameScanner.Anchor)ctx.anchor).framePos.getY() + 0.5, ((FrameScanner.Anchor)ctx.anchor).framePos.getZ() + 0.5, 10, 0.18, 0.18, 0.18, 0.03); } } catch (Throwable ignored) {}
         } catch (Throwable ignored) {}
+    }
+
+    public static void playPlantSound(net.minecraft.world.level.Level level, BlockPos pos, BlockState plantedState) {
+        if (level == null || pos == null || plantedState == null) return;
+        try {
+            SoundEvent sound = plantedState.getSoundType().getPlaceSound();
+            level.playSound(null, pos, sound, SoundSource.BLOCKS, 0.7F, 0.92F + level.getRandom().nextFloat() * 0.16F);
+        } catch (Throwable ignored) {}
+    }
+
+    public static void playTillingSound(net.minecraft.world.level.Level level, BlockPos pos) {
+        if (level == null || pos == null) return;
+        try {
+            SoundEvent sound = resolveHoeTillSound();
+            level.playSound(null, pos, sound, SoundSource.BLOCKS, 0.9F, 0.95F + level.getRandom().nextFloat() * 0.12F);
+        } catch (Throwable ignored) {}
+    }
+
+    public static void emitSpiralTrailParticles(net.minecraft.world.level.Level level, BlockPos cropPos) {
+        if (!Config.isHarvestParticles() || level == null || cropPos == null) return;
+        if (!(level instanceof ServerLevel server)) return;
+        try {
+            float brightness = Mth.clamp(0.82F + (server.getRandom().nextFloat() - 0.5F) * 0.14F, 0.70F, 0.95F);
+            int c = toColor(brightness, brightness, brightness);
+            DustParticleOptions dust = new DustParticleOptions(c, 0.75F);
+            server.sendParticles(dust,
+                    cropPos.getX() + 0.5,
+                    cropPos.getY() + 0.10,
+                    cropPos.getZ() + 0.5,
+                    6,
+                    0.16,
+                    0.34,
+                    0.16,
+                    0.018);
+        } catch (Throwable ignored) {}
+    }
+
+    private static void emitHarvestBurstParticles(net.minecraft.world.level.Level level, BlockPos cropPos, BlockState harvestedState) {
+        if (!(level instanceof ServerLevel server) || cropPos == null || harvestedState == null) return;
+        try {
+            float[] base = dominantDustColor(harvestedState.getBlock());
+            for (int i = 0; i < 2; i++) {
+                float variance = 0.12F;
+                float r = Mth.clamp(base[0] + (server.getRandom().nextFloat() - 0.5F) * variance, 0.0F, 1.0F);
+                float g = Mth.clamp(base[1] + (server.getRandom().nextFloat() - 0.5F) * variance, 0.0F, 1.0F);
+                float b = Mth.clamp(base[2] + (server.getRandom().nextFloat() - 0.5F) * variance, 0.0F, 1.0F);
+                DustParticleOptions dust = new DustParticleOptions(toColor(r, g, b), 0.90F);
+                server.sendParticles(dust,
+                        cropPos.getX() + 0.5,
+                        cropPos.getY() + 0.12,
+                        cropPos.getZ() + 0.5,
+                        14,
+                        0.16,
+                        1.35,
+                        0.16,
+                        0.038);
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private static void playHarvestBreakSound(HarvestContext ctx, BlockPos pos, BlockState harvestedState) {
+        try {
+            SoundEvent sound = harvestedState.getSoundType().getBreakSound();
+            ctx.level.playSound(null, pos, sound, SoundSource.BLOCKS, 0.85F, 0.92F + ctx.level.getRandom().nextFloat() * 0.18F);
+        } catch (Throwable ignored) {}
+    }
+
+    private static SoundEvent resolveHoeTillSound() {
+        try {
+            Object value = SoundEvents.HOE_TILL;
+            try {
+                java.lang.reflect.Method method = value.getClass().getMethod("value");
+                Object wrapped = method.invoke(value);
+                if (wrapped instanceof SoundEvent event) return event;
+            } catch (Throwable ignored) {}
+            try {
+                java.lang.reflect.Method method = value.getClass().getMethod("get");
+                Object wrapped = method.invoke(value);
+                if (wrapped instanceof SoundEvent event) return event;
+            } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {}
+        return SoundEvents.GRAVEL_HIT;
+    }
+
+    private static float[] dominantDustColor(Block block) {
+        if (block == null) return new float[]{0.78F, 0.78F, 0.78F};
+        if (block == Blocks.WHEAT) return new float[]{0.86F, 0.78F, 0.28F};
+        if (block == Blocks.CARROTS) return new float[]{0.93F, 0.55F, 0.20F};
+        if (block == Blocks.POTATOES) return new float[]{0.75F, 0.63F, 0.38F};
+        if (block == Blocks.BEETROOTS) return new float[]{0.72F, 0.20F, 0.24F};
+        if (block == Blocks.NETHER_WART) return new float[]{0.62F, 0.12F, 0.18F};
+        if (block == Blocks.SWEET_BERRY_BUSH) return new float[]{0.76F, 0.18F, 0.34F};
+        if (block == Blocks.MELON || block == Blocks.MELON_STEM || block == Blocks.ATTACHED_MELON_STEM) return new float[]{0.45F, 0.76F, 0.30F};
+        if (block == Blocks.PUMPKIN || block == Blocks.PUMPKIN_STEM || block == Blocks.ATTACHED_PUMPKIN_STEM) return new float[]{0.92F, 0.52F, 0.18F};
+        return new float[]{0.78F, 0.78F, 0.78F};
+    }
+
+    private static int toColor(float r, float g, float b) {
+        int ri = Mth.clamp((int)(r * 255.0F), 0, 255);
+        int gi = Mth.clamp((int)(g * 255.0F), 0, 255);
+        int bi = Mth.clamp((int)(b * 255.0F), 0, 255);
+        return (255 << 24) | (ri << 16) | (gi << 8) | bi;
     }
 
     private static SoundEvent resolveItemBreakSound() {

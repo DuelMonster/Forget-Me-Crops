@@ -374,6 +374,7 @@ public class FrameScanner {
         BlockState plantState = chosen.defaultBlockState();
         try { if (plantState.getBlock() instanceof CropBlock) plantState = setAgeSafe(plantState, 0); } catch (Throwable ignored) {}
         level.setBlock(pos, plantState, 3);
+        try { HarvestUtils.playPlantSound(level, pos, plantState); } catch (Throwable ignored) {}
         return true;
     }
 
@@ -447,6 +448,7 @@ public class FrameScanner {
             }
             if (farmlandNeighbors >= 1) {
                 level.setBlock(belowPos, Blocks.FARMLAND.defaultBlockState(), 3);
+                try { HarvestUtils.playTillingSound(level, belowPos); } catch (Throwable ignored) {}
                 ItemStack before = ctx.getHoe().isEmpty() ? (anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy()) : ctx.getHoe().copy();
                 try {
                     if (ctx.isSkipNextDamage()) { ctx.setSkipNextDamage(false); }
