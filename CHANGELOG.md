@@ -14,6 +14,10 @@
 - Added scan-pass player feedback: planting/tilling/harvest sounds, spiral trail dust particles, and crop-colored harvest dust burst particles.
 - Tuned harvest dust burst behavior to rise higher with tighter horizontal spread.
 - Restored dirt/grass repair tiling by including adjacent tillable repair targets in BFS farm position membership.
+- Expanded BFS farm traversal to include connected air-over-dirt/grass repair tiles across the farm area (within configured scan bounds), improving full-farm retill coverage.
+- Fixed scheduled scan continuity when a frame is empty: scan now attempts chest-driven hoe replacement inline instead of immediately aborting.
+- Fixed anchor resumption latency after chest-driven hoe replacement by scheduling immediate scan run (`ticksUntilNextRun = 0`) when an anchor transitions from no hoe to has hoe.
+- Maintenance refactor/cleanup pass: deduplicated replant helper logic in `HarvestUtils`, centralized anchor resolution helpers, and removed a now-unused durability import from `FrameScanner`.
 
 ## 0.11.0
 

@@ -91,6 +91,8 @@ Anchors are indexed by chunk key in `CHUNK_INDEX`. When a chunk unloads, all its
 
 Newly registered anchors start with `ticksUntilNextRun = tickInterval` so they wait a full cycle before doing any work. This prevents harvesting, tilling, or hoe replacement from firing immediately on world load.
 
+`updateHoe(dimId, pos, hoe)` includes a recovery fast-path: when an existing anchor transitions from no hoe to a valid hoe (for example after chest-driven replacement into a rebuilt empty frame), `ticksUntilNextRun` is set to `0` so scanning resumes immediately.
+
 #### Rotation batching
 
 Rotation requests are not applied immediately. They are enqueued in `PENDING_ROTATIONS` (a per-dimension map) and applied in a single flush pass during `tickAndCollectReady`. This concentrates world mutation into one point per tick and avoids conflicting concurrent rotation writes.
@@ -106,9 +108,9 @@ When `animating == true` for a frame entry, `scheduleRotation` skips adding new 
 `FrameScanner.bfsDiscoverFarm(center, level, rangeX, rangeZ)` builds a connected set of farm tiles using breadth-first search from the anchor position. Traversal rules:
 
 - A position is a valid farm tile if `isFarmPosition(level, pos)` returns true.
-- `isFarmPosition` accepts: crop blocks, melon/pumpkin stems, melon/pumpkin fruit, farmland (with or without a crop above), soul sand (with or without nether wart above), and air-over-dirt/grass repair tiles that are adjacent to farmland.
+- `isFarmPosition` accepts: crop blocks, melon/pumpkin stems, melon/pumpkin fruit, farmland (with or without a crop above), soul sand (with or without nether wart above), and air-over-dirt/grass repair tiles.
 - Traversal stops at the configured range limits `[center ± rangeX, center ± rangeZ]`.
-- Air gaps and ambiguous border tiles are not bridged — this prevents adjacent farms from leaking into each other.
+- Connectivity is constrained by BFS reachability from the anchor and by configured range limits, so repair traversal remains local to the connected farm area.
 
 If BFS yields an empty result (e.g. brand-new empty farm), the scanner falls back to a full rectangular grid over `[center ± rangeX, center ± rangeZ]` so the repair/planting pass still runs.
 
@@ -240,7 +242,7 @@ When a hoe reaches 0 durability, `HarvestUtils.handleBrokenHoe(ctx, before)` is 
 
 ### Idle frame re-equip
 
-If a scan finds the frame empty but the chest contains a hoe, `FrameHoeReplacement.tryReplaceBrokenHoe(ctx)` also handles this case — it loads the chest hoe into the frame so the next scan cycle runs correctly.
+If a scan finds the frame empty but the chest contains a hoe, `FrameHoeReplacement.tryReplaceBrokenHoe(ctx)` also handles this case — it loads the chest hoe into the frame and `FrameRegistry.updateHoe(...)` schedules that anchor to run immediately (`ticksUntilNextRun = 0` on no-hoe to has-hoe transition).
 
 ---
 

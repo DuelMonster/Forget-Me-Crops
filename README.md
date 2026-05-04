@@ -22,6 +22,7 @@ Farms stay active as long as their chunks are loaded, so vanilla chunk loaders a
 - Replants crops from chest stock after harvest
 - Self-repairs: retills dirt/grass back into farmland, replants empty patches
 - Replaces a broken hoe from chest stock automatically
+- If an anchor frame is rebuilt empty, pulls a hoe from chest stock and resumes scanning immediately
 - Detects when the frame or chest is removed and unregisters cleanly
 - Single-pass spiral scan combines harvesting, replanting, and farm repair actions
 - Incremental scanning spreads work across multiple ticks to keep lag spikes small
@@ -40,10 +41,11 @@ Farms stay active as long as their chunks are loaded, so vanilla chunk loaders a
 2. If a hoe is present and the chest has space, a `FarmScanTask` is created.
 3. The task discovers the farm area with a BFS pass, then sweeps it in an outward spiral.
 4. Mature crops are harvested and drops inserted into the chest; the seed/replant item is consumed from the drops (or chest) and the crop is immediately replanted.
-5. The same spiral pass also repairs farm gaps in-line: empty farmland/soul-sand tiles are replanted and adjacent dirt/grass tiles are retilled and replanted.
+5. The same spiral pass also repairs farm gaps in-line: empty farmland/soul-sand tiles are replanted and connected dirt/grass patches (air above, within scan bounds) are retilled and replanted.
 6. The item frame rotates as work progresses so you can see which ring is currently being processed.
 7. Scan work produces local feedback (tilling/plant/harvest sounds, spiral dust, and harvest dust bursts) so activity is visible during the pass.
 8. When the task finishes (or the chest fills), it cleans up and the anchor goes back on its cooldown timer.
+9. If a frame is restored empty and a hoe is available in the chest, the registry marks the anchor ready immediately instead of waiting a full `tickInterval`.
 
 ---
 
