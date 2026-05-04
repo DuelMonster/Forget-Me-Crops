@@ -13,6 +13,7 @@
 - Simplified `FarmScanTask` to a single spiral pass (removed constructor maturity pre-scan and end-of-task neighbour-only repair pass).
 - Added scan-pass player feedback: planting/tilling/harvest sounds, spiral trail dust particles, and crop-colored harvest dust burst particles.
 - Tuned harvest dust burst behavior to rise higher with tighter horizontal spread.
+- Fixed spiral trail dust filtering so particles render only on valid farm tiles (crops/fruit/stems and prepared farmland/soul sand), not on off-farm traversal connectors such as dirt/grass links.
 - Restored dirt/grass repair tiling by including adjacent tillable repair targets in BFS farm position membership.
 - Expanded BFS farm traversal to include connected air-over-dirt/grass repair tiles across the farm area (within configured scan bounds), improving full-farm retill coverage.
 - Fixed scheduled scan continuity when a frame is empty: scan now attempts chest-driven hoe replacement inline instead of immediately aborting.

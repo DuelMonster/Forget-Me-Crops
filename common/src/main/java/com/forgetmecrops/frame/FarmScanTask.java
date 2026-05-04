@@ -218,7 +218,9 @@ class FarmScanTask {
                 try {
                     BlockState state = level.getBlockState(pos);
                     ctx.incrementBlocksScanned();
-                    try { HarvestUtils.emitSpiralTrailParticles(level, pos); } catch (Throwable ignored) {}
+                    if (shouldEmitTrailParticles(level, pos, state)) {
+                        try { HarvestUtils.emitSpiralTrailParticles(level, pos); } catch (Throwable ignored) {}
+                    }
 
                     // Temporary detailed debug: log per-position block/maturity and chest-space checks
                     try {
@@ -377,6 +379,28 @@ class FarmScanTask {
         }
 
         return false;
+    }
+
+    private static boolean shouldEmitTrailParticles(Level level, BlockPos pos, BlockState state) {
+        if (level == null || pos == null || state == null) return false;
+
+        if (state.getBlock() instanceof CropBlock
+                || state.is(Blocks.NETHER_WART)
+                || state.is(Blocks.SWEET_BERRY_BUSH)
+                || state.is(Blocks.MELON)
+                || state.is(Blocks.PUMPKIN)
+                || state.is(Blocks.MELON_STEM)
+                || state.is(Blocks.PUMPKIN_STEM)) {
+            return true;
+        }
+
+        // Show trail on prepared-but-empty farm substrate, but not on dirt/grass traversal links.
+        if (state.isAir()) {
+            Block below = level.getBlockState(pos.below()).getBlock();
+            return below == Blocks.FARMLAND || below == Blocks.SOUL_SAND;
+        }
+
+        return state.is(Blocks.FARMLAND) || state.is(Blocks.SOUL_SAND);
     }
 }
 
