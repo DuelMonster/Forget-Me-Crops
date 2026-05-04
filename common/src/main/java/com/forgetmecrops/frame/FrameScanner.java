@@ -540,12 +540,11 @@ public class FrameScanner {
                 return true;
             }
             if (below == Blocks.DIRT || below == Blocks.GRASS_BLOCK) {
-                // Include adjacent dirt/grass repair targets so auto-till can run during the main scan pass.
-                BlockPos belowPos = pos.below();
-                for (Direction d : new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST}) {
-                    Block nearSoil = level.getBlockState(belowPos.relative(d)).getBlock();
-                    if (nearSoil == Blocks.FARMLAND) return true;
-                }
+                // Include air-above-dirt/grass positions so they're traversed by BFS. The BFS connectivity
+                // naturally limits inclusion to dirt/grass that is reachable from the farm center.
+                // This allows repair/tilling of entire dirt patches connected to the farm, not just
+                // those directly adjacent to farmland.
+                return true;
             }
 
             int melonPumpkinNeighbors = 0;
