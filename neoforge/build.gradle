@@ -86,7 +86,7 @@ sourceSets.configureEach {
 // --- Related Mods Handling (NeoForge, modeled after Fabric baseline) ---
 def fastItemFramesNeoForgeJarPath = providers.gradleProperty('fastItemFramesNeoForgeJar')
         .orElse(providers.gradleProperty('fastItemFramesJar'))
-def relatedModsDir = rootProject.file('related_mods')
+def relatedModsDir = rootProject.file('related_mods/neoforge')
 def relatedModNameTokens = ['fastitemframes', 'puzzleslib', 'neoforge', 'forgeconfigapiport']
 def loaderToken = 'neoforge'
 def skipRelatedModsInstall = providers.gradleProperty('fhNoRelatedMods').map { it.toBoolean() }.orElse(false)

@@ -76,7 +76,7 @@ loom.remapConfigurations.configureEach {
 // --- Related Mods Handling (from baseline) ---
 def fastItemFramesFabricJarPath = providers.gradleProperty('fastItemFramesFabricJar')
         .orElse(providers.gradleProperty('fastItemFramesJar'))
-def relatedModsDir = rootProject.file('related_mods')
+def relatedModsDir = rootProject.file('related_mods/fabric')
 def relatedModNameTokens = ['fastitemframes', 'puzzleslib', 'fabric-api', 'forgeconfigapiport']
 def loaderToken = 'fabric'
 def skipRelatedModsInstall = providers.gradleProperty('fhNoRelatedMods').map { it.toBoolean() }.orElse(false)
