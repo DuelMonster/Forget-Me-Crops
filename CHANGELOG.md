@@ -24,6 +24,10 @@
 - Config UI refactor: moved Cloth Config screen construction into shared `com.forgetmecrops.client.config.ConfigScreen` (common module) with shared `ConfigTooltipFactory`, `LabelHitbox`, and `LabelTooltip*ListEntry` classes.
 - Removed now-redundant loader wrappers (`ConfigScreens` and `ClothConfigBridge` in Fabric/NeoForge); loader entrypoints now delegate directly to `ConfigScreen.create(...)`.
 - Maintenance refactor/cleanup pass: deduplicated replant helper logic in `HarvestUtils`, centralized anchor resolution helpers, and removed a now-unused durability import from `FrameScanner`.
+- Config UI: enum option entries now display user-friendly names sourced from the locale file (e.g. "Single Step", "Full Rotation", "Follow Rotation") while saving the true enum identifier to config.
+- Config UI: all option labels, tooltips, category headings, and enum display names moved to `en_us.json`; config screen title now uses `ModCommon.MOD_NAME` directly.
+- Renamed `ConfigDescriptors` to `ConfigDefaults`; class now holds only `DEFAULT` and `MIN` constants, no string literals.
+- Renamed `RotationMode` enum constants: `STEP_PER_HARVEST` → `SINGLE_STEP`, `FULL_ROTATION_PER_HARVEST` → `FULL_ROTATION`, `FOLLOW_HARVEST_SPIRAL` → `FOLLOW_ROTATION`. All usages, docs, and the server TOML template updated.
 
 ## 0.11.0
 
