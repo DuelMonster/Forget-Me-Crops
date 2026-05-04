@@ -90,6 +90,7 @@ def relatedModsDir = rootProject.file('related_mods')
 def relatedModNameTokens = ['fastitemframes', 'puzzleslib', 'neoforge', 'forgeconfigapiport']
 def loaderToken = 'neoforge'
 def skipRelatedModsInstall = providers.gradleProperty('fhNoRelatedMods').map { it.toBoolean() }.orElse(false)
+def requireRelatedModsInstall = providers.gradleProperty('fhRequireRelatedMods').map { it.toBoolean() }.orElse(false)
 
 tasks.register('installFastItemFramesForClientNeoForge') {
     group = 'run setup'
@@ -119,7 +120,12 @@ tasks.register('installFastItemFramesForClientNeoForge') {
         }
 
         if (jarsToInstall.isEmpty()) {
-            throw new GradleException("No NeoForge FastItemFrames/PuzzlesLib jars found in ${relatedModsDir}. Expected loader name in filenames (e.g. *NeoForge*.jar).")
+            def message = "No NeoForge FastItemFrames/PuzzlesLib jars found in ${relatedModsDir}. Expected loader name in filenames (e.g. *NeoForge*.jar)."
+            if (requireRelatedModsInstall.get()) {
+                throw new GradleException(message)
+            }
+            logger.lifecycle("{} Continuing without related NeoForge mods. Set -PfhRequireRelatedMods=true to fail instead.", message)
+            return
         }
 
         def modsDir = file('runs/client/mods')
