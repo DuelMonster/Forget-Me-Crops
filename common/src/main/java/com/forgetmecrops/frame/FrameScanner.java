@@ -47,6 +47,9 @@ public class FrameScanner {
     /** Maximum frames processed per run. */
     public static final int MAX_FRAMES_PER_RUN = 24;
 
+    /** The four horizontal directions used for neighbour checks throughout scanning. */
+    static final Direction[] HORIZ_DIRS = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+
     /** Default constructor. */
     public FrameScanner() {}
 
@@ -126,7 +129,7 @@ public class FrameScanner {
                 try { FrameRegistry.updateHoe(dimId, center, currentHoe.copy()); } catch (Throwable ignored) {}
             } else {
                 // Frame is empty; delegate replacement logic to FrameHoeReplacement which encapsulates chest/frame transactions.
-                if (currentHoe == null || currentHoe.isEmpty()) {
+                if (currentHoe.isEmpty()) {
                     try {
                         HarvestContext tempCtx = new HarvestContext(anchor, level, ItemStack.EMPTY, anchor.chest, null);
                         com.forgetmecrops.util.hoe.FrameHoeReplacement.tryReplaceBrokenHoe(tempCtx);
@@ -138,7 +141,7 @@ public class FrameScanner {
             }
         } catch (Throwable ignored) {}
 
-        if (currentHoe == null || currentHoe.isEmpty()) {
+        if (currentHoe.isEmpty()) {
             LogUtils.logDebug("[SCAN] No hoe available for anchor {}; aborting scan.", anchor);
             return false;
         }
@@ -221,8 +224,7 @@ public class FrameScanner {
                     harvested = ctx.getHarvestedCount() > 0;
                     cropsFound = Math.max(cropsFound, ctx.getHarvestedCount());
                 } else if (state.is(Blocks.MELON_STEM) || state.is(Blocks.PUMPKIN_STEM)) {
-                    Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                    for (Direction d : dirs) {
+                    for (Direction d : HORIZ_DIRS) {
                         BlockPos npos = pos.relative(d);
                         BlockState ns = level.getBlockState(npos);
                         if ((ns.is(Blocks.MELON) && state.is(Blocks.MELON_STEM)) || (ns.is(Blocks.PUMPKIN) && state.is(Blocks.PUMPKIN_STEM))) {
@@ -420,11 +422,9 @@ public class FrameScanner {
         BlockState cur = level.getBlockState(pos);
         BlockPos belowPos = pos.below();
         BlockState below = level.getBlockState(belowPos);
-        Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-
         if (below != null && below.getBlock() == Blocks.FARMLAND && cur.isAir()) {
             Map<Block, Integer> counts = new HashMap<>();
-            for (Direction d : dirs) {
+            for (Direction d : HORIZ_DIRS) {
                 Block rep = CropRegistry.canonicalCropBlock(level.getBlockState(pos.relative(d)).getBlock());
                 if (rep != null && CropRegistry.isCropBlock(rep)) counts.merge(rep, 1, Integer::sum);
             }
@@ -433,7 +433,7 @@ public class FrameScanner {
 
         if (below != null && below.getBlock() == Blocks.SOUL_SAND && cur.isAir()) {
             Map<Block, Integer> counts = new HashMap<>();
-            for (Direction d : dirs) {
+            for (Direction d : HORIZ_DIRS) {
                 Block b = level.getBlockState(pos.relative(d)).getBlock();
                 if (b == Blocks.NETHER_WART) counts.merge(b, 1, Integer::sum);
             }
@@ -442,7 +442,7 @@ public class FrameScanner {
 
         if (below != null && (below.getBlock() == Blocks.DIRT || below.getBlock() == Blocks.GRASS_BLOCK) && cur.isAir()) {
             int farmlandNeighbors = 0;
-            for (Direction d : dirs) {
+            for (Direction d : HORIZ_DIRS) {
                 if (level.getBlockState(belowPos.relative(d)).getBlock() == Blocks.FARMLAND) farmlandNeighbors++;
             }
             if (farmlandNeighbors >= 1) {
@@ -455,7 +455,7 @@ public class FrameScanner {
                 } catch (Throwable ignored) {}
                 if (ctx.getHoe().isEmpty()) HarvestUtils.handleBrokenHoe(ctx, before);
                 Map<Block, Integer> counts = new HashMap<>();
-                for (Direction d : dirs) {
+                for (Direction d : HORIZ_DIRS) {
                     Block rep = CropRegistry.canonicalCropBlock(level.getBlockState(pos.relative(d)).getBlock());
                     if (rep != null && CropRegistry.isCropBlock(rep)) counts.merge(rep, 1, Integer::sum);
                 }
@@ -503,7 +503,7 @@ public class FrameScanner {
 
             result.add(cur);
 
-            for (Direction d : new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST}) {
+            for (Direction d : HORIZ_DIRS) {
                 BlockPos np = cur.relative(d);
                 long key = np.asLong();
                 if (visited.contains(key)) continue;

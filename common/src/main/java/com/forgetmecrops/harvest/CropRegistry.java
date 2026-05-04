@@ -19,6 +19,11 @@ import java.util.Map;
 public final class CropRegistry {
     private CropRegistry() {}
 
+    /** Returns true if the block's class name contains "torchflower" (heuristic for modded Torchflower crops). */
+    private static boolean isTorchflowerBlock(Block block) {
+        return block != null && block.getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower");
+    }
+
     /** Block -> seed item used for replanting (one seed consumed per harvest). */
     private static final Map<Block, Item> REPLANT_SEED = new IdentityHashMap<>();
     /** Block -> seed/fruit item shown in the clutter-filter UI. Superset of REPLANT_SEED. */
@@ -41,21 +46,21 @@ public final class CropRegistry {
     public static ItemStack replantCost(Block block) {
         Item seed = REPLANT_SEED.get(block);
         if (seed != null) return new ItemStack(seed);
-        try { if (block != null && block.getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower")) return new ItemStack(block.asItem()); } catch (Throwable ignored) {}
+        try { if (isTorchflowerBlock(block)) return new ItemStack(block.asItem()); } catch (Throwable ignored) {}
         return ItemStack.EMPTY;
     }
 
     public static Item clutterSeed(Block block) {
         Item seed = CLUTTER_SEED.get(block);
         if (seed != null) return seed;
-        try { if (block != null && block.getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower")) return block.asItem(); } catch (Throwable ignored) {}
+        try { if (isTorchflowerBlock(block)) return block.asItem(); } catch (Throwable ignored) {}
         return null;
     }
 
     public static boolean isSeedAlsoCropFruit(Item seedItem) {
         if (seedItem == null) return false;
         return seedItem == Items.CARROT || seedItem == Items.POTATO || seedItem == Items.NETHER_WART
-            || seedItem instanceof BlockItem && ((BlockItem)seedItem).getBlock().getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower");
+            || seedItem instanceof BlockItem && isTorchflowerBlock(((BlockItem)seedItem).getBlock());
     }
 
     public static boolean isCropBlock(Block b) {
@@ -131,7 +136,7 @@ public final class CropRegistry {
     private static int indexForFarmlandCrop(Block block) {
         Integer idx = FARMLAND_CROP_INDEX.get(block);
         if (idx != null) return idx;
-        try { if (block != null && block.getClass().getName().toLowerCase(Locale.ROOT).contains("torchflower")) return 4; } catch (Throwable ignored) {}
+        try { if (isTorchflowerBlock(block)) return 4; } catch (Throwable ignored) {}
         return -1;
     }
 }

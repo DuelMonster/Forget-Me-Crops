@@ -13,6 +13,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.ItemStack;
+
+// package-private: shared with FrameScanner which defines the canonical constant
+import static com.forgetmecrops.frame.FrameScanner.HORIZ_DIRS;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -251,9 +254,8 @@ class FarmScanTask {
                         HarvestUtils.harvestCrop(ctx, pos, state, s -> true, s -> null);
                         harvested = ctx.getHarvestedCount() > beforeHarvest;
                     } else if (state.is(Blocks.MELON_STEM) || state.is(Blocks.PUMPKIN_STEM)) {
-                        Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
                         boolean harvestedFruit = false;
-                        for (Direction d : dirs) {
+                        for (Direction d : HORIZ_DIRS) {
                             BlockPos npos = pos.relative(d);
                             BlockState ns = level.getBlockState(npos);
                             if ((ns.is(Blocks.MELON) && state.is(Blocks.MELON_STEM)) || (ns.is(Blocks.PUMPKIN) && state.is(Blocks.PUMPKIN_STEM))) {
