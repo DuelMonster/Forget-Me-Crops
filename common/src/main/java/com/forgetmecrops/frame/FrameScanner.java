@@ -540,6 +540,14 @@ public class FrameScanner {
                 // Empty prepared soul sand should remain part of the farm so Nether Wart scans can traverse it.
                 return true;
             }
+            if (below == Blocks.DIRT || below == Blocks.GRASS_BLOCK) {
+                // Include adjacent dirt/grass repair targets so auto-till can run during the main scan pass.
+                BlockPos belowPos = pos.below();
+                for (Direction d : new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST}) {
+                    Block nearSoil = level.getBlockState(belowPos.relative(d)).getBlock();
+                    if (nearSoil == Blocks.FARMLAND) return true;
+                }
+            }
 
             int melonPumpkinNeighbors = 0;
             if (CropRegistry.isMelonPumpkinFarmBlock(level.getBlockState(pos.north()).getBlock())) melonPumpkinNeighbors++;
