@@ -51,8 +51,6 @@ class FarmScanTask {
     final Map<Integer, Integer> indexToPosInRing = new HashMap<>();
     int lastComputedRotation = -1;
     int tickCounter = 0;
-    boolean neighborPassDone = false;
-    boolean hasMature = false;
     int numberOfTicksNeeded = 0;
     boolean fullAnimationScheduled = false;
     int animationInterval = 1;
@@ -99,36 +97,6 @@ class FarmScanTask {
             if (step.pos.equals(center) || candidateSet.contains(step.pos)) spiralPositions.add(step);
         }
 
-
-        // Quick pre-scan: determine whether any spiral position contains a mature crop or harvestable fruit.
-        boolean foundMature = false;
-        for (SpiralStep step : spiralPositions) {
-            BlockPos p = step.pos;
-            try {
-                BlockState s = level.getBlockState(p);
-                if (s == null || s.isAir()) {
-                    continue;
-                }
-                if (s.is(Blocks.MELON) || s.is(Blocks.PUMPKIN)) { foundMature = true; break; }
-                if (s.is(Blocks.MELON_STEM) || s.is(Blocks.PUMPKIN_STEM)) {
-                    Direction[] dirs = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
-                    for (Direction d : dirs) {
-                        BlockPos np = p.relative(d);
-                        BlockState ns = level.getBlockState(np);
-                        if (ns.is(Blocks.MELON) || ns.is(Blocks.PUMPKIN)) { foundMature = true; break; }
-                    }
-                    if (foundMature) break;
-                } else {
-                    boolean isCrop = s.getBlock() instanceof CropBlock || s.is(Blocks.NETHER_WART) || s.is(Blocks.SWEET_BERRY_BUSH);
-                    if (isCrop) {
-                        int threshold = FrameScanner.getMaturityThreshold(s);
-                        int age = FrameScanner.getAgeSafe(s);
-                        if (age >= threshold) { foundMature = true; break; }
-                    }
-                }
-            } catch (Throwable ignored) {}
-        }
-        this.hasMature = foundMature;
         this.totalPositions = spiralPositions.size();
 
         int ticks = Math.max(1, Config.getMaxSpiralDurationTicks());
@@ -156,10 +124,6 @@ class FarmScanTask {
         if (totalPositions == 0) {
             ctx.logSummary();
             return true;
-        }
-
-        if (!hasMature) {
-            try { LogUtils.logDebug("[SCAN] No mature crops found for {} — continuing repair sweep via spiral", center); } catch (Throwable ignored) {}
         }
 
         // Validate anchor presence and chest integrity at the start of this tick
@@ -357,18 +321,6 @@ class FarmScanTask {
         currentIndex = endIndex + 1;
 
         if (currentIndex >= totalPositions) {
-            int rX = Math.max(1, Config.getScanRangeX());
-            int rZ = Math.max(1, Config.getScanRangeZ());
-
-            if (!neighborPassDone) {
-                for (int dx = -rX; dx <= rX; dx++) {
-                    for (int dz = -rZ; dz <= rZ; dz++) {
-                        try { FrameScanner.tryAutoPlantAndTill(anchor, ctx, center.offset(dx, 0, dz), level); } catch (Throwable ignored) {}
-                    }
-                }
-                neighborPassDone = true;
-            }
-
             if (ctx.isChestFull()) {
                 FrameRegistry.setCooldown(dimId, center, Config.getChestFullCooldownTicks());
                 ctx.logSummary();
