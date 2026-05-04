@@ -1,0 +1,53 @@
+package com.forgetmecrops.fabric.client;
+
+import me.shedaniel.clothconfig2.gui.entries.IntegerListEntry;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+/**
+ * Restricts integer field tooltips to the field label hitbox so they do not trigger over the text field or reset button.
+ */
+public final class LabelTooltipIntegerListEntry extends IntegerListEntry {
+    private final LabelHitbox hitbox = new LabelHitbox();
+
+    public LabelTooltipIntegerListEntry(Component fieldName,
+                                        int value,
+                                        int defaultValue,
+                                        int minimum,
+                                        Consumer<Integer> saveCallback,
+                                        Supplier<Optional<Component[]>> tooltipSupplier) {
+        super(
+                fieldName,
+                value,
+                Component.translatable("text.cloth-config.reset_value"),
+                () -> defaultValue,
+                saveCallback,
+                tooltipSupplier
+        );
+        setMinimum(minimum);
+    }
+
+    @Override
+    public void render(GuiGraphics graphics,
+                       int index,
+                       int y,
+                       int x,
+                       int entryWidth,
+                       int entryHeight,
+                       int mouseX,
+                       int mouseY,
+                       boolean hovered,
+                       float delta) {
+        hitbox.update(x, y, entryWidth, entryHeight, getDisplayedFieldName());
+        super.render(graphics, index, y, x, entryWidth, entryHeight, mouseX, mouseY, hovered, delta);
+    }
+
+    @Override
+    public Optional<Component[]> getTooltip(int mouseX, int mouseY) {
+        return hitbox.isOverLabel(mouseX, mouseY) ? super.getTooltip(mouseX, mouseY) : Optional.empty();
+    }
+}

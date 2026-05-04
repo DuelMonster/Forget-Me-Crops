@@ -46,17 +46,17 @@ public final class ConfigDescriptors {
     public static final String DEBUG_LOGGING_TOOLTIP = "Enable verbose debug logging for troubleshooting";
 
     public static final String CHEST_FULL_COOLDOWN_LABEL = "Chest Full Cooldown";
-    public static final int CHEST_FULL_COOLDOWN_DEFAULT = 100;
+    public static final int CHEST_FULL_COOLDOWN_DEFAULT = 300;
     public static final int CHEST_FULL_COOLDOWN_MIN = 0;
     public static final String CHEST_FULL_COOLDOWN_TOOLTIP = "Ticks to wait before retrying a full chest";
 
     public static final String MAX_SPIRAL_DURATION_LABEL = "Max Spiral Duration";
-    public static final int MAX_SPIRAL_DEFAULT = 100;
+    public static final int MAX_SPIRAL_DEFAULT = 200;
     public static final int MAX_SPIRAL_MIN = 1;
     public static final String MAX_SPIRAL_TOOLTIP = "Maximum ticks allowed for a harvesting spiral search";
 
     public static final String ROTATION_MODE_LABEL = "Rotation Mode";
-    public static final RotationMode ROTATION_MODE_DEFAULT = RotationMode.FOLLOW_HARVEST_SPIRAL;
+    public static final RotationMode ROTATION_MODE_DEFAULT = RotationMode.FULL_ROTATION_PER_HARVEST;
     public static final String ROTATION_MODE_TOOLTIP = "How frames rotate when harvesting";
 
     public static final String SEED_CLUTTER_LABEL = "Seed Clutter Mode";
