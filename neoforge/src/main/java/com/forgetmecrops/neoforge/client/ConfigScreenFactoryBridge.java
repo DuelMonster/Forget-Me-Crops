@@ -1,5 +1,6 @@
 package com.forgetmecrops.neoforge.client;
 
+import com.forgetmecrops.client.config.ConfigScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.fml.ModContainer;
@@ -15,6 +16,6 @@ public final class ConfigScreenFactoryBridge implements IConfigScreenFactory {
 
     @Override
     public Screen createScreen(ModContainer container, Screen parent) {
-        return ClothConfigBridge.create(parent);
+        return ConfigScreen.create(parent);
     }
 }

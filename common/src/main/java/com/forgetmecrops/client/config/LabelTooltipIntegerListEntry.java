@@ -1,37 +1,34 @@
-package com.forgetmecrops.fabric.client;
+package com.forgetmecrops.client.config;
 
-import me.shedaniel.clothconfig2.gui.entries.EnumListEntry;
+import me.shedaniel.clothconfig2.gui.entries.IntegerListEntry;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * Restricts enum entry tooltips to the field label hitbox so they do not trigger over action buttons.
+ * Restricts integer field tooltips to the field label hitbox so they do not trigger over the text field or reset button.
  */
-public final class LabelTooltipEnumListEntry<T extends Enum<?>> extends EnumListEntry<T> {
+public final class LabelTooltipIntegerListEntry extends IntegerListEntry {
     private final LabelHitbox hitbox = new LabelHitbox();
 
-    @SuppressWarnings("unchecked")
-    public LabelTooltipEnumListEntry(Component fieldName,
-                                     Class<T> enumClass,
-                                     T value,
-                                     T defaultValue,
-                                     Consumer<T> saveCallback,
-                                     Supplier<Optional<Component[]>> tooltipSupplier) {
+    public LabelTooltipIntegerListEntry(Component fieldName,
+                                        int value,
+                                        int defaultValue,
+                                        int minimum,
+                                        Consumer<Integer> saveCallback,
+                                        Supplier<Optional<Component[]>> tooltipSupplier) {
         super(
                 fieldName,
-                enumClass,
                 value,
                 Component.translatable("text.cloth-config.reset_value"),
                 () -> defaultValue,
                 saveCallback,
-                (Function<Enum, Component>) EnumListEntry.DEFAULT_NAME_PROVIDER,
                 tooltipSupplier
         );
+        setMinimum(minimum);
     }
 
     @Override
@@ -45,7 +42,7 @@ public final class LabelTooltipEnumListEntry<T extends Enum<?>> extends EnumList
                        int mouseY,
                        boolean hovered,
                        float delta) {
-        hitbox.update(x, y, entryWidth, entryHeight, getDisplayedFieldName());
+        hitbox.update(x, y, entryWidth, entryHeight);
         super.render(graphics, index, y, x, entryWidth, entryHeight, mouseX, mouseY, hovered, delta);
     }
 

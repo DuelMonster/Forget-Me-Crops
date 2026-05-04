@@ -47,11 +47,11 @@ public final class ModInitializer {
             ClassLoader loader = factoryClass.getClassLoader();
             final java.lang.reflect.Method[] neoForgeCreate = new java.lang.reflect.Method[1];
             try {
-                Class<?> neoCfg = loader.loadClass("com.forgetmecrops.neoforge.client.ClothConfigBridge");
+                Class<?> neoCfg = loader.loadClass("com.forgetmecrops.client.config.ConfigScreen");
                 Class<?> screenClass = loader.loadClass("net.minecraft.client.gui.screens.Screen");
                 neoForgeCreate[0] = neoCfg.getMethod("create", screenClass);
             } catch (Throwable t2) {
-                LogUtils.logDebug("Could not resolve ClothConfigBridge.create on loader", t2);
+                LogUtils.logDebug("Could not resolve ConfigScreen.create on loader", t2);
             }
 
             Object factory = Proxy.newProxyInstance(loader, new Class<?>[]{factoryClass}, (proxy, method, args) -> {
@@ -66,7 +66,7 @@ public final class ModInitializer {
                                     LogUtils.logInfo("Creating ClothConfig screen for ForgetMeCrops (parent loader={})", a.getClass().getName());
                                     return neoForgeCreate[0].invoke(null, a);
                                 } catch (Throwable t3) {
-                                    LogUtils.logDebug("Invocation of ClothConfigBridge.create failed", t3);
+                                    LogUtils.logDebug("Invocation of ConfigScreen.create failed", t3);
                                     return null;
                                 }
                             }

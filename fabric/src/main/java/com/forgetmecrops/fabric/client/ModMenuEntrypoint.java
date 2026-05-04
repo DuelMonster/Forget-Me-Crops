@@ -1,5 +1,6 @@
 package com.forgetmecrops.fabric.client;
 
+import com.forgetmecrops.client.config.ConfigScreen;
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
 
@@ -15,6 +16,6 @@ public class ModMenuEntrypoint implements ModMenuApi {
      * @return config screen factory used by Mod Menu
      */
     public ConfigScreenFactory<?> getModConfigScreenFactory() {
-        return parent -> ClothConfigBridge.create(parent);
+        return ConfigScreen::create;
     }
 }

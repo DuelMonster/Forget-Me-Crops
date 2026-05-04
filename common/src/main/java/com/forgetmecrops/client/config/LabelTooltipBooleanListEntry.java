@@ -1,4 +1,4 @@
-package com.forgetmecrops.neoforge.client;
+package com.forgetmecrops.client.config;
 
 import me.shedaniel.clothconfig2.gui.entries.BooleanListEntry;
 import net.minecraft.client.gui.GuiGraphics;
@@ -39,7 +39,7 @@ public final class LabelTooltipBooleanListEntry extends BooleanListEntry {
                        int mouseY,
                        boolean hovered,
                        float delta) {
-        hitbox.update(x, y, entryWidth, entryHeight, getDisplayedFieldName());
+        hitbox.update(x, y, entryWidth, entryHeight);
         super.render(graphics, index, y, x, entryWidth, entryHeight, mouseX, mouseY, hovered, delta);
     }
 
