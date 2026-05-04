@@ -23,6 +23,11 @@ public final class ConfigTooltipFactory {
     // Utility class. The tooltip factory does not have tooltips about itself.
     private ConfigTooltipFactory() {}
 
+    private static Component modeLabel(String key, ChatFormatting color) {
+        return Component.literal("  ")
+                .append(Component.translatable(key).withStyle(color));
+    }
+
     /**
      * Creates a simple single-line tooltip from a translatable lang key.
      * The "plain" option — for when the option is self-explanatory and doesn't need a drama.
@@ -45,11 +50,11 @@ public final class ConfigTooltipFactory {
     public static Supplier<Optional<Component[]>> durabilityMode() {
         Component c = Component.literal("")
                 .append(Component.literal("Modes:\n").withStyle(ChatFormatting.YELLOW))
-                .append(Component.literal("  NORMAL").withStyle(ChatFormatting.GREEN))
+                .append(modeLabel("forgetmecrops.enum.durability_mode.normal", ChatFormatting.GREEN))
                 .append(Component.literal(" - Standard durability consumption (default)\n").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal("  IGNORE_UNBREAKING").withStyle(ChatFormatting.GOLD))
+                .append(modeLabel("forgetmecrops.enum.durability_mode.ignore_unbreaking", ChatFormatting.GOLD))
                 .append(Component.literal(" - Treat Unbreaking as absent when computing wear\n").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal("  NONE").withStyle(ChatFormatting.RED))
+                .append(modeLabel("forgetmecrops.enum.durability_mode.none", ChatFormatting.RED))
                 .append(Component.literal(" - Disable durability loss entirely\n").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal("\n"))
                 .append(Component.translatable("forgetmecrops.config.durabilityMode.tooltip").withStyle(ChatFormatting.GRAY));
@@ -66,11 +71,11 @@ public final class ConfigTooltipFactory {
     public static Supplier<Optional<Component[]>> rotationMode() {
         Component c = Component.literal("")
                 .append(Component.literal("Modes:\n").withStyle(ChatFormatting.YELLOW))
-                .append(Component.literal("  SINGLE_STEP").withStyle(ChatFormatting.AQUA))
+                .append(modeLabel("forgetmecrops.enum.rotation_mode.single_step", ChatFormatting.AQUA))
                 .append(Component.literal(" - Advance one rotation step per full farm harvest\n").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal("  FULL_ROTATION").withStyle(ChatFormatting.GOLD))
+                .append(modeLabel("forgetmecrops.enum.rotation_mode.full_rotation", ChatFormatting.GOLD))
                 .append(Component.literal(" - Perform a full 0..7 rotation cycle per harvest\n").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal("  FOLLOW_ROTATION").withStyle(ChatFormatting.GREEN))
+                .append(modeLabel("forgetmecrops.enum.rotation_mode.follow_rotation", ChatFormatting.GREEN))
                 .append(Component.literal(" - Rotate to follow the spiral scan progression (default)\n").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal("\n"))
                 .append(Component.translatable("forgetmecrops.config.rotationMode.tooltip").withStyle(ChatFormatting.GRAY));
@@ -87,11 +92,11 @@ public final class ConfigTooltipFactory {
     public static Supplier<Optional<Component[]>> seedClutterMode() {
         Component c = Component.literal("")
                 .append(Component.literal("Modes:\n").withStyle(ChatFormatting.YELLOW))
-                .append(Component.literal("  NORMAL").withStyle(ChatFormatting.GREEN))
+                .append(modeLabel("forgetmecrops.enum.seed_clutter_mode.normal", ChatFormatting.GREEN))
                 .append(Component.literal(" - Default seed handling\n").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal("  REDUCED").withStyle(ChatFormatting.GOLD))
+                .append(modeLabel("forgetmecrops.enum.seed_clutter_mode.reduced", ChatFormatting.GOLD))
                 .append(Component.literal(" - Reduce seed clutter by conserving seeds when replanting\n").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal("  NONE").withStyle(ChatFormatting.RED))
+                .append(modeLabel("forgetmecrops.enum.seed_clutter_mode.none", ChatFormatting.RED))
                 .append(Component.literal(" - Disable seed-clutter rules; do not automatically manage extra seeds\n").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal("\n"))
                 .append(Component.translatable("forgetmecrops.config.seedClutterMode.tooltip").withStyle(ChatFormatting.GRAY));
