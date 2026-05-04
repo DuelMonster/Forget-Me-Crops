@@ -296,7 +296,7 @@ Hard limits in `FrameScanner`:
 | Limit                          | Value | Notes                                                      |
 |--------------------------------|-------|------------------------------------------------------------|
 | Max frames processed per run   | 24    | `FrameScanner.MAX_FRAMES_PER_RUN`                          |
-| Max scan spread                | configurable | `maxSpiralDurationTicks` (default 200)              |
+| Max scan spread                | configurable | `maxSpiralDurationTicks` (default 200)               |
 
 Work is spread across ticks by `FarmScanTask`. One task instance per anchor per cycle; `positionsPerTick = ceil(totalPositions / maxSpiralDurationTicks)`.
 
@@ -334,7 +334,7 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 ## Fabric Platform Notes
 
 - Ticker: `ServerTickEvents.END_SERVER_TICK` drives the per-tick scan and rotation flush.
-- Config screen: a custom `Screen` implementation provided when Mod Menu is installed. Writes back to the same TOML files as the file-based config loader. Avoids calling `renderBackground` separately (prevents "Can only blur once per frame" on heavily-modded clients).
+- Config screen: a Cloth Config `Screen` provided when Mod Menu is installed. All option rows use custom entry subclasses (`LabelTooltipIntegerListEntry`, `LabelTooltipBooleanListEntry`, `LabelTooltipEnumListEntry`) that share a `LabelHitbox` helper — tooltips are suppressed unless the cursor is over the option label text. Writes back to the same TOML files as the file-based config loader. `ConfigEntryBuilder` is not used; entries are instantiated directly so tooltip and default-value behaviour are fully under project control.
 - FIF mixin: accessor mixin targets the FIF chunk holder collection for safe compile-time-resolved field access.
 - Metadata: `fabric.mod.json` version is set from the Gradle `mod_version` property to avoid `${version}` appearing as `unspecified` in release jars.
 - Debug logging: frame-discovery changes are logged only when the discovered count changes or on periodic summaries, and slow-run warnings are rate-limited.
@@ -343,7 +343,7 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 
 - Ticker: `ServerTickEvent.Post` drives the per-tick scan.
 - Config: registers native `ModConfigSpec` client and server configs using the same file names (`forget_me_crops-client.toml`, `forget_me_crops-server.toml`). A `ModConfigEvent.LOADING` handler syncs the NeoForge config values into the shared `Config` fields that all common gameplay code reads.
-- Config screen: provided by NeoForge's built-in config UI from the Mods list; no custom screen needed.
+- Config screen: a Cloth Config `Screen` registered via `IConfigScreenFactory` SPI so the Configure button appears in NeoForge's Mods list. Uses the same custom entry subclasses and `LabelHitbox` infrastructure as the Fabric screen — tooltips are suppressed outside the option label area.
 
 ---
 

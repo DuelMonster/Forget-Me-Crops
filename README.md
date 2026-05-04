@@ -119,6 +119,8 @@ Config files are written to `config/forget_me_crops-server.toml` and `config/for
 On **Fabric**, if Mod Menu is installed, these can also be edited in-game via the mod's Configure button.
 On **NeoForge**, the built-in config screen is available from the Mods list.
 
+In both loaders the config screen uses custom entry widgets for every option so that tooltips only appear when the mouse is over the option label — they do not pop up over the value field or reset button.
+
 ### Server Config
 
 | Option                     | Default                     | What it does                                                                                    |

@@ -20,6 +20,7 @@
 - Fixed anchor resumption latency after chest-driven hoe replacement by scheduling immediate scan run (`ticksUntilNextRun = 0`) when an anchor transitions from no hoe to has hoe.
 - Fixed TOML string parsing for quoted enum values so `rotationMode` and other string-backed options load correctly instead of silently falling back.
 - Fixed `FULL_ROTATION_PER_HARVEST` timing to start with spiral scan progression and complete exactly one paced `0..7` cycle over the configured scan duration.
+- Config UI: tooltips for all option types (integer fields, boolean toggles, and enum selectors) now appear only when hovering the option label text, not when hovering the value widget or reset button. Implemented via per-loader `LabelHitbox` helper and `LabelTooltipIntegerListEntry` / `LabelTooltipBooleanListEntry` / `LabelTooltipEnumListEntry` custom entry subclasses; `ConfigEntryBuilder` is no longer used in either loader's config screen.
 - Maintenance refactor/cleanup pass: deduplicated replant helper logic in `HarvestUtils`, centralized anchor resolution helpers, and removed a now-unused durability import from `FrameScanner`.
 
 ## 0.11.0
