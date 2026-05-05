@@ -307,12 +307,8 @@ Work is spread across ticks by `FarmScanTask`. One task instance per anchor per 
 
 Recent maintenance cleanup addressed null-analysis warnings in Eclipse JDT / VS Code Java diagnostics:
 
-- `LabelTooltipIntegerListEntry` now accepts `IntConsumer` and adapts it to `Consumer<Integer>` with a null-safe bridge.
-- `LabelTooltipBooleanListEntry` now accepts a primitive-style boolean callback (`BoolConsumer`) and adapts it to `Consumer<Boolean>` with null-safe coercion.
-- `LabelTooltipEnumListEntry` now uses a generic `Function<T, Component>` name provider and bridges to Cloth Config's legacy raw-`Enum` function signature.
-- `FrameScanner.tryAutoPlantAndTill` replaced `Map.merge(..., Integer::sum)` hot-path counters with explicit `getOrDefault(...)+1` updates to avoid boxed null-safety warnings on `BiFunction<Integer, Integer, Integer>` descriptors.
-
-Cloth Config API caveat: with pinned version `21.11.153`, the entry constructors used by these subclasses are marked deprecated upstream, so the project keeps targeted `@SuppressWarnings("deprecation")` annotations at those constructor call sites until a non-deprecated replacement API is adopted.
+- YACL uses `dev.isxander.yacl3.api.Option<T>` for each config field, with declarative `.binding(default, getter, setter)` and built-in controllers for boolean, integer, and enum types.
+- Tooltip content is now supplied via YACL's `OptionDescription` API, which handles multi-line wrapping natively without requiring custom hit-box filtering.
 
 ---
 
@@ -439,7 +435,7 @@ Current scope for seed filtering (clutter/reserve logic):
 | `common/.../util/chest/ChestUtils.java`                                  | Chest insert/remove with reserve enforcement               |
 | `common/.../util/durability/DurabilityLogic.java`                        | Enchantment-aware hoe damage                               |
 | `common/.../config/Config.java`                                          | Runtime config state and TOML I/O                          |
-| `common/.../client/config/ConfigScreen.java`                             | Shared Cloth Config screen builder for both loaders        |
+| `common/.../client/config/ConfigScreen.java`                             | Shared YACL config screen builder for both loaders         |
 | `common/.../client/config/ConfigTooltipFactory.java`                     | Shared tooltip content suppliers for config entries        |
 | `common/.../platform/adapter/FIF.java`                                   | FastItemFrames adapter interface                           |
 

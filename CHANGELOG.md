@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 0.13.0
+
+- Replace Cloth Config (`me.shedaniel.cloth:cloth-config-*:21.11.153`) with YetAnotherConfigLib (`dev.isxander:yet-another-config-lib:3.8.2+1.21.1`) for config screen generation.
+- Delete Cloth Config workaround classes: `LabelTooltipBooleanListEntry`, `LabelTooltipIntegerListEntry`, `LabelTooltipEnumListEntry`, `LabelHitbox` — YACL's native tooltip hover behavior eliminates the need for custom tooltip hit-box restrictions.
+- Rewrite `ConfigTooltipFactory`: change return type from `Supplier<Optional<Component[]>>` to `OptionDescription`; split multi-line tooltips into separate `Component` arguments for proper YACL line wrapping.
+- Rewrite `ConfigScreen`: replace Cloth Config `ConfigBuilder` API with YACL's `YetAnotherConfigLib.createBuilder()` fluent builder; use YACL's `Option<T>`, `OptionGroup`, and built-in controllers (`TickBoxControllerBuilder`, `IntegerFieldControllerBuilder`, `EnumControllerBuilder`).
+- Add `yet_another_config_lib_v3` as a required dependency (not optional) in `fabric.mod.json` and `neoforge.mods.toml`.
+- Upgrade Gradle wrapper from 8.14.4 to 9.5.0 (required by Loom 1.14.10, which is compatible with YACL 3.8.2).
+- Upgrade fabric-loom from 1.13-SNAPSHOT to 1.14.10.
+- Update maven repository: replace `maven.shedaniel.me` with `maven.isxander.dev/releases` for YACL dependency resolution.
+
 ## 0.12.0
 
 - Rename project from FastHarvester to Forget-Me-Crops: display name, mod ID (`forgetmecrops`), Java package root (`com.forgetmecrops`), metadata, resources, and documentation updated throughout.

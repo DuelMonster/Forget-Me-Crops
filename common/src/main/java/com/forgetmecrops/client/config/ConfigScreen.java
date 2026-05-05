@@ -6,8 +6,12 @@ import com.forgetmecrops.config.ConfigDefaults;
 import com.forgetmecrops.enums.DurabilityMode;
 import com.forgetmecrops.enums.RotationMode;
 import com.forgetmecrops.enums.SeedClutterMode;
-import me.shedaniel.clothconfig2.api.ConfigBuilder;
-import me.shedaniel.clothconfig2.api.ConfigCategory;
+import dev.isxander.yacl3.api.ConfigCategory;
+import dev.isxander.yacl3.api.Option;
+import dev.isxander.yacl3.api.YetAnotherConfigLib;
+import dev.isxander.yacl3.api.controller.EnumControllerBuilder;
+import dev.isxander.yacl3.api.controller.IntegerFieldControllerBuilder;
+import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -16,158 +20,125 @@ import java.util.Locale;
 /**
  * ConfigScreen: The in-game control panel for all of Forget-Me-Crops' settings!
  * <p>
- * Builds the full Cloth Config screen with all server and client settings organized
- * into sensible categories. Called by both the Fabric ModMenu entrypoint and the
- * NeoForge config-screen factory — all loader-specific code does is hand us a parent
- * Screen, and we build the whole thing from there.
- * </p>
- * <p>
- * Uses custom LabelTooltip*ListEntry wrappers that show rich tooltip text when hovering
- * the label side, not just the widget side. Because good config UI deserves good tooltips,
- * and players shouldn't have to guess what "FOLLOW_ROTATION" means.
+ * Builds the full YACL screen with all server and client settings organized into
+ * sensible categories. Called by both the Fabric ModMenu entrypoint and the NeoForge
+ * config-screen factory — all loader-specific code does is hand us a parent Screen,
+ * and we build the whole thing from there.
  * </p>
  */
 public final class ConfigScreen {
-        /** Non-instantiable utility class; use create() static method instead. */
+    /** Non-instantiable utility class; use create() static method instead. */
     private ConfigScreen() {}
 
     /**
-     * Converts an enum constant name into a human-readable localized display string.
+     * Converts an enum constant name into a human-readable localized display component.
      * For example: NORMAL → "forgetmecrops.enum.durability_mode.normal" → "Normal".
-     * Lowercases the enum name and appends the prefix to construct a translation key.
      *
-     * @param prefix the translation key prefix (e.g., "forgetmecrops.enum.durability_mode.")
+     * @param prefix    the translation key prefix (e.g., "forgetmecrops.enum.durability_mode.")
      * @param enumValue the enum constant to humanize
      * @return a Component with the localized enum name
      */
     private static Component localizedEnumName(String prefix, Enum<?> enumValue) {
-        String key = prefix + enumValue.name().toLowerCase(Locale.ROOT);
-        return Component.translatable(key);
+        return Component.translatable(prefix + enumValue.name().toLowerCase(Locale.ROOT));
     }
 
     /**
      * Builds and returns the config screen for Forget-Me-Crops.
-     * Constructs the Cloth Config builder with all server and client settings organized
-     * into categories, then returns a fully-formed Screen ready to display to the player.
      * Called by both Fabric ModMenu and NeoForge config-screen factory integrations.
      *
      * @param parent the parent screen (to return to when the config screen closes)
      * @return the generated config screen
      */
     public static Screen create(Screen parent) {
-        ConfigBuilder builder = ConfigBuilder.create()
-                .setParentScreen(parent)
-                .setTitle(Component.literal(ModCommon.MOD_NAME));
-
-        ConfigCategory server = builder.getOrCreateCategory(Component.translatable("forgetmecrops.config.category.server"));
-
-        server.addEntry(new LabelTooltipIntegerListEntry(
-                Component.translatable("forgetmecrops.config.tickInterval"),
-                Config.getTickInterval(),
-                ConfigDefaults.TICK_INTERVAL_DEFAULT,
-                ConfigDefaults.TICK_INTERVAL_MIN,
-                Config::setTickInterval,
-                ConfigTooltipFactory.plain("forgetmecrops.config.tickInterval.tooltip")
-        ));
-
-        server.addEntry(new LabelTooltipIntegerListEntry(
-                Component.translatable("forgetmecrops.config.scanRangeX"),
-                Config.getScanRangeX(),
-                ConfigDefaults.SCAN_RANGE_X_DEFAULT,
-                ConfigDefaults.SCAN_RANGE_X_MIN,
-                Config::setScanRangeX,
-                ConfigTooltipFactory.plain("forgetmecrops.config.scanRangeX.tooltip")
-        ));
-
-        server.addEntry(new LabelTooltipIntegerListEntry(
-                Component.translatable("forgetmecrops.config.scanRangeZ"),
-                Config.getScanRangeZ(),
-                ConfigDefaults.SCAN_RANGE_Z_DEFAULT,
-                ConfigDefaults.SCAN_RANGE_Z_MIN,
-                Config::setScanRangeZ,
-                ConfigTooltipFactory.plain("forgetmecrops.config.scanRangeZ.tooltip")
-        ));
-
-        server.addEntry(new LabelTooltipEnumListEntry<>(
-                Component.translatable("forgetmecrops.config.durabilityMode"),
-                DurabilityMode.class,
-                Config.getDurabilityMode(),
-                ConfigDefaults.DURABILITY_MODE_DEFAULT,
-                Config::setDurabilityMode,
-                enumValue -> localizedEnumName("forgetmecrops.enum.durability_mode.", enumValue),  // Humanizes enum names for display
-                ConfigTooltipFactory.durabilityMode()  // Provides rich tooltip for the option
-        ));
-
-        server.addEntry(new LabelTooltipBooleanListEntry(
-                Component.translatable("forgetmecrops.config.mendingNegation"),
-                Config.isMendingNegation(),
-                Config::setMendingNegation,
-                ConfigTooltipFactory.plain("forgetmecrops.config.mendingNegation.tooltip")
-        ));
-
-        server.addEntry(new LabelTooltipBooleanListEntry(
-                Component.translatable("forgetmecrops.config.debugLogging"),
-                Config.isDebugLogging(),
-                Config::setDebugLogging,
-                ConfigTooltipFactory.plain("forgetmecrops.config.debugLogging.tooltip")
-        ));
-
-        server.addEntry(new LabelTooltipIntegerListEntry(
-                Component.translatable("forgetmecrops.config.chestFullCooldownTicks"),
-                Config.getChestFullCooldownTicks(),
-                ConfigDefaults.CHEST_FULL_COOLDOWN_DEFAULT,
-                ConfigDefaults.CHEST_FULL_COOLDOWN_MIN,
-                Config::setChestFullCooldownTicks,
-                ConfigTooltipFactory.plain("forgetmecrops.config.chestFullCooldownTicks.tooltip")
-        ));
-
-        server.addEntry(new LabelTooltipIntegerListEntry(
-                Component.translatable("forgetmecrops.config.maxSpiralDurationTicks"),
-                Config.getMaxSpiralDurationTicks(),
-                ConfigDefaults.MAX_SPIRAL_DEFAULT,
-                ConfigDefaults.MAX_SPIRAL_MIN,
-                Config::setMaxSpiralDurationTicks,
-                ConfigTooltipFactory.plain("forgetmecrops.config.maxSpiralDurationTicks.tooltip")
-        ));
-
-        server.addEntry(new LabelTooltipEnumListEntry<>(
-                Component.translatable("forgetmecrops.config.rotationMode"),
-                RotationMode.class,
-                Config.getRotationMode(),
-                ConfigDefaults.ROTATION_MODE_DEFAULT,
-                Config::setRotationMode,
-                enumValue -> localizedEnumName("forgetmecrops.enum.rotation_mode.", enumValue),
-                ConfigTooltipFactory.rotationMode()
-        ));
-
-        server.addEntry(new LabelTooltipEnumListEntry<>(
-                Component.translatable("forgetmecrops.config.seedClutterMode"),
-                SeedClutterMode.class,
-                Config.getSeedClutterMode(),
-                ConfigDefaults.SEED_CLUTTER_DEFAULT,
-                Config::setSeedClutterMode,
-                enumValue -> localizedEnumName("forgetmecrops.enum.seed_clutter_mode.", enumValue),
-                ConfigTooltipFactory.seedClutterMode()
-        ));
-
-        server.addEntry(new LabelTooltipIntegerListEntry(
-                Component.translatable("forgetmecrops.config.seedReservePerType"),
-                Config.getSeedReservePerType(),
-                ConfigDefaults.SEED_RESERVE_DEFAULT,
-                ConfigDefaults.SEED_RESERVE_MIN,
-                Config::setSeedReservePerType,
-                ConfigTooltipFactory.plain("forgetmecrops.config.seedReservePerType.tooltip")
-        ));
-
-        ConfigCategory client = builder.getOrCreateCategory(Component.translatable("forgetmecrops.config.category.client"));
-        client.addEntry(new LabelTooltipBooleanListEntry(
-                Component.translatable("forgetmecrops.config.harvestParticles"),
-                Config.isHarvestParticles(),
-                Config::setHarvestParticles,
-                ConfigTooltipFactory.plain("forgetmecrops.config.harvestParticles.tooltip")
-        ));
-
-        builder.setSavingRunnable(Config::save);
-        return builder.build();
+        return YetAnotherConfigLib.createBuilder()
+                .title(Component.literal(ModCommon.MOD_NAME))
+                .save(Config::save)
+                .category(ConfigCategory.createBuilder()
+                        .name(Component.translatable("forgetmecrops.config.category.server"))
+                        .option(Option.<Integer>createBuilder()
+                                .name(Component.translatable("forgetmecrops.config.tickInterval"))
+                                .description(ConfigTooltipFactory.plain("forgetmecrops.config.tickInterval.tooltip"))
+                                .binding(ConfigDefaults.TICK_INTERVAL_DEFAULT, Config::getTickInterval, Config::setTickInterval)
+                                .controller(opt -> IntegerFieldControllerBuilder.create(opt).range(ConfigDefaults.TICK_INTERVAL_MIN, Integer.MAX_VALUE))
+                                .build())
+                        .option(Option.<Integer>createBuilder()
+                                .name(Component.translatable("forgetmecrops.config.scanRangeX"))
+                                .description(ConfigTooltipFactory.plain("forgetmecrops.config.scanRangeX.tooltip"))
+                                .binding(ConfigDefaults.SCAN_RANGE_X_DEFAULT, Config::getScanRangeX, Config::setScanRangeX)
+                                .controller(opt -> IntegerFieldControllerBuilder.create(opt).range(ConfigDefaults.SCAN_RANGE_X_MIN, Integer.MAX_VALUE))
+                                .build())
+                        .option(Option.<Integer>createBuilder()
+                                .name(Component.translatable("forgetmecrops.config.scanRangeZ"))
+                                .description(ConfigTooltipFactory.plain("forgetmecrops.config.scanRangeZ.tooltip"))
+                                .binding(ConfigDefaults.SCAN_RANGE_Z_DEFAULT, Config::getScanRangeZ, Config::setScanRangeZ)
+                                .controller(opt -> IntegerFieldControllerBuilder.create(opt).range(ConfigDefaults.SCAN_RANGE_Z_MIN, Integer.MAX_VALUE))
+                                .build())
+                        .option(Option.<DurabilityMode>createBuilder()
+                                .name(Component.translatable("forgetmecrops.config.durabilityMode"))
+                                .description(ConfigTooltipFactory.durabilityMode())
+                                .binding(ConfigDefaults.DURABILITY_MODE_DEFAULT, Config::getDurabilityMode, Config::setDurabilityMode)
+                                .controller(opt -> EnumControllerBuilder.create(opt)
+                                        .enumClass(DurabilityMode.class)
+                                        .formatValue(v -> localizedEnumName("forgetmecrops.enum.durability_mode.", v)))
+                                .build())
+                        .option(Option.<Boolean>createBuilder()
+                                .name(Component.translatable("forgetmecrops.config.mendingNegation"))
+                                .description(ConfigTooltipFactory.plain("forgetmecrops.config.mendingNegation.tooltip"))
+                                .binding(true, Config::isMendingNegation, Config::setMendingNegation)
+                                .controller(TickBoxControllerBuilder::create)
+                                .build())
+                        .option(Option.<Boolean>createBuilder()
+                                .name(Component.translatable("forgetmecrops.config.debugLogging"))
+                                .description(ConfigTooltipFactory.plain("forgetmecrops.config.debugLogging.tooltip"))
+                                .binding(false, Config::isDebugLogging, Config::setDebugLogging)
+                                .controller(TickBoxControllerBuilder::create)
+                                .build())
+                        .option(Option.<Integer>createBuilder()
+                                .name(Component.translatable("forgetmecrops.config.chestFullCooldownTicks"))
+                                .description(ConfigTooltipFactory.plain("forgetmecrops.config.chestFullCooldownTicks.tooltip"))
+                                .binding(ConfigDefaults.CHEST_FULL_COOLDOWN_DEFAULT, Config::getChestFullCooldownTicks, Config::setChestFullCooldownTicks)
+                                .controller(opt -> IntegerFieldControllerBuilder.create(opt).range(ConfigDefaults.CHEST_FULL_COOLDOWN_MIN, Integer.MAX_VALUE))
+                                .build())
+                        .option(Option.<Integer>createBuilder()
+                                .name(Component.translatable("forgetmecrops.config.maxSpiralDurationTicks"))
+                                .description(ConfigTooltipFactory.plain("forgetmecrops.config.maxSpiralDurationTicks.tooltip"))
+                                .binding(ConfigDefaults.MAX_SPIRAL_DEFAULT, Config::getMaxSpiralDurationTicks, Config::setMaxSpiralDurationTicks)
+                                .controller(opt -> IntegerFieldControllerBuilder.create(opt).range(ConfigDefaults.MAX_SPIRAL_MIN, Integer.MAX_VALUE))
+                                .build())
+                        .option(Option.<RotationMode>createBuilder()
+                                .name(Component.translatable("forgetmecrops.config.rotationMode"))
+                                .description(ConfigTooltipFactory.rotationMode())
+                                .binding(ConfigDefaults.ROTATION_MODE_DEFAULT, Config::getRotationMode, Config::setRotationMode)
+                                .controller(opt -> EnumControllerBuilder.create(opt)
+                                        .enumClass(RotationMode.class)
+                                        .formatValue(v -> localizedEnumName("forgetmecrops.enum.rotation_mode.", v)))
+                                .build())
+                        .option(Option.<SeedClutterMode>createBuilder()
+                                .name(Component.translatable("forgetmecrops.config.seedClutterMode"))
+                                .description(ConfigTooltipFactory.seedClutterMode())
+                                .binding(ConfigDefaults.SEED_CLUTTER_DEFAULT, Config::getSeedClutterMode, Config::setSeedClutterMode)
+                                .controller(opt -> EnumControllerBuilder.create(opt)
+                                        .enumClass(SeedClutterMode.class)
+                                        .formatValue(v -> localizedEnumName("forgetmecrops.enum.seed_clutter_mode.", v)))
+                                .build())
+                        .option(Option.<Integer>createBuilder()
+                                .name(Component.translatable("forgetmecrops.config.seedReservePerType"))
+                                .description(ConfigTooltipFactory.plain("forgetmecrops.config.seedReservePerType.tooltip"))
+                                .binding(ConfigDefaults.SEED_RESERVE_DEFAULT, Config::getSeedReservePerType, Config::setSeedReservePerType)
+                                .controller(opt -> IntegerFieldControllerBuilder.create(opt).range(ConfigDefaults.SEED_RESERVE_MIN, Integer.MAX_VALUE))
+                                .build())
+                        .build())
+                .category(ConfigCategory.createBuilder()
+                        .name(Component.translatable("forgetmecrops.config.category.client"))
+                        .option(Option.<Boolean>createBuilder()
+                                .name(Component.translatable("forgetmecrops.config.harvestParticles"))
+                                .description(ConfigTooltipFactory.plain("forgetmecrops.config.harvestParticles.tooltip"))
+                                .binding(true, Config::isHarvestParticles, Config::setHarvestParticles)
+                                .controller(TickBoxControllerBuilder::create)
+                                .build())
+                        .build())
+                .build()
+                .generateScreen(parent);
     }
 }
+

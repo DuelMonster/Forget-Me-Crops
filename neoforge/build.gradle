@@ -4,7 +4,6 @@ plugins {
 }
 
 repositories {
-    maven { url "https://maven.shedaniel.me/" }
     maven { url "https://maven.terraformersmc.com/releases/" }
     mavenCentral()
 }
@@ -56,8 +55,8 @@ dependencies {
             attribute(Attribute.of('io.github.mcgradleconventions.loader', String), 'common')
         }
     }
-    // ClothConfig: prefer Maven artifact for NeoForge builds
-    implementation("me.shedaniel.cloth:cloth-config-neoforge:21.11.153")
+    // YACL
+    implementation("dev.isxander:yet-another-config-lib:${yacl_version}-neoforge")
 
 }
 

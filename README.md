@@ -29,8 +29,8 @@ Farms stay active as long as their chunks are loaded, so vanilla chunk loaders a
 - BFS-based connected-farm discovery avoids cross-contaminating neighboring farms
 - In-world feedback during scan work: planting/tilling/harvest sounds plus dust/harvest particles
 - Fortune and Silk Touch enchantments are respected for drop calculations
-- Shared Cloth Config screen implementation for both loaders
-- Fabric Mod Menu config screen when Mod Menu is installed
+- YACL (YetAnotherConfigLib) config screen with responsive tooltips
+- Fabric Mod Menu integration when Mod Menu is installed
 - Works alongside [FastItemFrames by Fuzss](https://modrinth.com/mod/fastitemframes)
 
 ---
