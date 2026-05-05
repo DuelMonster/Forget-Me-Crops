@@ -117,30 +117,29 @@ The built-in NeoForge config screen is available from the Mods list in the main 
 Config files are written to `config/forgetmecrops-server.toml` and `config/forgetmecrops-client.toml` in your instance directory.
 
 On **Fabric**, if Mod Menu is installed, these can also be edited in-game via the mod's Configure button.
-On **NeoForge**, the Mods list Configure button opens the same shared Cloth Config screen.
+On **NeoForge**, the Mods list Configure button opens the same shared YACL screen.
 
-Both loaders delegate to the same `ConfigScreen` builder in `common`, with custom entry widgets for every option so tooltips only appear when the mouse is over the option label lane (not over the value field or reset button).
+Both loaders delegate to the same `ConfigScreen` builder in `common`, powered by YACL options and controllers.
+Numeric server settings now use integer sliders with explicit ranges from `ConfigDefaults`.
 Enum-mode tooltips in that screen use localized player-friendly labels from the language file (for example `Single Step` instead of `SINGLE_STEP`).
 Tooltips now also include each option's default value so players can compare changes against baseline behavior directly in the screen.
 
-Implementation note: in Cloth Config `21.11.153`, the low-level `BooleanListEntry`, `IntegerListEntry`, and `EnumListEntry` constructors used by custom subclasses are marked deprecated upstream. Forget-Me-Crops keeps these subclasses for label-only tooltip behavior and wraps callbacks with null-safe adapters to satisfy strict null-analysis diagnostics.
-
 ### Server Config
 
-| Option                     | Default                     | What it does                                                                                    |
-|----------------------------|-----------------------------|-------------------------------------------------------------------------------------------------|
-| `tickInterval`             | `300`                       | How often each anchor runs, in ticks. `300` is 15 seconds at 20 TPS.                           |
-| `frameRediscoveryInterval` | `600`                       | How often loaded chunks are rescanned to refresh the frame registry, in ticks.                  |
-| `scanRangeX`               | `4`                         | Scan radius along X from the anchor. `4` covers 4 blocks in each direction (9 blocks wide).    |
-| `scanRangeZ`               | `4`                         | Scan radius along Z from the anchor. `4` covers 4 blocks in each direction (9 blocks wide).    |
-| `durabilityMode`           | `normal`                    | Controls hoe wear during harvesting and repairs. See table below.                               |
-| `mendingNegation`          | `true`                      | When `true`, a hoe with Mending takes no durability loss from this mod's actions.               |
-| `chestFullCooldownTicks`   | `300`                       | How many ticks to wait before retrying when the attached chest is full.                         |
-| `maxSpiralDurationTicks`   | `200`                       | Maximum ticks to spread one scan cycle across. Higher values reduce per-tick load.              |
-| `rotationMode`             | `FULL_ROTATION`             | How the item frame rotates during a harvest cycle. See table below.                             |
-| `debugLogging`             | `false`                     | Writes detailed farm activity to the log. Useful for troubleshooting; leave off normally.       |
-| `seedClutterMode`          | `reduced`                   | Controls how excess seed drops are handled before chest insertion. See section below.           |
-| `seedReservePerType`       | `80`                        | Minimum seeds to keep per type in the chest. Replanting will not pull seeds below this amount.  |
+| Option                     | Default         | Config-Screen Range | What it does                                                                                   |
+|----------------------------|-----------------|---------------------|------------------------------------------------------------------------------------------------|
+| `tickInterval`             | `300`           | `1` to `1200`       | How often each anchor runs, in ticks. `300` is 15 seconds at 20 TPS.                          |
+| `frameRediscoveryInterval` | `300`           | `15` to `1200`      | How often loaded chunks are rescanned to refresh the frame registry, in ticks.                 |
+| `scanRangeX`               | `4`             | `1` to `16`         | Scan radius along X from the anchor. `4` covers 4 blocks in each direction (9 blocks wide).   |
+| `scanRangeZ`               | `4`             | `1` to `16`         | Scan radius along Z from the anchor. `4` covers 4 blocks in each direction (9 blocks wide).   |
+| `durabilityMode`           | `normal`        | n/a                 | Controls hoe wear during harvesting and repairs. See table below.                              |
+| `mendingNegation`          | `true`          | n/a                 | When `true`, a hoe with Mending takes no durability loss from this mod's actions.              |
+| `chestFullCooldownTicks`   | `300`           | `10` to `300`       | How many ticks to wait before retrying when the attached chest is full.                        |
+| `maxSpiralDurationTicks`   | `200`           | `10` to `400`       | Maximum ticks to spread one scan cycle across. Higher values reduce per-tick load.             |
+| `rotationMode`             | `FULL_ROTATION` | n/a                 | How the item frame rotates during a harvest cycle. See table below.                            |
+| `debugLogging`             | `false`         | n/a                 | Writes detailed farm activity to the log. Useful for troubleshooting; leave off normally.      |
+| `seedClutterMode`          | `reduced`       | n/a                 | Controls how excess seed drops are handled before chest insertion. See section below.          |
+| `seedReservePerType`       | `80`            | `0` to `1152`       | Minimum seeds to keep per type in the chest. Replanting will not pull seeds below this amount. |
 
 ### Client Config
 

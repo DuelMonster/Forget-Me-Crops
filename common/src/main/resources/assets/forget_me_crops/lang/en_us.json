@@ -3,6 +3,8 @@
   "forgetmecrops.config.category.client": "Client Settings",
   "forgetmecrops.config.tickInterval": "Tick Interval",
   "forgetmecrops.config.tickInterval.tooltip": "Ticks between automatic harvest attempts (default: 300)",
+  "forgetmecrops.config.frameRediscoveryInterval": "Frame Rediscovery Interval",
+  "forgetmecrops.config.frameRediscoveryInterval.tooltip": "Ticks between loaded-chunk frame rediscovery passes (default: 300)",
   "forgetmecrops.config.scanRangeX": "Scan Range (X)",
   "forgetmecrops.config.scanRangeX.tooltip": "Horizontal X radius (blocks) to search for crops around each frame (default: 4)",
   "forgetmecrops.config.scanRangeZ": "Scan Range (Z)",

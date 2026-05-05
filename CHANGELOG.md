@@ -2,10 +2,13 @@
 
 ## 0.13.0
 
-- Replace Cloth Config (`me.shedaniel.cloth:cloth-config-*:21.11.153`) with YetAnotherConfigLib (`dev.isxander:yet-another-config-lib:3.8.2+1.21.1`) for config screen generation.
+- Replace Cloth Config (`me.shedaniel.cloth:cloth-config-*:21.11.153`) with YetAnotherConfigLib (`dev.isxander:yet-another-config-lib:3.8.2+1.21.11`) for config screen generation.
 - Delete Cloth Config workaround classes: `LabelTooltipBooleanListEntry`, `LabelTooltipIntegerListEntry`, `LabelTooltipEnumListEntry`, `LabelHitbox` — YACL's native tooltip hover behavior eliminates the need for custom tooltip hit-box restrictions.
 - Rewrite `ConfigTooltipFactory`: change return type from `Supplier<Optional<Component[]>>` to `OptionDescription`; split multi-line tooltips into separate `Component` arguments for proper YACL line wrapping.
-- Rewrite `ConfigScreen`: replace Cloth Config `ConfigBuilder` API with YACL's `YetAnotherConfigLib.createBuilder()` fluent builder; use YACL's `Option<T>`, `OptionGroup`, and built-in controllers (`TickBoxControllerBuilder`, `IntegerFieldControllerBuilder`, `EnumControllerBuilder`).
+- Rewrite `ConfigScreen`: replace Cloth Config `ConfigBuilder` API with YACL's `YetAnotherConfigLib.createBuilder()` fluent builder; use YACL's `Option<T>`, `OptionGroup`, and built-in controllers (`TickBoxControllerBuilder`, `IntegerSliderControllerBuilder`, `EnumControllerBuilder`).
+- Add explicit max bounds for numeric config defaults in `ConfigDefaults` and wire those ranges into the YACL integer sliders.
+- Raise numeric config-screen minimums to practical values for `chestFullCooldownTicks` (10) and `maxSpiralDurationTicks` (10).
+- Add `frameRediscoveryInterval` to `ConfigDefaults` with default/min/max (`300` / `15` / `1200`) and expose it in the in-game config screen as an integer slider.
 - Add `yet_another_config_lib_v3` as a required dependency (not optional) in `fabric.mod.json` and `neoforge.mods.toml`.
 - Upgrade Gradle wrapper from 8.14.4 to 9.5.0 (required by Loom 1.14.10, which is compatible with YACL 3.8.2).
 - Upgrade fabric-loom from 1.13-SNAPSHOT to 1.14.10.

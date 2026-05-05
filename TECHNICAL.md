@@ -24,8 +24,8 @@ All gameplay decisions live in `common`. The platform modules only wire up ticke
 |--------------------------------------|-----------------------------------------------------------------------------------|
 | `com.forgetmecrops.frame`            | `FrameScanner`, `FrameRegistry`, `FrameDiscovery`, `FarmScanTask`, `SpiralStep`, `CatchupManager` |
 | `com.forgetmecrops.harvest`          | `HarvestUtils`, `HarvestContext`, `CropRegistry`                                  |
-| `com.forgetmecrops.config`           | `Config`, `ConfigDescriptors`                                                     |
-| `com.forgetmecrops.client.config`    | Shared config UI classes: `ConfigScreen`, tooltip builders, label-hitbox entries |
+| `com.forgetmecrops.config`           | `Config`, `ConfigDefaults`                                                        |
+| `com.forgetmecrops.client.config`    | Shared config UI classes: `ConfigScreen`, `ConfigTooltipFactory`                  |
 | `com.forgetmecrops.enums`            | `DurabilityMode`, `RotationMode`, `SeedClutterMode`                               |
 | `com.forgetmecrops.util.chest`       | `ChestUtils` — insert/remove helpers with reserve enforcement                     |
 | `com.forgetmecrops.util.durability`  | `DurabilityLogic` — enchantment-aware hoe damage                                  |
@@ -307,7 +307,8 @@ Work is spread across ticks by `FarmScanTask`. One task instance per anchor per 
 
 Recent maintenance cleanup addressed null-analysis warnings in Eclipse JDT / VS Code Java diagnostics:
 
-- YACL uses `dev.isxander.yacl3.api.Option<T>` for each config field, with declarative `.binding(default, getter, setter)` and built-in controllers for boolean, integer, and enum types.
+- YACL uses `dev.isxander.yacl3.api.Option<T>` for each config field, with declarative `.binding(default, getter, setter)` and built-in controllers for boolean, integer slider, and enum types.
+- Numeric server options in `ConfigScreen` use `IntegerSliderControllerBuilder` with explicit min/max bounds sourced from `ConfigDefaults`.
 - Tooltip content is now supplied via YACL's `OptionDescription` API, which handles multi-line wrapping natively without requiring custom hit-box filtering.
 
 ---
@@ -366,7 +367,7 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 | Option                     | Default                     | Type          | Description                                                                 |
 |----------------------------|-----------------------------|---------------|-----------------------------------------------------------------------------|
 | `tickInterval`             | `300`                       | int           | Ticks between anchor runs                                                   |
-| `frameRediscoveryInterval` | `600`                       | int           | Ticks between loaded-chunk rediscovery passes                               |
+| `frameRediscoveryInterval` | `300`                       | int           | Ticks between loaded-chunk rediscovery passes                               |
 | `scanRangeX`               | `4`                         | int           | Scan radius along X from the anchor (1–5 clamped in discovery)              |
 | `scanRangeZ`               | `4`                         | int           | Scan radius along Z from the anchor (1–5 clamped in discovery)              |
 | `durabilityMode`           | `normal`                    | enum string   | `normal` / `ignore_unbreaking` / `none`                                     |

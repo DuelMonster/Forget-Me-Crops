@@ -16,7 +16,7 @@ import java.util.Map;
  * configuration at a time, and instance management would just add ceremony for no benefit).
  * Handles TOML file loading and saving to separate server and client config files, validates
  * all values with sensible bounds, and provides getters for reads plus setters for the
- * in-game Cloth Config UI to push changes back through.
+ * in-game YACL config UI to push changes back through.
  * </p>
  * <p>
  * The server/client file split is intentional: server settings affect gameplay mechanics
@@ -35,21 +35,21 @@ public class Config {
     private static final Path CLIENT_CONFIG_PATH = CONFIG_DIR.resolve("forgetmecrops-client.toml");
 
     // Server-side gameplay settings with their working defaults (copied from ConfigDefaults for boot safety)
-    private static int tickInterval = 300;
-    private static int frameRediscoveryInterval = 150;
-    private static int scanRangeX = 4;
-    private static int scanRangeZ = 4;
+    private static int tickInterval = ConfigDefaults.TICK_INTERVAL_DEFAULT;
+    private static int frameRediscoveryInterval = ConfigDefaults.FRAME_REDISCOVERY_INTERVAL_DEFAULT;
+    private static int scanRangeX = ConfigDefaults.SCAN_RANGE_X_DEFAULT;
+    private static int scanRangeZ = ConfigDefaults.SCAN_RANGE_Z_DEFAULT;
     private static DurabilityMode durabilityMode = DurabilityMode.NORMAL;
-    private static boolean mendingNegation = true;
-    private static boolean debugLogging = false;
-    private static int chestFullCooldownTicks = 300;
-    private static int maxSpiralDurationTicks = 200;
-    private static boolean harvestParticles = true;
+    private static boolean mendingNegation = ConfigDefaults.MENDING_NEGATION_DEFAULT;
+    private static boolean debugLogging = ConfigDefaults.DEBUG_LOGGING_DEFAULT;
+    private static int chestFullCooldownTicks = ConfigDefaults.CHEST_FULL_COOLDOWN_DEFAULT;
+    private static int maxSpiralDurationTicks = ConfigDefaults.MAX_SPIRAL_DEFAULT;
+    private static boolean harvestParticles = ConfigDefaults.HARVEST_PARTICLES_DEFAULT;
     private static RotationMode rotationMode = RotationMode.FULL_ROTATION;
 
     // Seed economy settings — how many seeds to keep and when to stop hoarding
     private static SeedClutterMode seedClutterMode = SeedClutterMode.REDUCED;
-    private static int seedReservePerType = 80;
+    private static int seedReservePerType = ConfigDefaults.SEED_RESERVE_DEFAULT;
 
     /**
      * Loads both server and client config files from disk (creating them with defaults if absent).
@@ -105,18 +105,18 @@ public class Config {
                                            int chestFullCooldownTicks, int maxSpiralDurationTicks,
                                            RotationMode rotationMode, SeedClutterMode seedClutterMode,
                                            int seedReservePerType) {
-        Config.tickInterval = tickInterval;
-        Config.frameRediscoveryInterval = frameRediscoveryInterval;
-        Config.scanRangeX = scanRangeX;
-        Config.scanRangeZ = scanRangeZ;
+        Config.tickInterval = clamp(tickInterval, ConfigDefaults.TICK_INTERVAL_MIN, ConfigDefaults.TICK_INTERVAL_MAX);
+        Config.frameRediscoveryInterval = clamp(frameRediscoveryInterval, ConfigDefaults.FRAME_REDISCOVERY_INTERVAL_MIN, ConfigDefaults.FRAME_REDISCOVERY_INTERVAL_MAX);
+        Config.scanRangeX = clamp(scanRangeX, ConfigDefaults.SCAN_RANGE_X_MIN, ConfigDefaults.SCAN_RANGE_X_MAX);
+        Config.scanRangeZ = clamp(scanRangeZ, ConfigDefaults.SCAN_RANGE_Z_MIN, ConfigDefaults.SCAN_RANGE_Z_MAX);
         Config.durabilityMode = durabilityMode;
         Config.mendingNegation = mendingNegation;
         Config.debugLogging = debugLogging;
-        Config.chestFullCooldownTicks = chestFullCooldownTicks;
-        Config.maxSpiralDurationTicks = maxSpiralDurationTicks;
+        Config.chestFullCooldownTicks = clamp(chestFullCooldownTicks, ConfigDefaults.CHEST_FULL_COOLDOWN_MIN, ConfigDefaults.CHEST_FULL_COOLDOWN_MAX);
+        Config.maxSpiralDurationTicks = clamp(maxSpiralDurationTicks, ConfigDefaults.MAX_SPIRAL_MIN, ConfigDefaults.MAX_SPIRAL_MAX);
         Config.rotationMode = rotationMode;
         Config.seedClutterMode = seedClutterMode;
-        Config.seedReservePerType = seedReservePerType;
+        Config.seedReservePerType = clamp(seedReservePerType, ConfigDefaults.SEED_RESERVE_MIN, ConfigDefaults.SEED_RESERVE_MAX);
     }
 
     /**
@@ -152,17 +152,18 @@ public class Config {
 
     // --- Setters: used by the in-game config UI to push changes back through ---
     // These intentionally skip the server-side applyServerSettings bulk path for individual field updates.
-    public static void setTickInterval(int v) { tickInterval = v; }
-    public static void setScanRangeX(int v) { scanRangeX = v; }
-    public static void setScanRangeZ(int v) { scanRangeZ = v; }
+    public static void setTickInterval(int v) { tickInterval = clamp(v, ConfigDefaults.TICK_INTERVAL_MIN, ConfigDefaults.TICK_INTERVAL_MAX); }
+    public static void setFrameRediscoveryInterval(int v) { frameRediscoveryInterval = clamp(v, ConfigDefaults.FRAME_REDISCOVERY_INTERVAL_MIN, ConfigDefaults.FRAME_REDISCOVERY_INTERVAL_MAX); }
+    public static void setScanRangeX(int v) { scanRangeX = clamp(v, ConfigDefaults.SCAN_RANGE_X_MIN, ConfigDefaults.SCAN_RANGE_X_MAX); }
+    public static void setScanRangeZ(int v) { scanRangeZ = clamp(v, ConfigDefaults.SCAN_RANGE_Z_MIN, ConfigDefaults.SCAN_RANGE_Z_MAX); }
     public static void setDurabilityMode(DurabilityMode v) { durabilityMode = v; }
     public static void setMendingNegation(boolean v) { mendingNegation = v; }
     public static void setDebugLogging(boolean v) { debugLogging = v; }
-    public static void setChestFullCooldownTicks(int v) { chestFullCooldownTicks = v; }
-    public static void setMaxSpiralDurationTicks(int v) { maxSpiralDurationTicks = v; }
+    public static void setChestFullCooldownTicks(int v) { chestFullCooldownTicks = clamp(v, ConfigDefaults.CHEST_FULL_COOLDOWN_MIN, ConfigDefaults.CHEST_FULL_COOLDOWN_MAX); }
+    public static void setMaxSpiralDurationTicks(int v) { maxSpiralDurationTicks = clamp(v, ConfigDefaults.MAX_SPIRAL_MIN, ConfigDefaults.MAX_SPIRAL_MAX); }
     public static void setRotationMode(RotationMode v) { rotationMode = v; }
     public static void setSeedClutterMode(SeedClutterMode v) { seedClutterMode = v; }
-    public static void setSeedReservePerType(int v) { seedReservePerType = v; }
+    public static void setSeedReservePerType(int v) { seedReservePerType = clamp(v, ConfigDefaults.SEED_RESERVE_MIN, ConfigDefaults.SEED_RESERVE_MAX); }
     public static void setHarvestParticles(boolean v) { harvestParticles = v; }
 
     /**
@@ -189,18 +190,18 @@ public class Config {
             return;
         }
         Map<String, String> values = readToml(SERVER_CONFIG_PATH);
-        tickInterval = positiveInt(values, "tickInterval", tickInterval);
-        frameRediscoveryInterval = positiveInt(values, "frameRediscoveryInterval", frameRediscoveryInterval);
-        scanRangeX = positiveInt(values, "scanRangeX", scanRangeX);
-        scanRangeZ = positiveInt(values, "scanRangeZ", scanRangeZ);
+        tickInterval = boundedInt(values, "tickInterval", tickInterval, ConfigDefaults.TICK_INTERVAL_MIN, ConfigDefaults.TICK_INTERVAL_MAX);
+        frameRediscoveryInterval = boundedInt(values, "frameRediscoveryInterval", frameRediscoveryInterval, ConfigDefaults.FRAME_REDISCOVERY_INTERVAL_MIN, ConfigDefaults.FRAME_REDISCOVERY_INTERVAL_MAX);
+        scanRangeX = boundedInt(values, "scanRangeX", scanRangeX, ConfigDefaults.SCAN_RANGE_X_MIN, ConfigDefaults.SCAN_RANGE_X_MAX);
+        scanRangeZ = boundedInt(values, "scanRangeZ", scanRangeZ, ConfigDefaults.SCAN_RANGE_Z_MIN, ConfigDefaults.SCAN_RANGE_Z_MAX);
         durabilityMode = DurabilityMode.fromConfigValue(stringValue(values, "durabilityMode", durabilityMode.configValue()));
         mendingNegation = booleanValue(values, "mendingNegation", mendingNegation);
         debugLogging = booleanValue(values, "debugLogging", debugLogging);
-        chestFullCooldownTicks = nonNegativeInt(values, "chestFullCooldownTicks", chestFullCooldownTicks);
-        maxSpiralDurationTicks = positiveInt(values, "maxSpiralDurationTicks", maxSpiralDurationTicks);
+        chestFullCooldownTicks = boundedInt(values, "chestFullCooldownTicks", chestFullCooldownTicks, ConfigDefaults.CHEST_FULL_COOLDOWN_MIN, ConfigDefaults.CHEST_FULL_COOLDOWN_MAX);
+        maxSpiralDurationTicks = boundedInt(values, "maxSpiralDurationTicks", maxSpiralDurationTicks, ConfigDefaults.MAX_SPIRAL_MIN, ConfigDefaults.MAX_SPIRAL_MAX);
         rotationMode = RotationMode.fromConfigValue(stringValue(values, "rotationMode", rotationMode.configValue()));
         seedClutterMode = SeedClutterMode.fromConfigValue(stringValue(values, "seedClutterMode", seedClutterMode.configValue()));
-        seedReservePerType = nonNegativeInt(values, "seedReservePerType", seedReservePerType);
+        seedReservePerType = boundedInt(values, "seedReservePerType", seedReservePerType, ConfigDefaults.SEED_RESERVE_MIN, ConfigDefaults.SEED_RESERVE_MAX);
     }
 
     /**
@@ -354,30 +355,25 @@ public class Config {
         return fallback;
     }
 
-    /** Reads a positive integer (≥1) config value; uses fallback for missing or out-of-range values. */
-    private static int positiveInt(Map<String, String> values, String key, int fallback) {
-        return boundedInt(values, key, fallback, 1);
-    }
-
-    /** Reads a non-negative integer (≥0) config value; uses fallback for missing or out-of-range values. */
-    private static int nonNegativeInt(Map<String, String> values, String key, int fallback) {
-        return boundedInt(values, key, fallback, 0);
-    }
-
     /**
-     * Core integer reader: parses the raw string, enforces a minimum, logs a warning on failure.
-     * Used by both positiveInt and nonNegativeInt so they don't duplicate this logic.
+     * Core integer reader: parses the raw string, enforces inclusive min/max bounds,
+     * logs a warning on parse failure or out-of-range values.
      */
-    private static int boundedInt(Map<String, String> values, String key, int fallback, int minValue) {
+    private static int boundedInt(Map<String, String> values, String key, int fallback, int minValue, int maxValue) {
         String rawValue = values.get(key);
         if (rawValue == null) return fallback;
         try {
             int v = Integer.parseInt(rawValue.trim());
-            if (v < minValue) return fallback;
+            if (v < minValue || v > maxValue) return fallback;
             return v;
         } catch (NumberFormatException ignored) {}
         LogUtils.logWarn("Ignoring invalid integer for {} in {}: {}", key, configFileForKey(key), rawValue);
         return fallback;
+    }
+
+    /** Clamps a runtime value into inclusive bounds. */
+    private static int clamp(int value, int minValue, int maxValue) {
+        return Math.max(minValue, Math.min(maxValue, value));
     }
 
     /** Maps a config key to its owning TOML file name (for cleaner warning messages). */
