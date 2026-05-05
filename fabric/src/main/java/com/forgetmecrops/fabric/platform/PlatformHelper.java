@@ -93,12 +93,13 @@ public class PlatformHelper implements IPlatformHelper {
      * @param stack the ItemStack to place in the frame (empty to clear)
      */
     @Override
+    @SuppressWarnings("null") // List.get() return is not annotated @NonNull, but the list is non-empty at this call site
     public void updateFrameItem(Level level, BlockPos pos, ItemStack stack) {
         if (level == null || pos == null) return;
         try {
             try { LogUtils.logDebug("[PLATFORM] updateFrameItem called: pos={} incomingItem={} damage={}", pos, stack == null ? "<null>" : stack.getItem(), stack == null ? -1 : stack.getDamageValue()); } catch (Exception e) { LogUtils.logTrace("[PLATFORM] Debug log emit failed", e); }
             try {
-                java.util.List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class,
+                var frames = level.getEntitiesOfClass(ItemFrame.class,
                         new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1), e -> true);
                 if (!frames.isEmpty()) {
                     ItemFrame frame = frames.get(0);

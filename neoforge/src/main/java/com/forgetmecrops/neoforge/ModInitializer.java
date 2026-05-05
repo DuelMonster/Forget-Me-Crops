@@ -45,7 +45,6 @@ public final class ModInitializer {
      * @param modEventBus the mod-specific event bus (used for FML lifecycle events)
      * @param container   the mod container (unused here but required by FML)
      */
-    @SuppressWarnings("null")
     public ModInitializer(IEventBus modEventBus, ModContainer container) {
         // Use the shared `Config` files (forgetmecrops-client.toml / forgetmecrops-server.toml)
         // to remain consistent with the Fabric module. Avoid registering an

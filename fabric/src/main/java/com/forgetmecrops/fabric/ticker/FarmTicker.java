@@ -20,7 +20,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.chunk.LevelChunk;
 
-import java.util.List;
 import java.util.Map;
 import com.forgetmecrops.frame.CatchupManager;
 import com.forgetmecrops.platform.adapter.FastItemFrameAdapterImpl;
@@ -72,7 +71,7 @@ public class FarmTicker {
                 int maxZ = minZ + 15;
                 AABB box = new AABB(minX, 0, minZ, maxX + 1, 256, maxZ + 1);
 
-                List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box);
+                var frames = level.getEntitiesOfClass(ItemFrame.class, box);
                 LogUtils.logTrace("[TICK] Found {} item frames in chunk {} (deferring validation).", frames.size(), chunk.getPos());
                 java.util.List<BlockPos> vanillaCandidates = new java.util.ArrayList<>();
                 for (ItemFrame f : frames) {
@@ -109,7 +108,7 @@ public class FarmTicker {
                 int maxZ = minZ + 15;
                 AABB box = new AABB(minX, 0, minZ, maxX + 1, 256, maxZ + 1);
 
-                List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box, ef -> ef.getDirection() == Direction.UP);
+                var frames = level.getEntitiesOfClass(ItemFrame.class, box, ef -> ef.getDirection() == Direction.UP);
                 for (ItemFrame f : frames) {
                     try { FrameRegistry.unregisterFrame(dimId, f.blockPosition()); } catch (Exception e) { LogUtils.logTrace("[TICK] Failed to unregister frame during chunk unload", e); }
                 }

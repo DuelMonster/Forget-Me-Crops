@@ -911,7 +911,6 @@ public class FrameScanner {
      * @param pos         the frame position
      * @param newRotation the rotation to apply (0–7, masked to 3 bits internally)
      */
-    @SuppressWarnings("null")
     static void applyScheduledRotation(Level level, BlockPos pos, int newRotation) {
         if (level == null || pos == null) return;
         try {

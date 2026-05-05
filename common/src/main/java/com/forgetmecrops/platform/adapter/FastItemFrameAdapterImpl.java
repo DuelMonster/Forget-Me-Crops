@@ -593,7 +593,6 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
      * Attempt to write an ItemStack into a FastItemFrames block-entity using API-first
      * methods and reflective fallbacks. Returns true on success.
      */
-    @SuppressWarnings("null")
     public static boolean writeItemToBE(BlockEntity be, ItemStack stack) {
         ensureApiProbed();
         if (be == null) return false;

@@ -49,6 +49,7 @@ public final class ConfigScreen {
      * @param parent the parent screen (to return to when the config screen closes)
      * @return the generated config screen
      */
+    @SuppressWarnings("null") // YACL binding setters are never passed null; primitives unbox safely
     public static Screen create(Screen parent) {
         return YetAnotherConfigLib.createBuilder()
                 .title(Component.literal(ModCommon.MOD_NAME))
