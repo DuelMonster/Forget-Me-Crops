@@ -16,17 +16,17 @@ public final class ModCommon {
     /**
      * The mod's unique ID. Don't leave home without it!
      */
-    public static final String MOD_ID = "${mod_id}";
+    public static final String MOD_ID = "forgetmecrops";
 
     /**
      * The mod's display name. For when you want to look fancy in logs.
      */
-    public static final String MOD_NAME = "${mod_name}";
+    public static final String MOD_NAME = "Forget-Me-Crops";
 
     /**
      * The mod's version. Always know what flavor of Forget-Me-Crops you're running.
      */
-    public static final String MOD_VERSION = "${mod_version}";
+    public static final String MOD_VERSION = "0.14.0";
 
     /**
      * Private constructor: No one gets to make an instance of this class. It's too cool for that.

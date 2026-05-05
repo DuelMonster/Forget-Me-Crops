@@ -357,6 +357,7 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 - Ticker: `ServerTickEvent.Post` drives the per-tick scan.
 - Config files: uses the same shared TOML loader/saver as Fabric (`Config.load()` / `Config.save()` writing `forgetmecrops-client.toml` and `forgetmecrops-server.toml`).
 - Config screen: registered via `IConfigScreenFactory` SPI so the Configure button appears in NeoForge's Mods list. Delegates to the same `com.forgetmecrops.client.config.ConfigScreen` used by Fabric.
+- Mixin configs: NeoForge module resources provide `forgetmecrops.mixins.json` and `forgetmecrops.neoforge.mixins.json`, matching the `[[mixins]]` entries in `META-INF/neoforge.mods.toml`.
 
 ---
 

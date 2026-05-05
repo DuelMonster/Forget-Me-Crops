@@ -95,6 +95,9 @@ Mod Menu is optional but recommended — it gives you an in-game config screen.
 Drop `Forget-Me-Crops-1.21.11-<version>-NeoForge.jar` into your `mods/` folder.
 The built-in NeoForge config screen is available from the Mods list in the main menu.
 
+NeoForge dev runs load mixin configs from the NeoForge resources under the expected mod-id names:
+`forgetmecrops.mixins.json` and `forgetmecrops.neoforge.mixins.json`.
+
 ### Quick Setup
 
 1. Place a chest at the same height as the crop layer you want automated.

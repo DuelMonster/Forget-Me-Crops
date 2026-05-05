@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.14.0
+
+- Fix NeoForge client startup regression caused by mismatched mixin config filenames by aligning declared mixin configs with actual NeoForge resource filenames (`forgetmecrops.mixins.json`, `forgetmecrops.neoforge.mixins.json`).
+- Fix NeoForge mod entrypoint id resolution by replacing unresolved template placeholders in `ModCommon` constants with concrete runtime values (`MOD_ID`, `MOD_NAME`, `MOD_VERSION`) so `@Mod` registration resolves correctly during dev runs.
+
 ## 0.13.0
 
 - Replace Cloth Config (`me.shedaniel.cloth:cloth-config-*:21.11.153`) with YetAnotherConfigLib (`dev.isxander:yet-another-config-lib:3.8.2+1.21.11`) for config screen generation.
