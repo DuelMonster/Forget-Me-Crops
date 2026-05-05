@@ -29,11 +29,19 @@ public class DurabilityLogicTest {
     }
 
     /**
-     * Verify that Mending prevents damage under NORMAL mode when mendingNegation is not configured.
+     * Verify that active Mending protection prevents damage under NORMAL mode.
      */
     @Test
-    public void testShouldDamageHoe_NormalWithMending() {
+    public void testShouldDamageHoe_NormalWithMendingProtection() {
         assertFalse(DurabilityLogic.shouldDamageHoe(DurabilityMode.NORMAL, false, true));
+    }
+
+    /**
+     * Verify that active Mending protection also prevents damage in IGNORE_UNBREAKING mode.
+     */
+    @Test
+    public void testShouldDamageHoe_IgnoreUnbreakingWithMendingProtection() {
+        assertFalse(DurabilityLogic.shouldDamageHoe(DurabilityMode.IGNORE_UNBREAKING, true, true));
     }
 
     /**

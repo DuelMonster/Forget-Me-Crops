@@ -220,7 +220,7 @@ This avoids hardcoded per-crop thresholds and correctly handles beetroot (max ag
 | Fortune      | Applied to all crop drop calculations via `LootLogic`                                               |
 | Silk Touch   | Causes melons to drop the melon block instead of slices                                             |
 | Unbreaking   | Respected in `normal` durability mode; ignored in `ignore_unbreaking` mode                          |
-| Mending      | When `mendingNegation = true`, no durability loss is applied to a hoe bearing Mending               |
+| Mending      | When `mendingProtection = true`, no durability loss is applied to a hoe bearing Mending |
 
 Loot calculation is performed by `LootLogic`, which prefers server-side `LootContext` builders where available and falls back to reflective compatibility paths when needed.
 
@@ -371,7 +371,7 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 | `scanRangeX`               | `4`                         | int           | Scan radius along X from the anchor (1–5 clamped in discovery)              |
 | `scanRangeZ`               | `4`                         | int           | Scan radius along Z from the anchor (1–5 clamped in discovery)              |
 | `durabilityMode`           | `normal`                    | enum string   | `normal` / `ignore_unbreaking` / `none`                                     |
-| `mendingNegation`          | `true`                      | boolean       | Suppress durability loss on hoes with Mending                               |
+| `mendingProtection`        | `true`                      | boolean       | When true, suppress durability loss on hoes with Mending |
 | `debugLogging`             | `false`                     | boolean       | Verbose server log output                                                   |
 | `chestFullCooldownTicks`   | `300`                       | int           | Cooldown when chest is full                                                 |
 | `maxSpiralDurationTicks`   | `200`                       | int           | Max ticks to spread one scan cycle across                                   |

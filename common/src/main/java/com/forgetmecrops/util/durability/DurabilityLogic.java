@@ -12,14 +12,15 @@ import java.util.concurrent.ThreadLocalRandom;
  * DurabilityLogic: The accountant who decides exactly how much wear your hoe takes each harvest!
  * <p>
  * Implements the configured durability consumption rules: NORMAL (realistic wear with
- * Unbreaking probability roll and Mending respect), IGNORE_UNBREAKING (pessimistic wear
+ * Unbreaking probability roll and optional Mending protection), IGNORE_UNBREAKING (pessimistic wear
  * every single time regardless of enchantments), and NONE (your hoe is immortal — enjoy).
  * Also gracefully destroys the hoe stack when the damage counter reaches maximum,
  * which triggers the broken-hoe replacement flow upstream.
  * </p>
  * <p>
- * Mending negation is checked upstream in the applyDamage method itself (via Config.isMendingNegation()),
- * and Unbreaking probability is calculated here using the level's random source when available,
+ * Mending protection is controlled by the `mendingProtection` config flag:
+ * when true, Mending hoes are protected from durability loss from this mod's actions.
+ * Unbreaking probability is calculated here using the level's random source when available,
  * or ThreadLocalRandom as a fallback. We try to be correct. The hoe tries to survive.
  * </p>
  */
@@ -32,14 +33,14 @@ public class DurabilityLogic {
      *
      * @param mode configured durability mode
      * @param hasUnbreaking whether the tool has Unbreaking
-     * @param hasMending whether the tool has Mending
+     * @param hasMending whether Mending protection is currently active for this action
      * @return true if the hoe should take durability damage
      */
     public static boolean shouldDamageHoe(DurabilityMode mode, boolean hasUnbreaking, boolean hasMending) {
+        if (hasMending) return false;
         if (mode == DurabilityMode.NONE) return false;
         if (mode == DurabilityMode.IGNORE_UNBREAKING) return true;
         if (mode == DurabilityMode.NORMAL) {
-            if (hasMending) return false;
             return true;
         }
         return true;
@@ -76,13 +77,12 @@ public class DurabilityLogic {
             LogUtils.logDebug("[DURABILITY] Could not read enchantments", t);
         }
 
-        // Mending negation check: if the hoe has Mending AND we're configured to negate it,
-        // we still skip damage (the negation already cancels; the upstream caller handles it).
+        // `mendingProtection=true` means enable Mending protection for this mod.
         boolean hasMending = mendingLevel > 0;
-        if (Config.isMendingNegation() && hasMending) return;
+        boolean mendingProtectionEnabled = Config.isMendingProtection() && hasMending;
 
         // Ask shouldDamageHoe whether damage applies given the mode and enchantment combo
-        if (!shouldDamageHoe(Config.getDurabilityMode(), unbreakingLevel > 0, hasMending)) return;
+        if (!shouldDamageHoe(Config.getDurabilityMode(), unbreakingLevel > 0, mendingProtectionEnabled)) return;
 
         try {
             int max = hoe.getMaxDamage();

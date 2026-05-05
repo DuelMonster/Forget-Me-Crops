@@ -9,6 +9,7 @@
 - Add explicit max bounds for numeric config defaults in `ConfigDefaults` and wire those ranges into the YACL integer sliders.
 - Raise numeric config-screen minimums to practical values for `chestFullCooldownTicks` (10) and `maxSpiralDurationTicks` (10).
 - Add `frameRediscoveryInterval` to `ConfigDefaults` with default/min/max (`300` / `15` / `1200`) and expose it in the in-game config screen as an integer slider.
+- Clarify and enforce Mending durability behavior with renamed option `mendingProtection`: `true` consistently means Mending hoes are protected from durability loss caused by this mod across durability modes.
 - Add `yet_another_config_lib_v3` as a required dependency (not optional) in `fabric.mod.json` and `neoforge.mods.toml`.
 - Upgrade Gradle wrapper from 8.14.4 to 9.5.0 (required by Loom 1.14.10, which is compatible with YACL 3.8.2).
 - Upgrade fabric-loom from 1.13-SNAPSHOT to 1.14.10.

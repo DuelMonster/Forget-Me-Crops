@@ -128,10 +128,10 @@ public final class ConfigDefaults {
     public static final DurabilityMode DURABILITY_MODE_DEFAULT = DurabilityMode.NORMAL;
 
     /**
-     * Default mending behavior. True means Mending is negated for this mod's
-     * actions, so mending hoes still take durability loss while harvesting.
+     * Default mending behavior. When true, hoes with Mending are protected from
+     * durability loss caused by this mod's actions.
      */
-    public static final boolean MENDING_NEGATION_DEFAULT = true;
+    public static final boolean MENDING_PROTECTION_DEFAULT = true;
 
     /**
      * Default debug logging state. False keeps logs quiet during normal play.

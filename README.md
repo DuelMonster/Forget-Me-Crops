@@ -133,7 +133,7 @@ Tooltips now also include each option's default value so players can compare cha
 | `scanRangeX`               | `4`             | `1` to `16`         | Scan radius along X from the anchor. `4` covers 4 blocks in each direction (9 blocks wide).   |
 | `scanRangeZ`               | `4`             | `1` to `16`         | Scan radius along Z from the anchor. `4` covers 4 blocks in each direction (9 blocks wide).   |
 | `durabilityMode`           | `normal`        | n/a                 | Controls hoe wear during harvesting and repairs. See table below.                              |
-| `mendingNegation`          | `true`          | n/a                 | When `true`, a hoe with Mending takes no durability loss from this mod's actions.              |
+| `mendingProtection`        | `true`          | n/a                 | When `true`, hoes with Mending are protected from durability loss caused by this mod. |
 | `chestFullCooldownTicks`   | `300`           | `10` to `300`       | How many ticks to wait before retrying when the attached chest is full.                        |
 | `maxSpiralDurationTicks`   | `200`           | `10` to `400`       | Maximum ticks to spread one scan cycle across. Higher values reduce per-tick load.             |
 | `rotationMode`             | `FULL_ROTATION` | n/a                 | How the item frame rotates during a harvest cycle. See table below.                            |

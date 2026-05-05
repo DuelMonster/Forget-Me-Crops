@@ -40,7 +40,7 @@ public class Config {
     private static int scanRangeX = ConfigDefaults.SCAN_RANGE_X_DEFAULT;
     private static int scanRangeZ = ConfigDefaults.SCAN_RANGE_Z_DEFAULT;
     private static DurabilityMode durabilityMode = DurabilityMode.NORMAL;
-    private static boolean mendingNegation = ConfigDefaults.MENDING_NEGATION_DEFAULT;
+    private static boolean mendingProtection = ConfigDefaults.MENDING_PROTECTION_DEFAULT;
     private static boolean debugLogging = ConfigDefaults.DEBUG_LOGGING_DEFAULT;
     private static int chestFullCooldownTicks = ConfigDefaults.CHEST_FULL_COOLDOWN_DEFAULT;
     private static int maxSpiralDurationTicks = ConfigDefaults.MAX_SPIRAL_DEFAULT;
@@ -92,7 +92,7 @@ public class Config {
      * @param scanRangeX              east-west scan radius in blocks
      * @param scanRangeZ              north-south scan radius in blocks
      * @param durabilityMode          how much wear tools take per harvest
-     * @param mendingNegation         if true, Mending-enchanted hoes still take damage
+        * @param mendingProtection       if true, Mending-enchanted hoes are protected from this mod's durability damage
      * @param debugLogging            if true, emit verbose DEBUG logs
      * @param chestFullCooldownTicks  ticks to wait before retrying a full chest
      * @param maxSpiralDurationTicks  max ticks for one spiral scan pass
@@ -101,7 +101,7 @@ public class Config {
      * @param seedReservePerType      minimum seeds to keep per crop type before discarding extras
      */
     public static void applyServerSettings(int tickInterval, int frameRediscoveryInterval, int scanRangeX, int scanRangeZ, DurabilityMode durabilityMode,
-                                           boolean mendingNegation, boolean debugLogging,
+                                           boolean mendingProtection, boolean debugLogging,
                                            int chestFullCooldownTicks, int maxSpiralDurationTicks,
                                            RotationMode rotationMode, SeedClutterMode seedClutterMode,
                                            int seedReservePerType) {
@@ -110,7 +110,7 @@ public class Config {
         Config.scanRangeX = clamp(scanRangeX, ConfigDefaults.SCAN_RANGE_X_MIN, ConfigDefaults.SCAN_RANGE_X_MAX);
         Config.scanRangeZ = clamp(scanRangeZ, ConfigDefaults.SCAN_RANGE_Z_MIN, ConfigDefaults.SCAN_RANGE_Z_MAX);
         Config.durabilityMode = durabilityMode;
-        Config.mendingNegation = mendingNegation;
+        Config.mendingProtection = mendingProtection;
         Config.debugLogging = debugLogging;
         Config.chestFullCooldownTicks = clamp(chestFullCooldownTicks, ConfigDefaults.CHEST_FULL_COOLDOWN_MIN, ConfigDefaults.CHEST_FULL_COOLDOWN_MAX);
         Config.maxSpiralDurationTicks = clamp(maxSpiralDurationTicks, ConfigDefaults.MAX_SPIRAL_MIN, ConfigDefaults.MAX_SPIRAL_MAX);
@@ -137,8 +137,8 @@ public class Config {
     public static int getScanRangeX() { return scanRangeX; }
     public static int getScanRangeZ() { return scanRangeZ; }
     public static DurabilityMode getDurabilityMode() { return durabilityMode; }
-    /** True if Mending should be negated — i.e., Mending-enchanted hoes still lose durability each harvest. */
-    public static boolean isMendingNegation() { return mendingNegation; }
+    /** True means Mending-enchanted hoes are protected from this mod's durability damage. */
+    public static boolean isMendingProtection() { return mendingProtection; }
     /** True if verbose debug logging is enabled. Your console will know everything. */
     public static boolean isDebugLogging() { return debugLogging; }
     public static int getChestFullCooldownTicks() { return chestFullCooldownTicks; }
@@ -157,7 +157,7 @@ public class Config {
     public static void setScanRangeX(int v) { scanRangeX = clamp(v, ConfigDefaults.SCAN_RANGE_X_MIN, ConfigDefaults.SCAN_RANGE_X_MAX); }
     public static void setScanRangeZ(int v) { scanRangeZ = clamp(v, ConfigDefaults.SCAN_RANGE_Z_MIN, ConfigDefaults.SCAN_RANGE_Z_MAX); }
     public static void setDurabilityMode(DurabilityMode v) { durabilityMode = v; }
-    public static void setMendingNegation(boolean v) { mendingNegation = v; }
+    public static void setMendingProtection(boolean v) { mendingProtection = v; }
     public static void setDebugLogging(boolean v) { debugLogging = v; }
     public static void setChestFullCooldownTicks(int v) { chestFullCooldownTicks = clamp(v, ConfigDefaults.CHEST_FULL_COOLDOWN_MIN, ConfigDefaults.CHEST_FULL_COOLDOWN_MAX); }
     public static void setMaxSpiralDurationTicks(int v) { maxSpiralDurationTicks = clamp(v, ConfigDefaults.MAX_SPIRAL_MIN, ConfigDefaults.MAX_SPIRAL_MAX); }
@@ -195,7 +195,7 @@ public class Config {
         scanRangeX = boundedInt(values, "scanRangeX", scanRangeX, ConfigDefaults.SCAN_RANGE_X_MIN, ConfigDefaults.SCAN_RANGE_X_MAX);
         scanRangeZ = boundedInt(values, "scanRangeZ", scanRangeZ, ConfigDefaults.SCAN_RANGE_Z_MIN, ConfigDefaults.SCAN_RANGE_Z_MAX);
         durabilityMode = DurabilityMode.fromConfigValue(stringValue(values, "durabilityMode", durabilityMode.configValue()));
-        mendingNegation = booleanValue(values, "mendingNegation", mendingNegation);
+        mendingProtection = booleanValue(values, "mendingProtection", mendingProtection);
         debugLogging = booleanValue(values, "debugLogging", debugLogging);
         chestFullCooldownTicks = boundedInt(values, "chestFullCooldownTicks", chestFullCooldownTicks, ConfigDefaults.CHEST_FULL_COOLDOWN_MIN, ConfigDefaults.CHEST_FULL_COOLDOWN_MAX);
         maxSpiralDurationTicks = boundedInt(values, "maxSpiralDurationTicks", maxSpiralDurationTicks, ConfigDefaults.MAX_SPIRAL_MIN, ConfigDefaults.MAX_SPIRAL_MAX);
@@ -232,7 +232,7 @@ public class Config {
         values.put("scanRangeX", scanRangeX);
         values.put("scanRangeZ", scanRangeZ);
         values.put("durabilityMode", durabilityMode.configValue());
-        values.put("mendingNegation", mendingNegation);
+        values.put("mendingProtection", mendingProtection);
         values.put("debugLogging", debugLogging);
         values.put("chestFullCooldownTicks", chestFullCooldownTicks);
         values.put("maxSpiralDurationTicks", maxSpiralDurationTicks);
