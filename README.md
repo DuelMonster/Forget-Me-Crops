@@ -95,8 +95,7 @@ Mod Menu is optional but recommended — it gives you an in-game config screen.
 Drop `Forget-Me-Crops-1.21.11-<version>-NeoForge.jar` into your `mods/` folder.
 The built-in NeoForge config screen is available from the Mods list in the main menu.
 
-NeoForge dev runs load mixin configs from the NeoForge resources under the expected mod-id names:
-`forgetmecrops.mixins.json` and `forgetmecrops.neoforge.mixins.json`.
+Both loaders use a single unified mixin config: `forgetmecrops.mixins.json`.
 
 ### Quick Setup
 
@@ -209,5 +208,5 @@ MIT. See [LICENSE](LICENSE).
 ## Credits
 
 Developed by **Jared**.
-Built with [MultiLoader Template](https://github.com/jaredlll08/MultiLoader-Template) targeting Fabric and NeoForge.
+Built with [Stonecutter](https://stonecutter.kikugie.dev/) + [Modstitch](https://github.com/isXander/modstitch) targeting Fabric and NeoForge.
 Optional integration with [FastItemFrames](https://modrinth.com/mod/fastitemframes) by Fuzss.
