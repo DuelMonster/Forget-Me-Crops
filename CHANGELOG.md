@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## 0.15.0
+
+- Migrate build system from MultiLoader Template to Stonecutter + Modstitch.
+  - `settings.gradle.kts`: Stonecutter root; two nodes — `1.21.11-fabric` (`modstitch.platform=loom`) and `1.21.11-neoforge` (`modstitch.platform=moddevgradle`). VCS version = `1.21.11-fabric`.
+  - `build.gradle.kts`: central Modstitch script covering mixin config, metadata, dependency resolution, Maven publishing, and mod-publish-plugin (Modrinth + CurseForge) with token-gated conditional application.
+  - `stonecutter.gradle.kts`: controller script; registers `chiseledBuild` and `chiseledPublishMods` chiseled tasks.
+  - Per-node `versions/<name>/gradle.properties` hold all loader- and MC-version-specific dependency coordinates.
+  - Remove `common/`, `fabric/`, and `neoforge/` subprojects and `buildSrc/` Groovy plugin scripts — no longer used.
+- Migrate all source to a single unified `src/` directory; Stonecutter comment directives (`//? if fabric {` / `//? if neoforge {`) replace per-module file duplication.
+  - `ModEntry.java`: merged entry point (Fabric `ModInitializer` active in VCS; NeoForge `@Mod` in comment block).
+  - `ticker/FarmTicker.java`: merged server-tick wiring (Fabric `ServerTickEvents` active; NeoForge `IEventBus` in comment block).
+  - `platform/PlatformHelper.java`: unified SPI implementation; Stonecutter conditions select `FabricLoader` vs `ModList` APIs at compile time.
+  - `client/ModMenuEntrypoint.java`: Fabric-only (guarded by `//? if fabric {` block).
+  - `client/ConfigScreenFactoryBridge.java`: NeoForge-only `IConfigScreenFactory` SPI (in comment block).
+  - `mixin/MixinTitleScreen.java`: shared title-screen mixin, no conditions needed.
+- Unify mixin config to a single `forgetmecrops.mixins.json` covering both loaders; remove the now-redundant `forgetmecrops-common.mixins.json`.
+- Add mod metadata templates: `src/main/templates/fabric.mod.json` and `src/main/templates/META-INF/neoforge.mods.toml` with `${property}` substitution tokens.
+- Add Maven publishing (local `~/.m2`, Modrinth Maven, GitHub Packages) and mod-publish-plugin publishing (Modrinth + CurseForge) to `build.gradle.kts`; publishing activates only when `MODRINTH_TOKEN` / `CURSEFORGE_TOKEN` environment variables are present.
+- Update GitHub Actions: `ci.yml` uses `./gradlew chiseledBuild`; `release.yml` runs full chiseled build + Maven + Modrinth/CurseForge publish + GitHub Release creation.
+
 ## 0.14.0
 
 - Fix NeoForge client startup regression caused by mismatched mixin config filenames by aligning declared mixin configs with actual NeoForge resource filenames (`forgetmecrops.mixins.json`, `forgetmecrops.neoforge.mixins.json`).
