@@ -18,7 +18,7 @@
 - Unify mixin config to a single `forgetmecrops.mixins.json` covering both loaders; remove the now-redundant `forgetmecrops-common.mixins.json`.
 - Add mod metadata templates: `src/main/templates/fabric.mod.json` and `src/main/templates/META-INF/neoforge.mods.toml` with `${property}` substitution tokens.
 - Add Maven publishing (local `~/.m2`, Modrinth Maven, GitHub Packages) and mod-publish-plugin publishing (Modrinth + CurseForge) to `build.gradle.kts`; publishing activates only when `MODRINTH_TOKEN` / `CURSEFORGE_TOKEN` environment variables are present.
-- Update GitHub Actions: `ci.yml` uses `./gradlew chiseledBuild`; `release.yml` runs full chiseled build + Maven + Modrinth/CurseForge publish + GitHub Release creation.
+- Add `chiseledPackageRelease` chiseled task (backed by per-node `packageRelease`) that copies the production JAR for every Stonecutter node into the project-root `releases/` directory, restoring the `releases/*.jar` output behaviour from the old MultiLoader build. The CI release workflow calls this task and attaches the `releases/` JARs to the GitHub Release.
 
 ## 0.14.0
 

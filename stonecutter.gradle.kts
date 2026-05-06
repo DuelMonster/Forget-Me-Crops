@@ -25,6 +25,14 @@ stonecutter registerChiseled tasks.register("chiseledPublishAll", stonecutter.ch
     ofTask("publishMods")
 }
 
+// chiseledPackageRelease: copies the production JAR for every node into releases/.
+// Run with:  ./gradlew chiseledPackageRelease
+stonecutter registerChiseled tasks.register("chiseledPackageRelease", stonecutter.chiseled) {
+    group = "release"
+    description = "Copies the production JAR for ALL Stonecutter nodes into releases/."
+    ofTask("packageRelease")
+}
+
 // Shared repository declarations for ALL sub-projects (nodes).
 // Loader-specific repos (Fabric, NeoForge) are resolved here; each node
 // inherits them via allprojects so their dependency resolution doesn't fail.

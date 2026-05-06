@@ -503,6 +503,9 @@ Nodes are registered in `settings.gradle.kts`; Stonecutter reads the active VCS 
 # Run tests (common logic)
 .\gradlew.bat :versions:1.21.11-fabric:test
 
+# Copy production JARs into releases/ (both nodes)
+.\gradlew.bat chiseledPackageRelease
+
 # Publish to Modrinth + CurseForge (requires MODRINTH_TOKEN / CURSEFORGE_TOKEN env vars)
 .\gradlew.bat chiseledPublishMods
 
@@ -512,12 +515,16 @@ Nodes are registered in `settings.gradle.kts`; Stonecutter reads the active VCS 
 
 ### Output
 
-Release JARs are produced in the per-node build directories:
+Running `chiseledPackageRelease` (or the CI release workflow) copies the production JARs
+into the project-root `releases/` directory:
 
 ```
-versions/1.21.11-fabric/build/libs/forgetmecrops-<version>+1.21.11-fabric.jar
-versions/1.21.11-neoforge/build/libs/forgetmecrops-<version>+1.21.11-neoforge.jar
+releases/Forget-Me-Crops_<version>+1.21.11-fabric.jar
+releases/Forget-Me-Crops_<version>+1.21.11-neoforge.jar
 ```
+
+The intermediate per-node build outputs are in `versions/<name>/build/libs/` but those are
+not the release artifacts — always use the `releases/` copies.
 
 ### Publishing Setup
 

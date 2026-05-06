@@ -46,6 +46,10 @@ jobs:
       - name: Build all Stonecutter nodes
         run: ./gradlew chiseledBuild --no-daemon
 
+      # Copy production JARs into releases/ (mirrors old MultiLoader behaviour)
+      - name: Stage release JARs into releases/
+        run: ./gradlew chiseledPackageRelease --no-daemon
+
       # Publish the production JARs to the local Maven staging directory
       - name: Publish to local Maven staging
         run: ./gradlew chiseledPublishAllPublicationsToLocalRepository --no-daemon
@@ -77,14 +81,12 @@ jobs:
         run: |
           echo "mod_version=$(grep -E '^mod_version=' gradle.properties | cut -d'=' -f2 | tr -d '\r')" >> $GITHUB_OUTPUT
 
-      # Create the GitHub Release and attach the built JARs
+      # Create the GitHub Release and attach the built JARs from releases/
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: "Forget-Me-Crops v${{ steps.mod_version.outputs.mod_version }}"
-          files: |
-            versions/1.21.11-fabric/build/libs/*.jar
-            versions/1.21.11-neoforge/build/libs/*.jar
+          files: releases/*.jar
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
