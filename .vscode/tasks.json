@@ -5,7 +5,7 @@
 			"label": "debug fabric client",
 			"type": "shell",
 			"command": ".\\gradlew.bat",
-			"args": [":fabric:runClient"],
+			"args": [":versions:1.21.11-fabric:runClient"],
 			"options": {"cwd": "${workspaceFolder}"},
 			"group": "build"
 		},
@@ -13,7 +13,7 @@
 			"label": "debug fabric client (no related mods)",
 			"type": "shell",
 			"command": ".\\gradlew.bat",
-			"args": ["-PfhNoRelatedMods=true", ":fabric:runClient"],
+			"args": ["-PfhNoRelatedMods=true", ":versions:1.21.11-fabric:runClient"],
 			"options": {"cwd": "${workspaceFolder}"},
 			"group": "build"
 		},
@@ -21,7 +21,7 @@
 			"label": "debug neoforge client",
 			"type": "shell",
 			"command": ".\\gradlew.bat",
-			"args": [":neoforge:runClient"],
+			"args": [":versions:1.21.11-neoforge:runClient"],
 			"options": {"cwd": "${workspaceFolder}"},
 			"group": "build"
 		},
@@ -29,7 +29,7 @@
 			"label": "debug neoforge client (no related mods)",
 			"type": "shell",
 			"command": ".\\gradlew.bat",
-			"args": ["-PfhNoRelatedMods=true", ":neoforge:runClient"],
+			"args": ["-PfhNoRelatedMods=true", ":versions:1.21.11-neoforge:runClient"],
 			"options": {"cwd": "${workspaceFolder}"},
 			"group": "build"
 		},
@@ -37,7 +37,7 @@
 			"label": "debug fabric server",
 			"type": "shell",
 			"command": ".\\gradlew.bat",
-			"args": [":fabric:runServer"],
+			"args": [":versions:1.21.11-fabric:runServer"],
 			"options": {"cwd": "${workspaceFolder}"},
 			"group": "build"
 		},
@@ -45,7 +45,7 @@
 			"label": "debug fabric server (no related mods)",
 			"type": "shell",
 			"command": ".\\gradlew.bat",
-			"args": ["-PfhNoRelatedMods=true", ":fabric:runServer"],
+			"args": ["-PfhNoRelatedMods=true", ":versions:1.21.11-fabric:runServer"],
 			"options": {"cwd": "${workspaceFolder}"},
 			"group": "build"
 		},
@@ -53,7 +53,7 @@
 			"label": "debug neoforge server",
 			"type": "shell",
 			"command": ".\\gradlew.bat",
-			"args": [":neoforge:runServer"],
+			"args": [":versions:1.21.11-neoforge:runServer"],
 			"options": {"cwd": "${workspaceFolder}"},
 			"group": "build"
 		},
@@ -61,7 +61,7 @@
 			"label": "debug neoforge server (no related mods)",
 			"type": "shell",
 			"command": ".\\gradlew.bat",
-			"args": ["-PfhNoRelatedMods=true", ":neoforge:runServer"],
+			"args": ["-PfhNoRelatedMods=true", ":versions:1.21.11-neoforge:runServer"],
 			"options": {"cwd": "${workspaceFolder}"},
 			"group": "build"
 		}
