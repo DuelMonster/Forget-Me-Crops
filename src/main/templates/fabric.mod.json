@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "name": "${mod_name}",
+  "version": "${mod_version}",
+  "description": "${mod_description}",
+  "authors": [ "${mod_author}" ],
+  "license": "${mod_license}",
+  "icon": "assets/forget_me_crops/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.forgetmecrops.ModEntry"
+    ],
+    "modmenu": [
+      "com.forgetmecrops.client.ModMenuEntrypoint"
+    ]
+  },
+  "depends": {
+    "minecraft":               ">=1.21.11",
+    "fabricloader":            ">=0.19.2",
+    "java":                    ">=21",
+    "fabric-api":              "*",
+    "yet_another_config_lib_v3": "${yacl_version_range}"
+  },
+  "contact": {
+    "homepage": "${mod_homepage}",
+    "issues":   "${mod_issue_tracker}"
+  }
+}
