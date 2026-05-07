@@ -45,7 +45,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
-import java.util.List;*///?}
+import java.util.List;*/ //?}
 
 /**
  * FarmTicker: discovers farm anchors on chunk load/unload and schedules scans on server tick.
@@ -82,15 +82,7 @@ public class FarmTicker {
     // ═══════════════════════════════════════════════════════════
 
     //? if fabric {
-    /**
-     * Registers all Fabric lifecycle event listeners that drive farm discovery and scanning.
-     * <ul>
-     *   <li>CHUNK_LOAD   — enqueues vanilla ItemFrame and FIF candidates for gradual discovery</li>
-     *   <li>CHUNK_UNLOAD — unregisters anchors in the unloading chunk from the FrameRegistry</li>
-     *   <li>SERVER_STOPPING — clears the FrameRegistry so the next load starts clean</li>
-     *   <li>SERVER_END_TICK — drains the catchup queue and triggers due scans</li>
-     * </ul>
-     */
+    // Registers all Fabric lifecycle event listeners (chunk load/unload, server tick, server stop).
     public static void init() {
         ServerChunkEvents.CHUNK_LOAD.register((ServerLevel level, LevelChunk chunk) -> {
             try {
@@ -200,12 +192,9 @@ public class FarmTicker {
     //  NeoForge implementation — active when modstitch.platform=moddevgradle
     // ═══════════════════════════════════════════════════════════
 
-    /**
-     * Registers all NeoForge event listeners that drive farm discovery and scanning.
-     * Same logical flow as the Fabric ticker, but using NeoForge's event bus API.
-     *
-     * @param bus the NeoForge event bus to register listeners on
-     * /
+    // Registers all NeoForge event listeners that drive farm discovery and scanning.
+    // Same logical flow as the Fabric ticker, but using NeoForge's event bus API.
+    // @param bus the NeoForge event bus to register listeners on
     public static void init(IEventBus bus) {
         bus.addListener(FarmTicker::onChunkLoad);
         bus.addListener(FarmTicker::onChunkUnload);
@@ -337,5 +326,5 @@ public class FarmTicker {
             }
         } catch (Throwable t) { LogUtils.logWarn("[TICK] Unexpected NeoForge ticker error", t); }
     }
-    *///?}
+    */ //?}
 }

@@ -6,7 +6,7 @@ plugins {
     // Modstitch: the unified build plugin that abstracts Fabric Loom and NeoForge MDG.
     // Only one platform is "active" per node — determined by modstitch.platform in
     // the node's versioned gradle.properties.
-    id("dev.isxander.modstitch.base") version "0.5.12"
+    id("dev.isxander.modstitch.base") version "0.8.5"
     // mod-publish-plugin: Modrinth + CurseForge publishing (applied conditionally below)
     id("me.modmuss50.mod-publish-plugin") version "0.8.4" apply false
     // Maven publish (standard Gradle plugin — no version needed)
@@ -34,21 +34,6 @@ val isNeoForge = loader == "neoforge"
 // ────────────────────────────────────────────────────────────
 modstitch {
     minecraftVersion = minecraft
-
-    // Java 21 is required for MC 1.20.6+; guard this for future version additions.
-    javaTarget = when {
-        minecraft >= "1.20.6" -> 21
-        else -> throw IllegalArgumentException(
-            "Please set the Java target version for Minecraft $minecraft in build.gradle.kts"
-        )
-    }
-
-    // Parchment mappings: human-readable parameter names layered on top of Mojmap.
-    // Properties live in the node's versioned gradle.properties.
-    parchment {
-        prop("deps.parchment_mc") { minecraftVersion = it }
-        prop("deps.parchment") { mappingsVersion = it }
-    }
 
     // ── Metadata: populates fabric.mod.json and neoforge.mods.toml templates ──
     metadata {
@@ -99,15 +84,13 @@ modstitch {
 
     // ── NeoForge ModDevGradle platform (active when modstitch.platform=moddevgradle) ──
     moddevgradle {
-        enable {
-            prop("deps.neoforge") { neoForgeVersion = it }
-        }
+        prop("deps.neoforge") { neoForgeVersion = it }
 
         // Registers the default client + server run configurations that
         // VS Code tasks (":neoforge:runClient" etc.) relied on in the old setup.
         defaultRuns()
 
-        configureNeoforge {
+        configureNeoForge {
             parchment {
                 minecraftVersion = findProperty("deps.parchment_mc") as? String ?: minecraft
                 mappingsVersion = findProperty("deps.parchment") as? String ?: ""
@@ -135,10 +118,20 @@ modstitch {
 //  loader is active, so //? if fabric { … } blocks work correctly.
 // ────────────────────────────────────────────────────────────
 stonecutter {
-    consts(
-        "fabric"   to isFabric,
-        "neoforge" to isNeoForge
-    )
+    constants.match(loader, "fabric", "neoforge")
+}
+
+// Java 21 bytecode target — required for MC 1.20.6+.
+// In Modstitch 0.8.x, javaTarget was removed from the modstitch{} extension;
+// configure it directly on the compile tasks instead.
+tasks.withType<JavaCompile> {
+    options.release.set(21)
+}
+
+// Ensure Stonecutter preprocessing runs before Java compilation so
+// //? if ... blocks are resolved into valid Java source files.
+tasks.withType<JavaCompile> {
+    dependsOn("stonecutterGenerate")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -154,7 +147,6 @@ base.archivesName.set("Forget-Me-Crops_${property("mod_version")}+${minecraft}-$
 dependencies {
     // ── Fabric-only dependencies ──
     modstitch.loom {
-        // Fabric API — the backbone of Fabric modding
         modstitchModImplementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
         // YACL config library (Fabric flavour)
         modstitchModImplementation("dev.isxander:yet-another-config-lib:${property("deps.yacl")}-fabric") {
@@ -281,7 +273,7 @@ if (!modrinthToken.isNullOrBlank() || !curseForgeToken.isNullOrBlank()) {
                 file = tasks.named<AbstractArchiveTask>(prodJarTask).map { it.archiveFile.get() }
                 changelog = providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
                     .asText.orElse("")
-                requires { id("P7dR8mSH") } // YACL Modrinth project ID
+                requires("P7dR8mSH") // YACL Modrinth project ID
             }
         }
 
@@ -297,7 +289,7 @@ if (!modrinthToken.isNullOrBlank() || !curseForgeToken.isNullOrBlank()) {
                 file = tasks.named<AbstractArchiveTask>(prodJarTask).map { it.archiveFile.get() }
                 changelog = providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
                     .asText.orElse("")
-                requires { slug("yacl") }
+                requires("yacl")
             }
         }
     }

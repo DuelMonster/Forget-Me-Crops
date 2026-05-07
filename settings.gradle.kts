@@ -36,7 +36,7 @@ stonecutter {
         // Helper that registers both a fabric and neoforge node for a given MC version.
         // Each node gets a name like "1.21.11-fabric" and targets the given MC version.
         fun mc(mcVersion: String, loaders: Iterable<String>) =
-            loaders.forEach { vers("$mcVersion-$it", mcVersion) }
+            loaders.forEach { version("$mcVersion-$it", mcVersion) }
 
         // The one Minecraft version this mod currently supports.
         // Add more mc(…) calls here when expanding to additional versions.
