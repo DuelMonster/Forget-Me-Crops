@@ -491,17 +491,17 @@ Nodes are registered in `settings.gradle.kts`; Stonecutter reads the active VCS 
 .\gradlew.bat chiseledBuild
 
 # Build a single node
-.\gradlew.bat :versions:1.21.11-fabric:build
-.\gradlew.bat :versions:1.21.11-neoforge:build
+.\gradlew.bat :1.21.11-fabric:build
+.\gradlew.bat :1.21.11-neoforge:build
 
 # Run dev client (Fabric)
-.\gradlew.bat :versions:1.21.11-fabric:runClient
+.\gradlew.bat :1.21.11-fabric:runClient
 
 # Run dev client (NeoForge)
-.\gradlew.bat :versions:1.21.11-neoforge:runClient
+.\gradlew.bat :1.21.11-neoforge:runClient
 
 # Run tests (common logic)
-.\gradlew.bat :versions:1.21.11-fabric:test
+.\gradlew.bat :1.21.11-fabric:test
 
 # Copy production JARs into releases/ (both nodes)
 .\gradlew.bat chiseledPackageRelease
@@ -512,6 +512,19 @@ Nodes are registered in `settings.gradle.kts`; Stonecutter reads the active VCS 
 # Switch VCS active branch (e.g. to inspect NeoForge code uncommented)
 .\gradlew.bat stonecutter:Set active version to 1.21.11-neoforge
 ```
+
+### Dev Run Configuration
+
+Both loaders are configured in `build.gradle.kts` with matching run directory layouts:
+
+| Loader    | Client run dir             | Server run dir             |
+|-----------|----------------------------|----------------------------|
+| Fabric    | `versions/1.21.11-fabric/runs/client`   | `versions/1.21.11-fabric/runs/server`   |
+| NeoForge  | `versions/1.21.11-neoforge/runs/client` | `versions/1.21.11-neoforge/runs/server` |
+
+Both client runs pass `--username DuelMonster` as program arguments. Fabric uses
+`programArgs("--username", "DuelMonster")`; NeoForge uses `programArguments.addAll("--username",
+"DuelMonster")` on the MDG run config.
 
 ### Output
 

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 0.16.0
+
+- Fix VS Code debug-task Gradle paths: correct `:versions:1.21.11-<loader>:run*` to `:1.21.11-<loader>:run*`.
+- Align NeoForge dev run directories to `runs/client` and `runs/server` (matching Fabric Loom's layout) by adding explicit `gameDirectory` configuration on the MDG `client` and `server` run configs.
+- Lock dev-client player profile to `DuelMonster` for both Fabric (`programArgs`) and NeoForge (`programArguments.addAll`).
+
 ## 0.15.0
 
 - Migrate build system from MultiLoader Template to Stonecutter + Modstitch.

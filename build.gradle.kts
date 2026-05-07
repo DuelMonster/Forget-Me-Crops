@@ -70,6 +70,7 @@ modstitch {
                 setConfigName("Fabric Client")
                 ideConfigGenerated(true)
                 runDir("runs/client")
+                programArgs("--username", "DuelMonster")
             }
             runs.named("server") {
                 setConfigName("Fabric Server")
@@ -86,11 +87,20 @@ modstitch {
     moddevgradle {
         prop("deps.neoforge") { neoForgeVersion = it }
 
-        // Registers the default client + server run configurations that
-        // VS Code tasks (":neoforge:runClient" etc.) relied on in the old setup.
+        // Registers the default client + server run configurations.
         defaultRuns()
 
         configureNeoForge {
+            // Match the Fabric layout so both loaders use the same run-dir convention.
+            runs {
+                named("client") {
+                    gameDirectory = project.file("runs/client")
+                    programArguments.addAll("--username", "DuelMonster")
+                }
+                named("server") {
+                    gameDirectory = project.file("runs/server")
+                }
+            }
             parchment {
                 minecraftVersion = findProperty("deps.parchment_mc") as? String ?: minecraft
                 mappingsVersion = findProperty("deps.parchment") as? String ?: ""
