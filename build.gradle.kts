@@ -41,7 +41,7 @@ modstitch {
         modName = "Forget-Me-Crops"
         modVersion = property("mod_version") as String
         modGroup = "com.forgetmecrops"
-        modAuthor = "Jared"
+        modAuthor = "DuelMonster"
 
         // Extra tokens available inside src/main/templates/
         replacementProperties.putAll(mapOf(
@@ -49,7 +49,7 @@ modstitch {
             "mod_name"                to "Forget-Me-Crops",
             "mod_description"         to "Automates crop harvesting for both Fabric and NeoForge.",
             "mod_license"             to "CC0-1.0",
-            "mod_author"              to "Jared",
+            "mod_author"              to "DuelMonster",
             "mod_homepage"            to "https://github.com/duelmonster/Forget-Me-Crops",
             "mod_issue_tracker"       to "https://github.com/duelmonster/Forget-Me-Crops/issues",
             "minecraft_version_range" to "[1.21.11, 1.22)",

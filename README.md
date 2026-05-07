@@ -202,12 +202,12 @@ For implementation internals, package structure, scan algorithm details, rotatio
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+CC0. See [LICENSE](LICENSE).
 
 ---
 
 ## Credits
 
-Developed by **Jared**.
+Developed by **DuelMonster**.
 Built with [Stonecutter](https://stonecutter.kikugie.dev/) + [Modstitch](https://github.com/isXander/modstitch) targeting Fabric and NeoForge.
 Optional integration with [FastItemFrames](https://modrinth.com/mod/fastitemframes) by Fuzss.

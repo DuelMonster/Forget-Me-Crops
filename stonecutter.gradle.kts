@@ -56,8 +56,8 @@ allprojects {
         maven("https://maven.parchmentmc.org/")
         // Fuzss mod resources — PuzzlesLib etc.
         maven("https://raw.githubusercontent.com/Fuzss/modresources/main/maven/")
-        // BlameJared — misc CurseForge-hosted mods
-        maven("https://maven.blamejared.com")
+        // BlameDuelMonster — misc CurseForge-hosted mods
+        maven("https://maven.blameDuelMonster.com")
         // mod-publish-plugin
         maven("https://maven.modmuss50.me/")
     }
