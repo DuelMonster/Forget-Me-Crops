@@ -95,8 +95,7 @@ Mod Menu is optional but recommended — it gives you an in-game config screen.
 Drop `Forget-Me-Crops-1.21.11-<version>-NeoForge.jar` into your `mods/` folder.
 The built-in NeoForge config screen is available from the Mods list in the main menu.
 
-NeoForge dev runs load mixin configs from the NeoForge resources under the expected mod-id names:
-`forgetmecrops.mixins.json` and `forgetmecrops.neoforge.mixins.json`.
+Both loaders use a single unified mixin config: `forgetmecrops.mixins.json`.
 
 ### Quick Setup
 
@@ -123,6 +122,7 @@ On **Fabric**, if Mod Menu is installed, these can also be edited in-game via th
 On **NeoForge**, the Mods list Configure button opens the same shared YACL screen.
 
 Both loaders delegate to the same `ConfigScreen` builder in `common`, powered by YACL options and controllers.
+NeoForge exposes the Configure button through its extension-point registration path, so current builds show the button enabled in the Mods list.
 Numeric server settings now use integer sliders with explicit ranges from `ConfigDefaults`.
 Enum-mode tooltips in that screen use localized player-friendly labels from the language file (for example `Single Step` instead of `SINGLE_STEP`).
 Tooltips now also include each option's default value so players can compare changes against baseline behavior directly in the screen.
@@ -209,5 +209,5 @@ MIT. See [LICENSE](LICENSE).
 ## Credits
 
 Developed by **Jared**.
-Built with [MultiLoader Template](https://github.com/jaredlll08/MultiLoader-Template) targeting Fabric and NeoForge.
+Built with [Stonecutter](https://stonecutter.kikugie.dev/) + [Modstitch](https://github.com/isXander/modstitch) targeting Fabric and NeoForge.
 Optional integration with [FastItemFrames](https://modrinth.com/mod/fastitemframes) by Fuzss.

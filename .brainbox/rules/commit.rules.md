@@ -19,14 +19,13 @@ A semantic commit message consists of three parts - `header`, `body`, and `foote
 The header is a mandatory line that simply describes the purpose of the change (up to 72 characters).
 It is often referred to as the “Summary” and it should consist of three parts:
 1.	Type - a short prefix that represents the kind of change (See [Commit Types] below)
-2.	ID - the Story, Task or Defect ID number relating to the change (if relevant).
-3.	Subject - represents a concise description of the actual change.
+2.	Subject - represents a concise description of the actual change.
 
 Practically, in terms of Git, it is merely the first line of the commit message.
 
 `Example`
 ```
-🐞fix: 2456 - disable confirm button until tick box ticked
+🐞fix: disable confirm button until tick box ticked
 ```
 
 The message is separated by ‘: ’.
@@ -42,7 +41,7 @@ The body is an optional element that introduces the motivation behind the change
 
 `Example`
 ```
-🐞fix: 2456 - disable confirm button until approved is ticked
+🐞fix: disable confirm button until approved is ticked
 It was flagged that the confirm button was being clicked prior to a user ticking the approved checkbox. This caused issues and needed to be resolved.
 ```
 
@@ -51,13 +50,11 @@ The footer is a mandatory place to link related work items.  It can also, option
 
 `Example`
 ```
-🐞fix: 2456 - disable confirm button until approved is ticked
+🐞fix: disable confirm button until approved is ticked
 It was flagged that the confirm button was being clicked prior to a user ticking the approved checkbox. This caused issues and needed to be resolved.
-\#2456
 ```
 
 In this example, we plainly add a reference to the relevant defect report and nothing else.
-Using the ‘#’ notation in the footer is a very important step when composing your commit messages.  Doing so will instruct Devops to link your commit against the task/defect automatically. This then gives us easy access to the commit history and will help in cases where a defect fix was made, but the test was failed.
 
 ##Pull Request Message Format
 A semantic Pull Request message consists of three parts - `header`, `body`, and `footer`.
@@ -66,14 +63,13 @@ A semantic Pull Request message consists of three parts - `header`, `body`, and 
 The header is a mandatory line that simply describes the purpose of the pull request (up to 72 characters).
 It is often referred to as the “Summary” and it should consist of three parts:
 1.	Type - a short prefix that represents the kind of change (See [Commit Types] below)
-2.	ID - the task or defect ID number relating to the change (if relevant).
 3.	Subject - represents a concise description of the actual change.
 
 Practically, in terms of Git, it is merely the first line of the commit message.
 
 `Example`
 ```
-✨feature: 2567 - Location Groups admin
+✨feature: Location Groups admin
 ```
 
 The message is separated by ‘: ’.
@@ -90,8 +86,7 @@ The body is an optional element that introduces the motivation behind the change
 
 `Example`
 ```
-✨feature: 2567 – Location Groups admin
-
+✨feature: Location Groups admin
 Created Location Groups administration.
 Please review my array assignment code in file `LocationGroupEdit.vue` line 198. It works but I feel it could be improved.
 ```
@@ -101,37 +96,17 @@ The footer is a mandatory place to link related work items.  I can also, optiona
 
 `Example`
 ```
-✨feature: 2567 - Location Groups admin
+✨feature: Location Groups admin
 Created Location Groups administration.
-
 Please review my array assignment code in file `LocationGroupEdit.vue` line 198. It works but I feel it could be improved.
-Ready: \#2567
 ```
 
 In this example, we add a reference to the relevant task and denote that it is ‘ready’.
-Using the `#` notation in the footer is a very important step when composing your pull request messages.  Doing so will instruct Devops to link your pull request against the task/defect automatically. This then gives us easy access to the pull request history and will help in cases where a feature or defect fix was made, but the test was failed or was reported as missing from a release.
-
-##Set work item state in Pull Request Footer
-When you create a pull request, you can set the state value of the linked work items in the description. When a pull request is merged by an approver, Devops will read the description and update the work items state.
-To achieve this, you must follow the syntax: `{state value}: #ID`
-In the Footer example above, we tell Devops that the work item \#2567 should be moved to the ‘**Ready**’ state.
-`{state value}` is the deciding factor used by Devops to determine what state a task/defect should be moved to upon a pull request being merged. It must match a valid state that we have setup, to work correctly.
-
-##Current state values
-- Resolved:
-- Ready:
-- Closed:
-
-You are not limited to the number of state values you can enter per pull request.
-If a Pull Request contains multiple tasks and/or defect fixes you should include all #IDs and denote which ‘**state**’ they should be moved into. Each `#ID` should be separated with a comma.
 
 `Example`
 ```
-✨feature: 2678 – Session Actions
-
+✨feature: Session Actions
 Added additional actions to the session screens.
-Ready: #2679, #2680, #2681, #2682
-Closed: #2690, #2692
 ```
 
 ##Commit Types

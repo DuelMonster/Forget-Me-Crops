@@ -8,15 +8,33 @@ For the user-facing setup guide and config reference see [README.md](README.md).
 
 ## Architecture Overview
 
-Forget-Me-Crops is structured as a Gradle multi-module project:
+Forget-Me-Crops is structured as a Stonecutter + Modstitch project with a single unified
+`src/` directory. Stonecutter slices the source into per-platform nodes at build time using
+comment-based conditional directives. Modstitch abstracts the toolchain differences between
+Fabric Loom and NeoForge ModDevGradle behind a shared DSL.
 
-| Module    | Role                                                                         |
-|-----------|------------------------------------------------------------------------------|
-| `common`  | All game logic — scanning, harvesting, registry, config, helpers             |
-| `fabric`  | Fabric glue — ticker, event hooks, Mod Menu integration, FIF mixin            |
-| `neoforge`| NeoForge glue — ticker, event hooks, config-screen SPI registration           |
+| Module                   | Role                                                                        |
+|--------------------------|-----------------------------------------------------------------------------|
+| `src/main/java/`         | All game logic and platform glue — conditions select the active platform    |
+| `versions/1.21.11-fabric`| Stonecutter node: `modstitch.platform=loom`                                 |
+| `versions/1.21.11-neoforge`| Stonecutter node: `modstitch.platform=moddevgradle`                       |
+| `src/main/templates/`    | `fabric.mod.json` and `META-INF/neoforge.mods.toml` with `${property}` tokens |
 
-All gameplay decisions live in `common`. The platform modules only wire up tickers and platform-specific config APIs.
+The VCS (uncommitted working state) always reflects the **Fabric** branch: Fabric code is
+uncommented, NeoForge platform branches are wrapped in `/* ... */` Stonecutter-managed block
+comments. The `stonecutter active "1.21.11-fabric"` line in `stonecutter.gradle.kts` records this.
+
+### Stonecutter Condition Syntax
+
+```java
+//? if fabric {
+import net.fabricmc.api.ModInitializer;
+//?} else {
+/*import net.neoforged.fml.common.Mod;
+*///?}
+```
+
+Conditions supported: `fabric`, `neoforge`, `>=1.21.11`, `<1.22`, compound (`fabric && >=1.21.11`).
 
 ### Package Structure
 
@@ -26,15 +44,17 @@ All gameplay decisions live in `common`. The platform modules only wire up ticke
 | `com.forgetmecrops.harvest`          | `HarvestUtils`, `HarvestContext`, `CropRegistry`                                  |
 | `com.forgetmecrops.config`           | `Config`, `ConfigDefaults`                                                        |
 | `com.forgetmecrops.client.config`    | Shared config UI classes: `ConfigScreen`, `ConfigTooltipFactory`                  |
+| `com.forgetmecrops.client`           | `ModMenuEntrypoint` (Fabric), `ConfigScreenFactoryBridge` (NeoForge), `ModEntry`  |
 | `com.forgetmecrops.enums`            | `DurabilityMode`, `RotationMode`, `SeedClutterMode`                               |
 | `com.forgetmecrops.util.chest`       | `ChestUtils` — insert/remove helpers with reserve enforcement                     |
 | `com.forgetmecrops.util.durability`  | `DurabilityLogic` — enchantment-aware hoe damage                                  |
 | `com.forgetmecrops.util.hoe`         | `FrameHoeReplacement` — broken-hoe replacement and frame sync                     |
 | `com.forgetmecrops.util.loot`        | `LootLogic` — Fortune/Silk Touch aware drop calculation                           |
 | `com.forgetmecrops.util.log`         | `LogUtils` — gated debug/trace logging                                            |
-| `com.forgetmecrops.platform`         | `Services`, platform adapter interfaces                                           |
+| `com.forgetmecrops.platform`         | `PlatformHelper` (unified SPI impl, conditions pick platform), `Services`         |
 | `com.forgetmecrops.platform.adapter` | `FIF`, `FastItemFrameAdapterImpl` — FastItemFrames integration                    |
-| `com.forgetmecrops.mixin`            | Fabric-side accessor mixins for chunk enumeration                                 |
+| `com.forgetmecrops.mixin`            | Accessor mixins for chunk enumeration (`MixinMinecraft`, `MixinTitleScreen`)      |
+| `com.forgetmecrops.ticker`           | `FarmTicker` — platform-conditional server-tick event wiring                      |
 
 ---
 
@@ -354,10 +374,10 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 
 ## NeoForge Platform Notes
 
-- Ticker: `ServerTickEvent.Post` drives the per-tick scan.
+- Ticker: `ServerTickEvent.Post` drives the per-tick scan. Wired via `IEventBus.addListener` in `FarmTicker.init(IEventBus)`.
 - Config files: uses the same shared TOML loader/saver as Fabric (`Config.load()` / `Config.save()` writing `forgetmecrops-client.toml` and `forgetmecrops-server.toml`).
-- Config screen: registered via `IConfigScreenFactory` SPI so the Configure button appears in NeoForge's Mods list. Delegates to the same `com.forgetmecrops.client.config.ConfigScreen` used by Fabric.
-- Mixin configs: NeoForge module resources provide `forgetmecrops.mixins.json` and `forgetmecrops.neoforge.mixins.json`, matching the `[[mixins]]` entries in `META-INF/neoforge.mods.toml`.
+- Config screen: registered via `ModContainer.registerExtensionPoint(IConfigScreenFactory.class, ...)` in `ModEntry`, using `ConfigScreenFactoryBridge` as the factory implementation. This is what enables the Configure button in NeoForge's Mods list.
+- Mixin config: both loaders share `forgetmecrops.mixins.json` (registered in `META-INF/neoforge.mods.toml` `[[mixins]]` section).
 
 ---
 
@@ -421,25 +441,30 @@ Current scope for seed filtering (clutter/reserve logic):
 
 ## Key Source Files
 
-| File                                                                     | Purpose                                                    |
-|--------------------------------------------------------------------------|------------------------------------------------------------|
-| `common/.../frame/FrameScanner.java`                                     | Scan orchestration, hoe I/O, rotation apply               |
-| `common/.../frame/FarmScanTask.java`                                     | Incremental tick-based spiral scanner                      |
-| `common/.../frame/SpiralStep.java`                                       | Immutable (pos, direction) spiral record                   |
-| `common/.../frame/FrameRegistry.java`                                    | Anchor registry, chunk lifecycle, rotation batching        |
-| `common/.../frame/FrameDiscovery.java`                                   | Frame discovery for vanilla and FIF frames                 |
-| `common/.../frame/CatchupManager.java`                                   | Gradual discovery queue across ticks                       |
-| `common/.../harvest/HarvestUtils.java`                                   | Harvest execution, drop handling, hoe break events         |
-| `common/.../harvest/HarvestContext.java`                                 | Per-scan mutable state (hoe, chest, counters)              |
-| `common/.../harvest/CropRegistry.java`                                   | Crop → seed mappings, canonical block normalisation        |
-| `common/.../util/loot/LootLogic.java`                                    | Fortune/Silk Touch drop calculation                        |
-| `common/.../util/hoe/FrameHoeReplacement.java`                           | Broken hoe replacement and frame sync                      |
-| `common/.../util/chest/ChestUtils.java`                                  | Chest insert/remove with reserve enforcement               |
-| `common/.../util/durability/DurabilityLogic.java`                        | Enchantment-aware hoe damage                               |
-| `common/.../config/Config.java`                                          | Runtime config state and TOML I/O                          |
-| `common/.../client/config/ConfigScreen.java`                             | Shared YACL config screen builder for both loaders         |
-| `common/.../client/config/ConfigTooltipFactory.java`                     | Shared tooltip content suppliers for config entries        |
-| `common/.../platform/adapter/FIF.java`                                   | FastItemFrames adapter interface                           |
+All paths are relative to `src/main/java/com/forgetmecrops/`.
+
+| File                                   | Purpose                                                    |
+|----------------------------------------|------------------------------------------------------------|
+| `frame/FrameScanner.java`              | Scan orchestration, hoe I/O, rotation apply               |
+| `frame/FarmScanTask.java`              | Incremental tick-based spiral scanner                      |
+| `frame/SpiralStep.java`                | Immutable (pos, direction) spiral record                   |
+| `frame/FrameRegistry.java`             | Anchor registry, chunk lifecycle, rotation batching        |
+| `frame/FrameDiscovery.java`            | Frame discovery for vanilla and FIF frames                 |
+| `frame/CatchupManager.java`            | Gradual discovery queue across ticks                       |
+| `harvest/HarvestUtils.java`            | Harvest execution, drop handling, hoe break events         |
+| `harvest/HarvestContext.java`          | Per-scan mutable state (hoe, chest, counters)              |
+| `harvest/CropRegistry.java`            | Crop → seed mappings, canonical block normalisation        |
+| `util/loot/LootLogic.java`             | Fortune/Silk Touch drop calculation                        |
+| `util/hoe/FrameHoeReplacement.java`    | Broken hoe replacement and frame sync                      |
+| `util/chest/ChestUtils.java`           | Chest insert/remove with reserve enforcement               |
+| `util/durability/DurabilityLogic.java` | Enchantment-aware hoe damage                               |
+| `config/Config.java`                   | Runtime config state and TOML I/O                          |
+| `client/config/ConfigScreen.java`      | Shared YACL config screen builder for both loaders         |
+| `client/config/ConfigTooltipFactory.java` | Shared tooltip content suppliers for config entries     |
+| `client/ModEntry.java`                 | Entry point (Fabric: `ModInitializer`, NeoForge: `@Mod`)   |
+| `ticker/FarmTicker.java`               | Server-tick wiring (Fabric events vs NeoForge bus)         |
+| `platform/PlatformHelper.java`         | SPI implementation (Stonecutter-conditional per platform)  |
+| `platform/adapter/FIF.java`            | FastItemFrames adapter interface                           |
 
 ---
 
@@ -448,35 +473,88 @@ Current scope for seed filtering (clutter/reserve logic):
 ### Prerequisites
 
 - JDK 21
-- Gradle (wrapper included)
+- Gradle (wrapper included — `gradlew` / `gradlew.bat`)
+
+### Build System
+
+Forget-Me-Crops uses [Stonecutter](https://stonecutter.kikugie.dev/) for version/platform slicing
+and [Modstitch](https://github.com/isXander/modstitch) to abstract Fabric Loom vs NeoForge
+ModDevGradle. Publishing uses [mod-publish-plugin](https://github.com/modmuss50/mod-publish-plugin).
+
+Nodes are registered in `settings.gradle.kts`; Stonecutter reads the active VCS version from
+`stonecutter.gradle.kts`. Each node's `versions/<name>/gradle.properties` sets `modstitch.platform`.
 
 ### Commands
 
 ```bash
-# Full build (both loaders, runs tests)
-.\gradlew.bat clean build
+# Full build — all Stonecutter nodes (Fabric + NeoForge)
+.\gradlew.bat chiseledBuild
 
-# Compile only
-.\gradlew.bat :common:compileJava :fabric:compileJava :neoforge:compileJava
+# Build a single node
+.\gradlew.bat :1.21.11-fabric:build
+.\gradlew.bat :1.21.11-neoforge:build
 
-# Run tests
-.\gradlew.bat :common:test
+# Run dev client (Fabric)
+.\gradlew.bat :1.21.11-fabric:runClient
 
-# Run Fabric dev client
-.\gradlew.bat :fabric:runClient
+# Run dev client (NeoForge)
+.\gradlew.bat :1.21.11-neoforge:runClient
 
-# Run NeoForge dev client
-.\gradlew.bat :neoforge:runClient
+# Run tests (common logic)
+.\gradlew.bat :1.21.11-fabric:test
+
+# Copy production JARs into releases/ (both nodes)
+.\gradlew.bat chiseledPackageRelease
+
+# Publish to Modrinth + CurseForge (requires MODRINTH_TOKEN / CURSEFORGE_TOKEN env vars)
+.\gradlew.bat chiseledPublishMods
+
+# Switch VCS active branch (e.g. to inspect NeoForge code uncommented)
+.\gradlew.bat stonecutter:Set active version to 1.21.11-neoforge
 ```
+
+### Dev Run Configuration
+
+Both loaders are configured in `build.gradle.kts` with matching run directory layouts:
+
+| Loader    | Client run dir             | Server run dir             |
+|-----------|----------------------------|----------------------------|
+| Fabric    | `versions/1.21.11-fabric/runs/client`   | `versions/1.21.11-fabric/runs/server`   |
+| NeoForge  | `versions/1.21.11-neoforge/runs/client` | `versions/1.21.11-neoforge/runs/server` |
+
+Both client runs pass `--username DuelMonster` as program arguments.
+Fabric uses `programArgs("--username", "DuelMonster")`.
+NeoForge uses MDG `programArgument(...)` entries for:
+`--username DuelMonster --width 1960 --height 1080`.
+This guarantees NeoForge dev runs start at `1960x1080` without relying on `options.txt`
+`overrideWidth` / `overrideHeight` behavior.
 
 ### Output
 
-Release jars are produced in the `releases/` directory:
+Running `chiseledPackageRelease` (or the CI release workflow) copies the production JARs
+into the project-root `releases/` directory:
 
 ```
-releases/Forget-Me-Crops-1.21.11-<version>-Fabric.jar
-releases/Forget-Me-Crops-1.21.11-<version>-NeoForge.jar
+releases/Forget-Me-Crops_<version>+1.21.11-fabric.jar
+releases/Forget-Me-Crops_<version>+1.21.11-neoforge.jar
 ```
+
+The intermediate per-node build outputs are in `versions/<name>/build/libs/` but those are
+not the release artifacts — always use the `releases/` copies.
+
+### Publishing Setup
+
+Maven and Modrinth/CurseForge publishing is configured in `build.gradle.kts` and activated
+automatically when the corresponding environment variables or `gradle.properties` tokens are set:
+
+| Variable            | Destination                    |
+|---------------------|-------------------------------|
+| `MODRINTH_TOKEN`    | Modrinth releases              |
+| `CURSEFORGE_TOKEN`  | CurseForge releases            |
+| `GITHUB_TOKEN`      | GitHub Packages Maven          |
+| `GITHUB_ACTOR`      | GitHub Packages actor username |
+
+Local Maven publishes to `~/.m2/repository` unconditionally.
 
 ---
 
@@ -489,5 +567,5 @@ MIT. See [LICENSE](LICENSE).
 ## Credits
 
 Developed by **Jared**.
-Built with [MultiLoader Template](https://github.com/jaredlll08/MultiLoader-Template) targeting Fabric and NeoForge.
+Built with [Stonecutter](https://stonecutter.kikugie.dev/) + [Modstitch](https://github.com/isXander/modstitch) targeting Fabric and NeoForge.
 Optional integration with [FastItemFrames](https://modrinth.com/mod/fastitemframes) by Fuzss.
