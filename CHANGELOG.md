@@ -4,7 +4,9 @@
 
 - Fix VS Code debug-task Gradle paths: correct `:versions:1.21.11-<loader>:run*` to `:1.21.11-<loader>:run*`.
 - Align NeoForge dev run directories to `runs/client` and `runs/server` (matching Fabric Loom's layout) by adding explicit `gameDirectory` configuration on the MDG `client` and `server` run configs.
-- Lock dev-client player profile to `DuelMonster` for both Fabric (`programArgs`) and NeoForge (`programArguments.addAll`).
+- Lock dev-client player profile to `DuelMonster` for both Fabric (`programArgs`) and NeoForge (MDG `programArgument` entries).
+- Fix NeoForge in-game Configure button registration by switching to explicit `ModContainer.registerExtensionPoint(IConfigScreenFactory.class, ...)` wiring.
+- Force NeoForge dev-client launch size to `1960x1080` using run arguments (`--width 1960 --height 1080`) instead of relying on `options.txt` overrides.
 
 ## 0.15.0
 

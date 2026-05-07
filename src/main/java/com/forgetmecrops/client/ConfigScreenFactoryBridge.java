@@ -3,7 +3,7 @@ package com.forgetmecrops.client;
 // 🔧 ConfigScreenFactoryBridge: earns Forget-Me-Crops a "Config" button on NeoForge.
 // This entire file is gated by a Stonecutter condition — it only compiles on NeoForge.
 // Fabric uses ModMenuEntrypoint instead.
-// Registered via META-INF/services/net.neoforged.neoforge.client.gui.IConfigScreenFactory.
+// Registered from ModEntry via ModContainer#registerExtensionPoint(IConfigScreenFactory, ...).
 
 //? if neoforge {
 /*import com.forgetmecrops.client.config.ConfigScreen;

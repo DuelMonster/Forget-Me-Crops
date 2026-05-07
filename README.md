@@ -122,6 +122,7 @@ On **Fabric**, if Mod Menu is installed, these can also be edited in-game via th
 On **NeoForge**, the Mods list Configure button opens the same shared YACL screen.
 
 Both loaders delegate to the same `ConfigScreen` builder in `common`, powered by YACL options and controllers.
+NeoForge exposes the Configure button through its extension-point registration path, so current builds show the button enabled in the Mods list.
 Numeric server settings now use integer sliders with explicit ranges from `ConfigDefaults`.
 Enum-mode tooltips in that screen use localized player-friendly labels from the language file (for example `Single Step` instead of `SINGLE_STEP`).
 Tooltips now also include each option's default value so players can compare changes against baseline behavior directly in the screen.

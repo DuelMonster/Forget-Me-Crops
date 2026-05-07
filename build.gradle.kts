@@ -95,7 +95,12 @@ modstitch {
             runs {
                 named("client") {
                     gameDirectory = project.file("runs/client")
-                    programArguments.addAll("--username", "DuelMonster")
+                    programArgument("--username")
+                    programArgument("DuelMonster")
+                    programArgument("--width")
+                    programArgument("1960")
+                    programArgument("--height")
+                    programArgument("1080")
                 }
                 named("server") {
                     gameDirectory = project.file("runs/server")

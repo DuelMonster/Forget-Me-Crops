@@ -376,7 +376,7 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 
 - Ticker: `ServerTickEvent.Post` drives the per-tick scan. Wired via `IEventBus.addListener` in `FarmTicker.init(IEventBus)`.
 - Config files: uses the same shared TOML loader/saver as Fabric (`Config.load()` / `Config.save()` writing `forgetmecrops-client.toml` and `forgetmecrops-server.toml`).
-- Config screen: registered via `IConfigScreenFactory` SPI (`ConfigScreenFactoryBridge`) so the Configure button appears in NeoForge's Mods list. Delegates to the same `com.forgetmecrops.client.config.ConfigScreen` used by Fabric.
+- Config screen: registered via `ModContainer.registerExtensionPoint(IConfigScreenFactory.class, ...)` in `ModEntry`, using `ConfigScreenFactoryBridge` as the factory implementation. This is what enables the Configure button in NeoForge's Mods list.
 - Mixin config: both loaders share `forgetmecrops.mixins.json` (registered in `META-INF/neoforge.mods.toml` `[[mixins]]` section).
 
 ---
@@ -522,9 +522,12 @@ Both loaders are configured in `build.gradle.kts` with matching run directory la
 | Fabric    | `versions/1.21.11-fabric/runs/client`   | `versions/1.21.11-fabric/runs/server`   |
 | NeoForge  | `versions/1.21.11-neoforge/runs/client` | `versions/1.21.11-neoforge/runs/server` |
 
-Both client runs pass `--username DuelMonster` as program arguments. Fabric uses
-`programArgs("--username", "DuelMonster")`; NeoForge uses `programArguments.addAll("--username",
-"DuelMonster")` on the MDG run config.
+Both client runs pass `--username DuelMonster` as program arguments.
+Fabric uses `programArgs("--username", "DuelMonster")`.
+NeoForge uses MDG `programArgument(...)` entries for:
+`--username DuelMonster --width 1960 --height 1080`.
+This guarantees NeoForge dev runs start at `1960x1080` without relying on `options.txt`
+`overrideWidth` / `overrideHeight` behavior.
 
 ### Output
 
