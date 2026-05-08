@@ -3,45 +3,66 @@ package com.forgetmecrops;
 import com.forgetmecrops.config.Config;
 import com.forgetmecrops.util.log.LogUtils;
 
-// 🚀 Forget-Me-Crops: the mod's heart. It waves a tiny flag when the mod starts and quietly hopes players enjoy the harvest.
-// Why it matters: startup rituals are emotional anchoring for mods.
-
 /**
- * 🌾 Forget-Me-Crops: The beating heart of your automated farming dreams! 🌾
+ * 🌾 Forget-Me-Crops: The mod's steadfast heart and the keeper of farming destiny!
  * <p>
- * This class is the main entry point for all the juicy, loader-agnostic logic that makes crops tremble and farmers cheer.
- * Loader-specific entrypoints call into here to kick off the magic. If you ever wondered where the fun begins, it's right here!
+ * This is where all the real magic lives — the loader-agnostic core logic that makes crops
+ * tremble with fear and farmers cheer with joy. Fabric and NeoForge loader implementations
+ * call into here with their entrypoints, passing the baton to this unified logic hub.
  * </p>
  * <p>
- * Why does this matter? Because without it, your crops would be lonely, unharvested, and probably a little sad.
+ * Think of it as the neutral ground where all farming happens, regardless of which loader
+ * is playing traffic cop outside. This is the happy place where crops get harvested,
+ * configs get respected, and everyone leaves with a smile.
+ * </p>
+ * <p>
+ * Without this class? Your crops would be lonely, unharvested, and frankly pretty sad.
+ * We're not here to let that happen.
  * </p>
  */
 public class ForgetMeCrops {
-    /** Utility class: do not instantiate. */
+    // Utility class — we do not instantiate. We are philosophy, not object.
     private ForgetMeCrops() {}
+
     /**
-     * The all-knowing, all-powerful config! Loader-specific code should fill this with love (and settings) before calling init().
+     * The all-knowing, all-powerful configuration object!
+     * <p>
+     * Loader-specific code is responsible for populating this BEFORE calling init().
+     * We treat it as gospel truth after initialization. Respect it, fear it, love it.
+     * </p>
      */
     public static final Config CONFIG = new Config();
 
     /**
-     * Initializes the core logic. Loader-specific entrypoints, this is your cue!
+     * Awakens the sleeping farming giant! This is the mod's true initialization ritual.
      * <p>
-     * Call this after you've set up the config, loaded your snacks, and are ready for some serious farming action.
+     * Loader-specific entrypoints, this is your moment! Call this after you've:
+     * 1. Set up the config (CONFIG will be populated and ready)
+     * 2. Lit your figurative candles
+     * 3. Taken a deep breath
+     * 4. Committed to automated farming
+     *
+     * If you call this without initializing CONFIG first, the crops will know. And they will judge.
      * </p>
      */
     public static void init() {
-        // Called by loader-specific entrypoints
-        // Loader should populate CONFIG before calling this
-        // (If you forget, the crops will know. And they will judge you.)
+        // This method is called by loader-specific entrypoints (ModEntry for Fabric, different path for NeoForge)
+        // The assumption: CONFIG has already been populated by the time we get here
+        // The result: everything below this comment works with that assumption as gospel
 
-        // --- Guaranteed debug log for mod initialization ---
+        // --- Mandatory startup announcement ---
+        // Let the world know we're alive. This line is our flag in the sand, our "we're here!"
         LogUtils.logInfo("Mod initialization started! If you see this, the core logic is alive and kicking.");
-        // Defer FastItemFrames adapter probe to first use to avoid heavy classloading during init
+
+        // FastItemFrames adapter detection is deferred to first use, not here.
+        // Why? Because classloading during startup is expensive. We'll probe when we actually need it.
+
+        // Debug logging configuration check — lets players know if they're in verbose mode
         if (CONFIG != null && Config.isDebugLogging()) {
-            LogUtils.logDebug("Debug logging is ENABLED! Prepare for a flood of farming facts.");
+            LogUtils.logDebug("Debug logging is ENABLED! Buckle up for a flood of farming facts and farm-related trivia.");
         } else {
-            LogUtils.logInfo("Debug logging is OFF. For more details, set debugLogging=true in your config.");
+            // Politely remind players how to enable debug mode if they ever need it
+            LogUtils.logInfo("Debug logging is OFF. Want to see all the juicy details? Set debugLogging=true in your config file.");
         }
     }
 }
