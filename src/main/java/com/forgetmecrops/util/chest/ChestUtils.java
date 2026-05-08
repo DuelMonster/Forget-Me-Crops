@@ -1,6 +1,7 @@
 package com.forgetmecrops.util.chest;
 
 import com.forgetmecrops.util.log.LogUtils;
+import com.forgetmecrops.util.ExceptionHandler;
 import com.forgetmecrops.config.Config;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -77,7 +78,7 @@ public class ChestUtils {
                     ItemStack slot = chest.getItem(i);
                     if (slot.isEmpty()) {
                         chest.setItem(i, remaining.copy());
-                        try { LogUtils.logDebug("[CHEST] insertAll: placed {} x{} into empty slot {}", remaining.getItem(), remaining.getCount(), i); } catch (Throwable ignored) {}
+                        ExceptionHandler.silentTry(() -> LogUtils.logDebug("[CHEST] insertAll: placed {} x{} into empty slot {}", remaining.getItem(), remaining.getCount(), i));
                         remaining.setCount(0);
                         changed = true;
                         break;
@@ -86,7 +87,7 @@ public class ChestUtils {
             }
         }
         if (changed && chest instanceof BlockEntity be) {
-            try { be.setChanged(); } catch (Throwable ignored) {}
+            ExceptionHandler.silentTry(() -> be.setChanged());
         }
     }
 

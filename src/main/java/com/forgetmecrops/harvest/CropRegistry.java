@@ -11,6 +11,7 @@ import net.minecraft.core.BlockPos;
 import java.util.IdentityHashMap;
 import java.util.Locale;
 import java.util.Map;
+import com.forgetmecrops.util.ExceptionHandler;
 
 /**
  * CropRegistry: The agricultural authority on which crops want which seeds!
@@ -68,8 +69,11 @@ public final class CropRegistry {
     public static ItemStack replantCost(Block block) {
         Item seed = REPLANT_SEED.get(block);
         if (seed != null) return new ItemStack(seed);
-        try { if (isTorchflowerBlock(block)) return new ItemStack(block.asItem()); } catch (Throwable ignored) {}
-        return ItemStack.EMPTY;
+        ItemStack torchflower = ExceptionHandler.silentTry(
+            () -> isTorchflowerBlock(block) ? new ItemStack(block.asItem()) : null,
+            null
+        );
+        return torchflower != null ? torchflower : ItemStack.EMPTY;
     }
 
     /**
@@ -83,8 +87,10 @@ public final class CropRegistry {
     public static Item clutterSeed(Block block) {
         Item seed = CLUTTER_SEED.get(block);
         if (seed != null) return seed;
-        try { if (isTorchflowerBlock(block)) return block.asItem(); } catch (Throwable ignored) {}
-        return null;
+        return ExceptionHandler.silentTry(
+            () -> isTorchflowerBlock(block) ? block.asItem() : null,
+            null
+        );
     }
 
     /**
@@ -170,14 +176,14 @@ public final class CropRegistry {
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
                 if (dx == 0 && dz == 0) continue;
-                try {
+                ExceptionHandler.silentTry(() -> {
                     Block neighbor = level.getBlockState(pos.offset(dx, 0, dz)).getBlock();
                     int idx = indexForFarmlandCrop(neighbor);
                     if (idx >= 0) {
                         int weight = (Math.abs(dx) + Math.abs(dz) == 1) ? 3 : 1;
                         scores[idx] += weight;
                     }
-                } catch (Throwable ignored) {}
+                });
             }
         }
         int bestIdx = -1;
@@ -209,7 +215,9 @@ public final class CropRegistry {
     private static int indexForFarmlandCrop(Block block) {
         Integer idx = FARMLAND_CROP_INDEX.get(block);
         if (idx != null) return idx;
-        try { if (isTorchflowerBlock(block)) return 4; } catch (Throwable ignored) {}
-        return -1;
+        return ExceptionHandler.silentTry(
+            () -> isTorchflowerBlock(block) ? 4 : -1,
+            -1
+        );
     }
 }

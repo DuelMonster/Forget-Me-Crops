@@ -29,6 +29,8 @@ import com.forgetmecrops.util.loot.LootLogic;
 import com.forgetmecrops.util.chest.ChestUtils;
 import com.forgetmecrops.util.durability.DurabilityLogic;
 import com.forgetmecrops.util.log.LogUtils;
+import com.forgetmecrops.util.ExceptionHandler;
+import com.forgetmecrops.util.ValidationUtils;
 import com.forgetmecrops.config.Config;
 import com.forgetmecrops.enums.SeedClutterMode;
 
@@ -63,7 +65,7 @@ public class HarvestUtils {
      * @param getReplantState function that returns the replanted block state, or null if non-replantable
      */
     public static void harvestCrop(HarvestContext ctx, BlockPos pos, BlockState state, Function<BlockState, Boolean> isMature, Function<BlockState, BlockState> getReplantState) {
-        if (ctx.level == null || ctx.getHoe().isEmpty() || ctx.chest == null) return;
+        if (ValidationUtils.isAnyNull(ctx.level, ctx.chest) || ctx.getHoe().isEmpty()) return;
 
         Block block = state.getBlock();
         if (!isMature.apply(state)) return;
@@ -89,7 +91,7 @@ public class HarvestUtils {
                 if (s != null && !s.isEmpty() && s.getItem() == replantSeedItem) {
                     if (s.getCount() > 1) { s.setCount(s.getCount() - 1); } else { it.remove(); }
                     tookFromDropsForReplant = true;
-                    try { LogUtils.logDebug("[HARVEST] Took seed from drops for replant: {} at {}", replantSeedItem, pos); } catch (Throwable ignored) {}
+                    ExceptionHandler.silentTry(() -> LogUtils.logDebug("[HARVEST] Took seed from drops for replant: {} at {}", replantSeedItem, pos));
                     break;
                 }
             }

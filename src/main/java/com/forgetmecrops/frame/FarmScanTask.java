@@ -8,6 +8,7 @@ import com.forgetmecrops.harvest.HarvestUtils;
 import com.forgetmecrops.util.chest.ChestUtils;
 import com.forgetmecrops.util.hoe.FrameHoeReplacement;
 import com.forgetmecrops.util.log.LogUtils;
+import com.forgetmecrops.util.ExceptionHandler;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -105,7 +106,7 @@ class FarmScanTask {
             ItemStack frameHoe = FrameScanner.readHoeFromFrame(level, center);
             if (frameHoe != null && !frameHoe.isEmpty() && frameHoe.getItem() instanceof HoeItem) {
                 this.ctx.setHoe(frameHoe);
-                try { FrameRegistry.updateHoe(dimId, center, this.ctx.getHoe().copy()); } catch (Throwable ignored) {}
+                ExceptionHandler.silentTry(() -> FrameRegistry.updateHoe(dimId, center, this.ctx.getHoe().copy()));
             } else if (this.ctx.getHoe().isEmpty()) {
                 try {
                     FrameHoeReplacement.tryReplaceBrokenHoe(this.ctx);

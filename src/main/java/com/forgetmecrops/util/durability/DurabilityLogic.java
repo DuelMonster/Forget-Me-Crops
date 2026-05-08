@@ -3,6 +3,7 @@ package com.forgetmecrops.util.durability;
 import com.forgetmecrops.enums.DurabilityMode;
 import com.forgetmecrops.config.Config;
 import com.forgetmecrops.util.log.LogUtils;
+import com.forgetmecrops.util.ExceptionHandler;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import java.util.Map;
@@ -104,18 +105,18 @@ public class DurabilityLogic {
                 }
             }
 
-            try { LogUtils.logDebug("[DURABILITY] applyDamage pre: item={} currentDamage={} max={} unbreaking={} mending={} willApply={}", hoe.getItem(), current, max, unbreakingLevel, mendingLevel, applyDamage); } catch (Throwable ignored) {}
+            ExceptionHandler.silentTry(() -> LogUtils.logDebug("[DURABILITY] applyDamage pre: item={} currentDamage={} max={} unbreaking={} mending={} willApply={}", hoe.getItem(), current, max, unbreakingLevel, mendingLevel, applyDamage));
 
             if (!applyDamage) return;
 
             int next = current + 1;
             if (next >= max) {
                 // Hoe has reached its final tick — destroy the stack to trigger replacement flow
-                try { LogUtils.logDebug("[DURABILITY] applyDamage: next >= max -> destroying stack"); } catch (Throwable ignored) {}
+                ExceptionHandler.silentTry(() -> LogUtils.logDebug("[DURABILITY] applyDamage: next >= max -> destroying stack"));
                 hoe.setCount(0);
             } else {
                 hoe.setDamageValue(next);
-                try { LogUtils.logDebug("[DURABILITY] applyDamage post: newDamage={} (was={})", next, current); } catch (Throwable ignored) {}
+                ExceptionHandler.silentTry(() -> LogUtils.logDebug("[DURABILITY] applyDamage post: newDamage={} (was={})", next, current));
             }
         } catch (Throwable t) {
             LogUtils.logWarn("[DURABILITY] Failed to apply damage to hoe", t);

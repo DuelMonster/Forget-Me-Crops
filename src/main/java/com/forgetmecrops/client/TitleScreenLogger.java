@@ -1,6 +1,7 @@
 package com.forgetmecrops.client;
 
 import com.forgetmecrops.util.log.LogUtils;
+import com.forgetmecrops.util.ExceptionHandler;
 
 /**
  * TitleScreenLogger: The mod's version of announcing itself at a party!
@@ -26,19 +27,14 @@ public final class TitleScreenLogger {
      * </p>
      */
     public static void logPlatform() {
-        try {
+        ExceptionHandler.silentTry(() -> {
             // Start with a humble "I dunno" placeholder in case the platform helper is feeling shy
-            String pf = "<unknown>";
-            try {
-                // Ask the Services layer: "hey, what loader are we running under right now?"
-                pf = com.forgetmecrops.platform.Services.PLATFORM.getPlatformName();
-            } catch (Throwable ignored) {
-                // Platform helper threw a tantrum. We'll shrug and carry on with our life.
-            }
+            String pf = ExceptionHandler.silentTry(
+                () -> com.forgetmecrops.platform.Services.PLATFORM.getPlatformName(),
+                "<unknown>"
+            );
             // Emit at DEBUG level — quiet enough not to alarm production logs
             LogUtils.logDebug("Title screen init: platform={}", pf);
-        } catch (Throwable ignored) {
-            // Something went cosmically wrong. We refuse to let title screen chaos ruin anyone's day.
-        }
+        });
     }
 }
