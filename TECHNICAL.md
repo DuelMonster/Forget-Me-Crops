@@ -558,6 +558,24 @@ Local Maven publishes to `~/.m2/repository` unconditionally.
 
 ---
 
+## Documentation Enforcement
+
+To keep docs aligned with `.brainbox/rules/documentation.rules.md`, this workspace now includes a lightweight docs compliance check script:
+
+- `scripts/validate-docs.ps1` (PowerShell)
+- `scripts/validate-docs.sh` (Bash)
+
+The check validates required section headers in `README.md`, verifies the `TECHNICAL.md` link in README, and confirms MIT licensing is stated in both docs.
+
+Local enforcement is wired through git pre-commit hooks:
+
+- `.git/hooks/pre-commit` (Bash)
+- `.git/hooks/pre-commit.ps1` (PowerShell)
+
+If docs drift from required structure, commits are blocked with a clear message explaining what is missing.
+
+---
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

@@ -202,7 +202,7 @@ For implementation internals, package structure, scan algorithm details, rotatio
 
 ## License
 
-CC0. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
 
 ---
 
