@@ -105,7 +105,17 @@ public class DurabilityLogic {
                 }
             }
 
-            ExceptionHandler.silentTry(() -> LogUtils.logDebug("[DURABILITY] applyDamage pre: item={} currentDamage={} max={} unbreaking={} mending={} willApply={}", hoe.getItem(), current, max, unbreakingLevel, mendingLevel, applyDamage));
+            try {
+                LogUtils.logDebug(
+                    "[DURABILITY] applyDamage pre: item={} currentDamage={} max={} unbreaking={} mending={} willApply={}",
+                    hoe.getItem(),
+                    current,
+                    max,
+                    unbreakingLevel,
+                    mendingLevel,
+                    applyDamage
+                );
+            } catch (Throwable ignored) {}
 
             if (!applyDamage) return;
 

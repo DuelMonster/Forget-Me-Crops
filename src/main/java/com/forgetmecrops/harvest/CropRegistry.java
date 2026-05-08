@@ -176,11 +176,13 @@ public final class CropRegistry {
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
                 if (dx == 0 && dz == 0) continue;
+                final int fx = dx;
+                final int fz = dz;
                 ExceptionHandler.silentTry(() -> {
-                    Block neighbor = level.getBlockState(pos.offset(dx, 0, dz)).getBlock();
+                    Block neighbor = level.getBlockState(pos.offset(fx, 0, fz)).getBlock();
                     int idx = indexForFarmlandCrop(neighbor);
                     if (idx >= 0) {
-                        int weight = (Math.abs(dx) + Math.abs(dz) == 1) ? 3 : 1;
+                        int weight = (Math.abs(fx) + Math.abs(fz) == 1) ? 3 : 1;
                         scores[idx] += weight;
                     }
                 });

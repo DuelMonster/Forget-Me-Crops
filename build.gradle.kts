@@ -149,6 +149,16 @@ tasks.withType<JavaCompile> {
     dependsOn("stonecutterGenerate")
 }
 
+// Compatibility alias: allows `:node:compile` to target main-source compilation
+// without Gradle's name-abbreviation ambiguity (`compileJava` vs `compileTestJava`).
+if (tasks.findByName("compile") == null) {
+    tasks.register("compile") {
+        group = "build"
+        description = "Compiles main Java sources (alias of compileJava)."
+        dependsOn("compileJava")
+    }
+}
+
 // ────────────────────────────────────────────────────────────
 //  Version string for the built artifact
 //  e.g.  0.15.0+1.21.11-fabric

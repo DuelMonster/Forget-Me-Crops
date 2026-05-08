@@ -85,122 +85,135 @@ public final class CatchupManager {
      * @param dimId the dimension identifier for queue scoping
      */
     public static void queueLoadedFrames(ServerLevel level, String dimId) {
+        if (level == null || dimId == null) return;
+
         try {
-            if (level == null || dimId == null) return;
-            // Light-weight discovery: add any loaded item frames' positions to the vanilla queue.
-            java.util.List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(-30000000, 0, -30000000, 30000000, 256, 30000000));
+            java.util.List<ItemFrame> frames = level.getEntitiesOfClass(
+                ItemFrame.class,
+                new AABB(-30000000, 0, -30000000, 30000000, 256, 30000000)
+            );
+
             Queue<BlockPos> q = vanillaQueues.computeIfAbsent(dimId, k -> new ConcurrentLinkedQueue<>());
+            Queue<BlockPos> fq = fifQueues.computeIfAbsent(dimId, k -> new ConcurrentLinkedQueue<>());
+
             int vanillaDiscovered = 0;
             if (!ValidationUtils.isNullOrEmpty(frames)) {
                 for (ItemFrame f : frames) {
                     ExceptionHandler.silentTry(() -> FrameDiscovery.registerVanillaFrameIfValid(dimId, level, f));
-                    ExceptionHandler.silentTry(() -> q.add(f.blockPosition()));
+                    q.add(f.blockPosition());
                     vanillaDiscovered++;
                 }
             }
 
-            // FIF: iterate loaded chunks and register FastItemFrames block-entities immediately
             int fifDiscovered = 0;
             try {
                 List<LevelChunk> loadedChunks = FastItemFrameAdapterImpl.getLoadedChunks(level);
-                Queue<BlockPos> fq = fifQueues.computeIfAbsent(dimId, k -> new ConcurrentLinkedQueue<>());
                 if (!ValidationUtils.isNullOrEmpty(loadedChunks)) {
                     for (LevelChunk chunk : loadedChunks) {
-                        ExceptionHandler.silentTry(() -> {
-                            for (BlockEntity be : chunk.getBlockEntities().values()) {
-                                if (!FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
-                                BlockPos pos = be.getBlockPos();
-                                ExceptionHandler.silentTry(() -> FrameDiscovery.registerFIFIfValid(dimId, level, be, pos));
-                                ExceptionHandler.silentTry(() -> fq.add(pos));
-                                fifDiscovered++;
-                            }
-                        });
-                    }
-                }
-                // Fallback: if reflective loaded-chunk scan returned nothing, do a
-                // small radius player-area scan for FIF block-entities. This is
-                // best-effort and intentionally conservative to avoid heavy work.
-                if (fifDiscovered == 0) {
-                    try {
-                        int fallbackRadiusBlocks = 32; // ~2 chunks
-                        int step = 2; // step to reduce checks
-                        java.util.List<? extends Player> players = level.players();
-                        if (!ValidationUtils.isNullOrEmpty(players)) {
-                            ExceptionHandler.silentTry(() -> LogUtils.logTrace("[CATCHUP] FIF fallback: scanning around {} players with radius {}", players.size(), fallbackRadiusBlocks));
-                            for (Player pl : players) {
-                                ExceptionHandler.silentTry(() -> {
-                                    BlockPos center = pl.blockPosition();
-                                    int minX = center.getX() - fallbackRadiusBlocks;
-                                    int maxX = center.getX() + fallbackRadiusBlocks;
-                                    int minZ = center.getZ() - fallbackRadiusBlocks;
-                                    int maxZ = center.getZ() + fallbackRadiusBlocks;
-                                    int minY = Math.max(0, center.getY() - 2);
-                                    int maxY = Math.min(255, center.getY() + 2);
-                                    for (int x = minX; x <= maxX; x += step) {
-                                        for (int z = minZ; z <= maxZ; z += step) {
-                                            for (int y = minY; y <= maxY; y++) {
-                                                BlockPos pos = new BlockPos(x, y, z);
-                                                BlockEntity be = level.getBlockEntity(pos);
-                                                if (be == null) continue;
-                                                if (!FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
-                                                ExceptionHandler.silentTry(() -> FrameDiscovery.registerFIFIfValid(dimId, level, be, pos));
-                                                ExceptionHandler.silentTry(() -> fq.add(pos));
-                                                fifDiscovered++;
-                                            }
-                                        }
-                                    }
-                                });
-                            }
+                        for (BlockEntity be : chunk.getBlockEntities().values()) {
+                            if (!FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
+                            BlockPos pos = be.getBlockPos();
+                            ExceptionHandler.silentTry(() -> FrameDiscovery.registerFIFIfValid(dimId, level, be, pos));
+                            fq.add(pos);
+                            fifDiscovered++;
                         }
-                        if (fifDiscovered > 0) {
-                            ExceptionHandler.silentTry(() -> LogUtils.logDebug("[CATCHUP] FIF fallback found {} block-entities for {}", fifDiscovered, dimId));
-                        } else {
-                            // If the conservative fallback found nothing, perform a
-                            // single, slightly more thorough pass (step=1, larger
-                            // radius) to improve rediscovery reliability after
-                            // world reloads where block-entities may be restored
-                            // slightly later. This is still best-effort but helps
-                            // catch cases where a coarse scan misses an exact pos.
-                            ExceptionHandler.silentTry(() -> {
-                                int thoroughRadius = 48; // broader radius
-                                int thoroughStep = 1; // check every block
-                                Player first = ValidationUtils.isNullOrEmpty(players) ? null : players.get(0);
-                                if (first != null) {
-                                    ExceptionHandler.silentTry(() -> LogUtils.logTrace("[CATCHUP] FIF thorough fallback: scanning around player {} with radius {}", first.getName().getString(), thoroughRadius));
-                                    BlockPos center = first.blockPosition();
-                                    int minX = center.getX() - thoroughRadius;
-                                    int maxX = center.getX() + thoroughRadius;
-                                    int minZ = center.getZ() - thoroughRadius;
-                                    int maxZ = center.getZ() + thoroughRadius;
-                                    int minY = Math.max(0, center.getY() - 3);
-                                    int maxY = Math.min(255, center.getY() + 3);
-                                    for (int x = minX; x <= maxX; x += thoroughStep) {
-                                        for (int z = minZ; z <= maxZ; z += thoroughStep) {
-                                            for (int y = minY; y <= maxY; y++) {
-                                                BlockPos pos = new BlockPos(x, y, z);
-                                                BlockEntity be = level.getBlockEntity(pos);
-                                                if (be == null) continue;
-                                                if (!FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
-                                                ExceptionHandler.silentTry(() -> FrameDiscovery.registerFIFIfValid(dimId, level, be, pos));
-                                                ExceptionHandler.silentTry(() -> fq.add(pos));
-                                                fifDiscovered++;
-                                            }
-                                        }
-                                    }
-                                    if (fifDiscovered > 0) ExceptionHandler.silentTry(() -> LogUtils.logDebug("[CATCHUP] FIF thorough fallback found {} block-entities for {}", fifDiscovered, dimId));
-                                }
-                            });
-                            }
-                        }
-                    } catch (Throwable t) {
-                        try { LogUtils.logTrace("[CATCHUP] FIF fallback scan failed: {}", t.getMessage()); } catch (Throwable ignored) {}
                     }
                 }
             } catch (Throwable t) {
-                try { LogUtils.logTrace("[CATCHUP] FIF loaded-chunk scan failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+                ExceptionHandler.silentTry(() -> LogUtils.logTrace("[CATCHUP] FIF loaded-chunk scan failed: {}", t.getMessage()));
             }
 
-            try { LogUtils.logTrace("[CATCHUP] queueLoadedFrames added {} vanilla frames and {} FIF block-entities for {} (vanillaQ={} fifQ={})", vanillaDiscovered, fifDiscovered, dimId, q.size(), fifQueues.computeIfAbsent(dimId, k -> new ConcurrentLinkedQueue<>()).size()); } catch (Throwable ignored) {}
+            // Fallback: if reflective loaded-chunk scan returned nothing, do a
+            // player-area scan for FIF block-entities to recover anchors after reload.
+            if (fifDiscovered == 0) {
+                try {
+                    int fallbackRadiusBlocks = 32;
+                    int step = 2;
+                    java.util.List<? extends Player> players = level.players();
+
+                    if (!ValidationUtils.isNullOrEmpty(players)) {
+                        ExceptionHandler.silentTry(() -> LogUtils.logTrace("[CATCHUP] FIF fallback: scanning around {} players with radius {}", players.size(), fallbackRadiusBlocks));
+
+                        for (Player pl : players) {
+                            BlockPos center = pl.blockPosition();
+                            int minX = center.getX() - fallbackRadiusBlocks;
+                            int maxX = center.getX() + fallbackRadiusBlocks;
+                            int minZ = center.getZ() - fallbackRadiusBlocks;
+                            int maxZ = center.getZ() + fallbackRadiusBlocks;
+                            int minY = Math.max(0, center.getY() - 2);
+                            int maxY = Math.min(255, center.getY() + 2);
+
+                            for (int x = minX; x <= maxX; x += step) {
+                                for (int z = minZ; z <= maxZ; z += step) {
+                                    for (int y = minY; y <= maxY; y++) {
+                                        BlockPos pos = new BlockPos(x, y, z);
+                                        BlockEntity be = level.getBlockEntity(pos);
+                                        if (be == null) continue;
+                                        if (!FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
+                                        ExceptionHandler.silentTry(() -> FrameDiscovery.registerFIFIfValid(dimId, level, be, pos));
+                                        fq.add(pos);
+                                        fifDiscovered++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (fifDiscovered > 0) {
+                        try {
+                            LogUtils.logDebug("[CATCHUP] FIF fallback found {} block-entities for {}", fifDiscovered, dimId);
+                        } catch (Throwable ignored) {}
+                    } else if (!ValidationUtils.isNullOrEmpty(players)) {
+                        // One deeper pass around the first player if the coarse scan found nothing.
+                        int thoroughRadius = 48;
+                        int thoroughStep = 1;
+                        Player first = players.get(0);
+
+                        ExceptionHandler.silentTry(() -> LogUtils.logTrace("[CATCHUP] FIF thorough fallback: scanning around player {} with radius {}", first.getName().getString(), thoroughRadius));
+
+                        BlockPos center = first.blockPosition();
+                        int minX = center.getX() - thoroughRadius;
+                        int maxX = center.getX() + thoroughRadius;
+                        int minZ = center.getZ() - thoroughRadius;
+                        int maxZ = center.getZ() + thoroughRadius;
+                        int minY = Math.max(0, center.getY() - 3);
+                        int maxY = Math.min(255, center.getY() + 3);
+
+                        for (int x = minX; x <= maxX; x += thoroughStep) {
+                            for (int z = minZ; z <= maxZ; z += thoroughStep) {
+                                for (int y = minY; y <= maxY; y++) {
+                                    BlockPos pos = new BlockPos(x, y, z);
+                                    BlockEntity be = level.getBlockEntity(pos);
+                                    if (be == null) continue;
+                                    if (!FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
+                                    ExceptionHandler.silentTry(() -> FrameDiscovery.registerFIFIfValid(dimId, level, be, pos));
+                                    fq.add(pos);
+                                    fifDiscovered++;
+                                }
+                            }
+                        }
+
+                        if (fifDiscovered > 0) {
+                            try {
+                                LogUtils.logDebug("[CATCHUP] FIF thorough fallback found {} block-entities for {}", fifDiscovered, dimId);
+                            } catch (Throwable ignored) {}
+                        }
+                    }
+                } catch (Throwable t) {
+                    ExceptionHandler.silentTry(() -> LogUtils.logTrace("[CATCHUP] FIF fallback scan failed: {}", t.getMessage()));
+                }
+            }
+
+            try {
+                LogUtils.logTrace(
+                    "[CATCHUP] queueLoadedFrames added {} vanilla frames and {} FIF block-entities for {} (vanillaQ={} fifQ={})",
+                    vanillaDiscovered,
+                    fifDiscovered,
+                    dimId,
+                    q.size(),
+                    fq.size()
+                );
+            } catch (Throwable ignored) {}
         } catch (Throwable t) {
             LogUtils.logTrace("[CATCHUP] queueLoadedFrames failed", t);
         }
@@ -222,24 +235,31 @@ public final class CatchupManager {
         while (processed < maxToProcess) {
             BlockPos p = vq.poll();
             if (p != null) {
-                ExceptionHandler.silentTry(() -> {
+                try {
                     java.util.List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(p.getX(), p.getY(), p.getZ(), p.getX()+1, p.getY()+1, p.getZ()+1));
                     if (!ValidationUtils.isNullOrEmpty(frames)) {
                         for (ItemFrame f : frames) {
                             ExceptionHandler.silentTry(() -> FrameDiscovery.registerVanillaFrameIfValid(dimId, level, f));
                         }
                     }
-                }, () -> LogUtils.logTrace("[CATCHUP] Failed to process vanilla pos", new Exception()));
+                } catch (Throwable t) {
+                    try {
+                        LogUtils.logTrace("[CATCHUP] Failed to process vanilla pos {}: {}", p, t.getMessage());
+                    } catch (Throwable ignored) {}
+                }
                 processed++;
                 continue;
             }
 
             p = fq.poll();
             if (p != null) {
-                ExceptionHandler.silentTry(() -> {
-                    BlockEntity be = level.getBlockEntity(p);
-                    if (be != null) ExceptionHandler.silentTry(() -> FrameDiscovery.registerFIFIfValid(dimId, level, be, p));
-                });
+                try {
+                    final BlockPos fp = p;
+                    BlockEntity be = level.getBlockEntity(fp);
+                    if (be != null) {
+                        ExceptionHandler.silentTry(() -> FrameDiscovery.registerFIFIfValid(dimId, level, be, fp));
+                    }
+                } catch (Throwable ignored) {}
                 processed++;
                 continue;
             }
@@ -247,6 +267,8 @@ public final class CatchupManager {
             // nothing left to process
             break;
         }
-        ExceptionHandler.silentTry(() -> LogUtils.logTrace("[CATCHUP] processBatch({}, {}) processed {} entries", dimId, maxToProcess, processed));
+        try {
+            LogUtils.logTrace("[CATCHUP] processBatch({}, {}) processed {} entries", dimId, maxToProcess, processed);
+        } catch (Throwable ignored) {}
     }
 }

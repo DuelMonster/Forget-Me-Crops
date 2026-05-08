@@ -78,7 +78,7 @@ public class ChestUtils {
                     ItemStack slot = chest.getItem(i);
                     if (slot.isEmpty()) {
                         chest.setItem(i, remaining.copy());
-                        ExceptionHandler.silentTry(() -> LogUtils.logDebug("[CHEST] insertAll: placed {} x{} into empty slot {}", remaining.getItem(), remaining.getCount(), i));
+                        try { LogUtils.logDebug("[CHEST] insertAll: placed {} x{} into empty slot {}", remaining.getItem(), remaining.getCount(), i); } catch (Throwable ignored) {}
                         remaining.setCount(0);
                         changed = true;
                         break;
