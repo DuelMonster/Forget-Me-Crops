@@ -68,13 +68,13 @@ modstitch {
             // Runs for development (matches the VS Code task setup the project already uses)
             runs.named("client") {
                 setConfigName("Fabric Client")
-                ideConfigGenerated(true)
+                ideConfigGenerated(false)
                 runDir("runs/client")
                 programArgs("--username", "DuelMonster")
             }
             runs.named("server") {
                 setConfigName("Fabric Server")
-                ideConfigGenerated(true)
+                ideConfigGenerated(false)
                 runDir("runs/server")
             }
             // Access-widener (if present). Modstitch also auto-converts AWs → ATs for NeoForge.
@@ -101,9 +101,11 @@ modstitch {
                     programArgument("1960")
                     programArgument("--height")
                     programArgument("1080")
+                    ideConfigGenerated = false
                 }
                 named("server") {
                     gameDirectory = project.file("runs/server")
+                    ideConfigGenerated = false
                 }
             }
             parchment {
@@ -156,6 +158,50 @@ if (tasks.findByName("compile") == null) {
         group = "build"
         description = "Compiles main Java sources (alias of compileJava)."
         dependsOn("compileJava")
+    }
+}
+
+// ────────────────────────────────────────────────────────────
+//  Task: copyRelatedMods (copy dependency mods to run directories)
+//  This copies jars from related_mods/{loader}/ into runs/client/mods
+//  and runs/server/mods so that the development environment has the
+//  required mod dependencies available.
+// ────────────────────────────────────────────────────────────
+tasks.register("copyRelatedMods") {
+    group = "run"
+    description = "Copy related_mods jars to run directory mods folders."
+    
+    doLast {
+        // Use the actual root project's directory structure.
+        val actualRoot = rootProject.projectDir
+        val nodeVersionDir = project.projectDir // e.g., versions/1.21.11-fabric
+        
+        // Extract the loader name (fabric or neoforge) from the project name
+        val projectLoader = project.name.substringAfterLast("-") // e.g., "1.21.11-fabric" → "fabric"
+        val loaderModsDir = File(actualRoot, "related_mods/$projectLoader")
+        
+        if (loaderModsDir.exists() && loaderModsDir.isDirectory) {
+            val clientModsDir = File(nodeVersionDir, "runs/client/mods")
+            val serverModsDir = File(nodeVersionDir, "runs/server/mods")
+            
+            // Ensure directories exist
+            clientModsDir.mkdirs()
+            serverModsDir.mkdirs()
+            
+            // Copy all jars from the loader-specific related_mods directory to both run directories
+            val jarFiles = loaderModsDir.listFiles { file: File -> file.isFile && file.extension == "jar" }
+            jarFiles?.forEach { jar ->
+                jar.copyTo(File(clientModsDir, jar.name), overwrite = true)
+                jar.copyTo(File(serverModsDir, jar.name), overwrite = true)
+            }
+        }
+    }
+}
+
+// Configure dependencies after all tasks are created (delayed configuration)
+afterEvaluate {
+    tasks.matching { it.name.matches(Regex("run.*")) }.configureEach {
+        dependsOn("copyRelatedMods")
     }
 }
 
@@ -330,4 +376,8 @@ tasks.register<Copy>("packageRelease") {
     dependsOn(prodJarTask)
     from(tasks.named<AbstractArchiveTask>(prodJarTask).map { it.archiveFile })
     into(rootProject.layout.projectDirectory.dir("releases"))
+}
+
+tasks.named("build") {
+    finalizedBy("packageRelease")
 }
