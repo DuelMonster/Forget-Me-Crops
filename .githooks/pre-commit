@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+script="$repo_root/scripts/validate-docs.sh"
+
+if [[ ! -f "$script" ]]; then
+  echo "Missing docs validator: scripts/validate-docs.sh"
+  exit 1
+fi
+
+if [[ ! -x "$script" ]]; then
+  chmod +x "$script" 2>/dev/null || true
+fi
+
+"$script"

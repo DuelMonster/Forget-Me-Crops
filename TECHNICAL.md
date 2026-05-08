@@ -567,10 +567,28 @@ To keep docs aligned with `.brainbox/rules/documentation.rules.md`, this workspa
 
 The check validates required section headers in `README.md`, verifies the `TECHNICAL.md` link in README, and confirms MIT licensing is stated in both docs.
 
-Local enforcement is wired through git pre-commit hooks:
+Repository-level enforcement is versioned in `.githooks/` and wired through Git's hooks path setting:
 
-- `.git/hooks/pre-commit` (Bash)
-- `.git/hooks/pre-commit.ps1` (PowerShell)
+- `.githooks/pre-commit` (Bash)
+- `.githooks/pre-commit.ps1` (PowerShell)
+
+Onboarding commands:
+
+```powershell
+./scripts/setup-hooks.ps1
+```
+
+```bash
+./scripts/setup-hooks.sh
+```
+
+Both setup scripts run:
+
+```bash
+git config --local core.hooksPath .githooks
+```
+
+After onboarding, commits in this repository automatically execute docs validation before commit creation.
 
 If docs drift from required structure, commits are blocked with a clear message explaining what is missing.
 

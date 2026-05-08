@@ -198,6 +198,24 @@ Forget-Me-Crops works with [FastItemFrames by Fuzss](https://modrinth.com/mod/fa
 
 For implementation internals, package structure, scan algorithm details, rotation system internals, loot handling, and build instructions, see **[TECHNICAL.md](TECHNICAL.md)**.
 
+### Contributor Hook Setup
+
+If you are contributing changes, enable versioned repository hooks so docs checks run automatically before commits.
+
+PowerShell (Windows):
+
+```powershell
+./scripts/setup-hooks.ps1
+```
+
+Bash (Linux/macOS/Git Bash):
+
+```bash
+./scripts/setup-hooks.sh
+```
+
+This configures `core.hooksPath` to `.githooks`, where the shared `pre-commit` hook runs `scripts/validate-docs.ps1`/`scripts/validate-docs.sh`.
+
 ---
 
 ## License
