@@ -564,6 +564,8 @@ To keep docs aligned with `.brainbox/rules/documentation.rules.md`, this workspa
 
 - `scripts/validate-docs.ps1` (PowerShell)
 - `scripts/validate-docs.sh` (Bash)
+- `scripts/validate-optimization-pass.ps1` (PowerShell)
+- `scripts/validate-optimization-pass.sh` (Bash)
 
 The check validates required section headers in `README.md`, verifies the `TECHNICAL.md` link in README, and confirms MIT licensing is stated in both docs.
 
@@ -588,7 +590,7 @@ Both setup scripts run:
 git config --local core.hooksPath .githooks
 ```
 
-After onboarding, commits in this repository automatically execute docs validation before commit creation.
+After onboarding, commits in this repository automatically execute documentation and optimization validation before commit creation.
 
 If docs drift from required structure, commits are blocked with a clear message explaining what is missing.
 

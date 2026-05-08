@@ -216,6 +216,8 @@ Bash (Linux/macOS/Git Bash):
 
 This configures `core.hooksPath` to `.githooks`, where the shared `pre-commit` hook runs `scripts/validate-docs.ps1`/`scripts/validate-docs.sh`.
 
+The same shared hook also runs `scripts/validate-optimization-pass.ps1`/`scripts/validate-optimization-pass.sh` to apply automated checks aligned with `.brainbox/rules/todo.optimisation.pass.md`.
+
 ---
 
 ## License
