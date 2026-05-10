@@ -20,7 +20,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.chunk.LevelChunk;
-import java.util.List;
 import java.util.Map;
 
 //? if fabric {

@@ -294,7 +294,6 @@ class FarmScanTask {
             boolean ringHarvested = false;
             for (int idx : indices) {
                 BlockPos pos = spiralPositions.get(idx).pos;
-                Direction curDir = spiralPositions.get(idx).dir;
                 try {
                     BlockState state = level.getBlockState(pos);
                     ctx.incrementBlocksScanned();

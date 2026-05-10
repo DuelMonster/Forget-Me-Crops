@@ -10,7 +10,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
@@ -461,7 +460,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                         entryPos,
                         entryLevel != null && entryLevel.isClientSide(),
                         entryLevel != null && entryPos != null && entryLevel.isLoaded(entryPos),
-                        entryLevel != null && entryPos != null && entryLevel.hasChunkAt(entryPos));
+                        entryLevel != null && entryPos != null && entryLevel.getChunk(entryPos) != null);
             } catch (Throwable ignored) {}
             logRotationState(entryLevel, entryPos, "setRotation.pre");
 
@@ -676,7 +675,7 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                     pos,
                     level.isClientSide(),
                     level.isLoaded(pos),
-                    level.hasChunkAt(pos),
+                    level.getChunk(pos) != null,
                     describeRotationState(state));
         } catch (Throwable t) {
             try { LogUtils.logDebug("[FIF-DIAG] {} failed to snapshot state at {}: {}", label, pos, throwableSummary(t)); } catch (Throwable ignored) {}
