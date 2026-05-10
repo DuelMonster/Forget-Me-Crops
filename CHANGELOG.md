@@ -2,6 +2,10 @@
 
 ## 0.18.0
 
+- Fix FOLLOW_ROTATION mode to cycle through all 8 steps per ring without per-tick pending-queue overwrites.
+- Fix FOLLOW_ROTATION to return to starting rotation at end of scan, including no-harvest passes.
+- Improve rotation semantics: all modes now properly anchor to cycle origin and return to start at cycle end.
+- Update FULL_ROTATION legacy scan path to use relative rotation mapping for consistency.
 - Move debug-status announcement out of early mod initialization and into server/world load lifecycle so runtime logs reflect the active loaded config state.
 - Mirror the lifecycle behavior across both Fabric and NeoForge ticker paths.
 

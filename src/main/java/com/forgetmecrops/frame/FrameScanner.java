@@ -170,6 +170,7 @@ public class FrameScanner {
 
         Direction lastDir = null;
         int lastComputedRot = getFrameRotation(level, center) & 7;
+        int initialRot = lastComputedRot;
         for (int i = 0; i < spiralSteps; i++) {
             SpiralStep step = spiral.get(i);
             BlockPos pos = step.pos;
@@ -185,7 +186,10 @@ public class FrameScanner {
                     }
                 }
                 case FULL_ROTATION -> {
-                    int rot = (int) Math.floor((double) i * 8.0 / spiralSteps) & 7;
+                    // Relative mapping: i=0 -> initialRot+1, i=spiralSteps-1 -> initialRot (full cycle).
+                    int rot = spiralSteps > 1
+                            ? (initialRot + 1 + (int) Math.floor((double) i * 7.0 / (spiralSteps - 1))) & 7
+                            : initialRot;
                     if (rot != lastComputedRot) {
                         setFrameRotation(level, center, rot);
                         lastComputedRot = rot;

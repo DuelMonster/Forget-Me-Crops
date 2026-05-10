@@ -52,8 +52,6 @@ class FarmScanTask {
     final String dimId;      // dimension identifier for FrameRegistry lookups
 
     // --- Spiral precomputation data structures ---
-    /** Maps each ring index (0 = center, 1 = innermost ring, etc.) to the BlockPos list in that ring. */
-    final Map<Integer, List<BlockPos>> ringMap = new HashMap<>();
     /** Flat ordered list of (pos, direction) steps in spiral order, pre-generated at construction time. */
     final List<SpiralStep> spiralPositions = new ArrayList<>();
     /** Maximum ring radius computed from scanRangeX and scanRangeZ config values. */
@@ -70,13 +68,13 @@ class FarmScanTask {
     boolean anyHarvested = false;
     /** Ring number of the most recently harvested position — for direction tracking. */
     int lastHarvestedRing = -1;
-    /** Last spiral direction — tracked for animation step calculation. */
-    Direction lastDirection = null;
     /** Remaining animation steps for mid-scan visual feedback. */
     int animationStepsRemaining = 0;
     final Map<Integer, List<Integer>> ringFullIndices = new HashMap<>();
     final Map<Integer, Integer> indexToPosInRing = new HashMap<>();
     int lastComputedRotation = -1;
+    /** Frame rotation captured at task-start; every rotation cycle begins at current+1 and ends back here. */
+    int startRotation = 0;
     int tickCounter = 0;
     int numberOfTicksNeeded = 0;
     /** True once the full post-scan animation has been queued (prevents double-scheduling). */
@@ -127,7 +125,6 @@ class FarmScanTask {
         for (BlockPos p : candidates) {
             int ring = Math.max(Math.abs(p.getX() - center.getX()), Math.abs(p.getZ() - center.getZ()));
             if (ring > Math.max(rX, rZ)) continue;
-            ringMap.computeIfAbsent(ring, k -> new ArrayList<>()).add(p);
             maxRing = Math.max(maxRing, ring);
             candidateSet.add(p);
         }
@@ -151,7 +148,8 @@ class FarmScanTask {
             for (int j = 0; j < list.size(); j++) indexToPosInRing.put(list.get(j), j);
         }
         this.numberOfTicksNeeded = (int) Math.ceil((double) this.totalPositions / (double) this.positionsPerTick);
-        LogUtils.logDebug("[SCAN] Created FarmScanTask center={} totalPositions={} positionsPerTick={} computedMaxRing={} ticksNeeded={}", center, totalPositions, positionsPerTick, computedMaxRing, numberOfTicksNeeded);
+        this.startRotation = FrameScanner.getFrameRotation(level, center) & 7;
+        LogUtils.logDebug("[SCAN] Created FarmScanTask center={} totalPositions={} positionsPerTick={} computedMaxRing={} ticksNeeded={} startRotation={}", center, totalPositions, positionsPerTick, computedMaxRing, numberOfTicksNeeded, startRotation);
     }
 
     boolean tick() {
@@ -243,12 +241,42 @@ class FarmScanTask {
             try { LogUtils.logDebug("[ROT] Full animation complete for {} — cleared sequence", center); } catch (Throwable ignored) {}
         }
 
+        // Refresh startRotation at the start of each new cycle so a manual player rotation is honoured.
+        if (currentIndex == 0) {
+            startRotation = FrameScanner.getFrameRotation(level, center) & 7;
+            try { LogUtils.logDebug("[ROT] startRotation refreshed for {} => {}", center, startRotation); } catch (Throwable ignored) {}
+        }
+
         // FULL_ROTATION should begin with the scan progression, not only after a mature crop is found.
         if (Config.getRotationMode() == RotationMode.FULL_ROTATION && currentIndex == 0 && !fullAnimationScheduled) {
             startFullRotationAnimation();
         }
 
         int endIndex = Math.min(totalPositions - 1, currentIndex + positionsPerTick - 1);
+
+        // FOLLOW_ROTATION: rotate once per tick, but map rotation to the current
+        // ring position so each outward ring can perform its own 8-step cycle.
+        // This preserves the "multiple rotations while spiraling outward" behavior
+        // without flooding the per-tick pending-rotation map.
+        if (Config.getRotationMode() == RotationMode.FOLLOW_ROTATION) {
+            if (endIndex >= 0 && endIndex < spiralPositions.size()) {
+                BlockPos p = spiralPositions.get(endIndex).pos;
+                int ring = Math.max(Math.abs(p.getX() - center.getX()), Math.abs(p.getZ() - center.getZ()));
+                Integer posInRing = indexToPosInRing.get(endIndex);
+                List<Integer> full = ringFullIndices.get(ring);
+                if (posInRing != null && full != null && !full.isEmpty()) {
+                    int ringSize = full.size();
+                    int ringOffset = ringSize <= 1
+                            ? 0
+                            : (int) Math.floor((double) posInRing * 7.0 / (double) (ringSize - 1));
+                    int rot = (startRotation + 1 + ringOffset) & 7;
+                    if (rot != lastComputedRotation) {
+                        FrameScanner.setFrameRotation(level, center, rot, true);
+                        lastComputedRotation = rot;
+                    }
+                }
+            }
+        }
 
         int beforeHarvest = ctx.getHarvestedCount();
         int computedMaxRingLocal = computedMaxRing;
@@ -329,23 +357,6 @@ class FarmScanTask {
 
                     try { FrameScanner.tryAutoPlantAndTill(anchor, ctx, pos, level); } catch (Throwable ignored) {}
 
-                    if (Config.getRotationMode() == RotationMode.FOLLOW_ROTATION) {
-                        Integer posInRing = indexToPosInRing.get(idx);
-                        List<Integer> full = ringFullIndices.get(ring);
-                        if (posInRing != null && full != null && !full.isEmpty()) {
-                            int ringSize = full.size();
-                            int rot = (int) Math.floor((double) posInRing * 8.0 / (double) ringSize) & 7;
-                            if (rot != lastComputedRotation) {
-                                FrameScanner.setFrameRotation(level, center, rot);
-                                lastComputedRotation = rot;
-                            }
-                        } else {
-                            if (lastDirection == null || !lastDirection.equals(curDir)) {
-                                FrameScanner.setFrameRotation(level, center, FrameScanner.dirToRotation(curDir));
-                                lastDirection = curDir;
-                            }
-                        }
-                    }
                 } catch (Throwable t) {
                     LogUtils.logDebug("[SCAN] Exception while scanning " + center, t);
                 }
@@ -381,7 +392,9 @@ class FarmScanTask {
                 return false;
             }
 
-            if (anyHarvested && lastHarvestedRing >= 0) {
+            boolean shouldFinalizeRotation = (anyHarvested && lastHarvestedRing >= 0)
+                    || (Config.getRotationMode() == RotationMode.FOLLOW_ROTATION && lastComputedRotation >= 0);
+            if (shouldFinalizeRotation) {
                 int newRotation = 0;
                 switch (Config.getRotationMode()) {
                     case SINGLE_STEP -> {
@@ -390,19 +403,16 @@ class FarmScanTask {
                     }
                     case FULL_ROTATION -> {
                         if (!fullAnimationScheduled) {
-                            int steps = computedMaxRing > 0 ? (int) Math.floor((double)(lastHarvestedRing + 1) * 8.0 / (computedMaxRing + 1)) : 0;
-                            newRotation = steps & 7;
+                            // Return to starting position to complete the cycle.
+                            newRotation = startRotation;
                             FrameScanner.setFrameRotation(level, center, newRotation);
                         }
                     }
                     case FOLLOW_ROTATION -> {
-                        List<Integer> full = ringFullIndices.get(lastHarvestedRing);
-                        if (full != null && !full.isEmpty()) {
-                            int posIdx = Math.max(0, full.size() - 1);
-                            int rot = (int) Math.floor((double) posIdx * 8.0 / (double) full.size()) & 7;
-                            newRotation = rot;
-                            FrameScanner.setFrameRotation(level, center, newRotation);
-                        }
+                        // Always land back at starting position to complete the cycle,
+                        // including no-harvest scan passes where FOLLOW still animated.
+                        newRotation = startRotation;
+                        FrameScanner.setFrameRotation(level, center, newRotation, true);
                     }
                 }
             }
@@ -441,7 +451,7 @@ class FarmScanTask {
         fullAnimationTickCounter = 0;
         // Prepare a deterministic 8-step rotation sequence starting from current rotation.
         try {
-            int start = FrameScanner.getFrameRotation(level, center) & 7;
+            int start = startRotation;
             fullAnimationSequence.clear();
             for (int s = 1; s <= 8; s++) fullAnimationSequence.add((start + s) & 7);
             fullAnimationIndex = 0;
