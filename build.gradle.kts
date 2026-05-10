@@ -368,10 +368,28 @@ if (!modrinthToken.isNullOrBlank() || !curseForgeToken.isNullOrBlank()) {
 //  Release-packaging task (kept for backward compatibility with
 //  the CI release workflow — copies the final JAR to releases/)
 // ────────────────────────────────────────────────────────────
+
+// Register cleanReleases on the root project once (the first node to configure
+// creates it; subsequent nodes simply look it up). This guarantees it runs
+// exactly once — before any node copies its JAR into releases/.
+val cleanReleasesTask = if (rootProject.tasks.findByName("cleanReleases") == null) {
+    rootProject.tasks.register("cleanReleases") {
+        group = "release"
+        description = "Deletes all *.jar files from releases/ before packaging new ones."
+        doLast {
+            val releasesDir = rootProject.layout.projectDirectory.dir("releases").asFile
+            releasesDir.listFiles { f: File -> f.isFile && f.extension == "jar" }
+                ?.forEach { it.delete() }
+        }
+    }
+} else {
+    rootProject.tasks.named("cleanReleases")
+}
+
 tasks.register<Copy>("packageRelease") {
     group = "release"
     description = "Copies the remapped production JAR for this loader into releases/."
-    dependsOn(prodJarTask)
+    dependsOn(prodJarTask, cleanReleasesTask)
     from(tasks.named<AbstractArchiveTask>(prodJarTask).map { it.archiveFile })
     into(rootProject.layout.projectDirectory.dir("releases"))
 }

@@ -65,14 +65,16 @@ public final class FIF {
     }
 
     /**
-     * Sets the rotation of a FastItemFrame block-entity. Silently does nothing if FIF is absent.
-     * This is the spinny bit. The fun part.
+     * Sets the rotation of a FastItemFrame block-entity and reports whether the write actually stuck.
+     * Silent no-ops are how cosmetic bugs become ghost stories, so this method tells callers whether
+     * the adapter believes the rotation really landed.
      *
      * @param be          the FIF block-entity to update
      * @param newRotation the new rotation value to apply (0-7)
+     * @return true if the adapter applied or verified the rotation; false otherwise
      */
-    public static void setRotation(BlockEntity be, int newRotation) {
-        try { FastItemFrameAdapterImpl.setRotation(be, newRotation); } catch (Throwable ignored) {}
+    public static boolean setRotation(BlockEntity be, int newRotation) {
+        try { return FastItemFrameAdapterImpl.setRotation(be, newRotation); } catch (Throwable ignored) { return false; }
     }
 
     /**

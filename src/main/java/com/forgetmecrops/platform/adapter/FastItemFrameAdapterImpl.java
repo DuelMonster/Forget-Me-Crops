@@ -409,39 +409,80 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                 Object v = fld.get(be);
                 if (v instanceof Number) return ((Number) v).intValue() & 7;
             } catch (Throwable ignored) {}
+
+            // Production FIF exposes rotation on the block state, not the block entity itself.
+            try {
+                Level level = be.getLevel();
+                if (level != null) {
+                    BlockState state = level.getBlockState(be.getBlockPos());
+                    Property<?> rotationProp = findRotationProperty(state);
+                    if (rotationProp != null) {
+                        Object value = getPropertyValue(state, rotationProp);
+                        int mapped = rotationValueToInt(rotationProp, value);
+                        try { LogUtils.logTrace("[FIF] getRotation: block-state property {} on {} -> value={} mapped={}", rotationProp.getName(), be.getClass().getName(), value, mapped); } catch (Throwable ignored) {}
+                        return mapped;
+                    }
+                }
+            } catch (Throwable ignored) {}
         } catch (Throwable ignored) {}
         return 0;
     }
 
     /**
-     * Set rotation on a FastItemFrames block-entity using setter methods or
-     * by writing a `rotation` field if available. Best-effort; ignores errors.
+     * Set rotation on a FastItemFrames block-entity and report whether the write actually stuck.
+     * <p>
+     * The old project survived production packs by preferring real setters and falling back to
+     * cycling the frame block's rotation property instead of guessing at raw property values.
+     * We keep that same survival instinct here so version mismatches have fewer places to hide.
+     * </p>
      * @param be The block entity to modify.
      * @param newRotation Rotation value to set (0-7).
+     * @return true if the adapter applied or verified the requested rotation; false otherwise.
      */
-    public static void setRotation(BlockEntity be, int newRotation) {
+    public static boolean setRotation(BlockEntity be, int newRotation) {
         ensureApiProbed();
-        if (be == null) return;
+        if (be == null) {
+            try { LogUtils.logDebug("[FIF-DIAG] setRotation called with null block entity (requested={})", newRotation & 7); } catch (Throwable ignored) {}
+            return false;
+        }
         try {
-            try { LogUtils.logTrace("[FIF] setRotation: entry be={} requestedRot={} apiAvailable={} apiSetRotation={}", be.getClass().getName(), newRotation & 7, apiAvailable, apiSetRotation == null ? "<none>" : apiSetRotation.getName()); } catch (Throwable ignored) {}
+            int requestedRotation = newRotation & 7;
+            Level entryLevel = null;
+            BlockPos entryPos = null;
+            try { entryLevel = be.getLevel(); } catch (Throwable ignored) {}
+            try { entryPos = be.getBlockPos(); } catch (Throwable ignored) {}
+            try {
+                LogUtils.logDebug("[FIF-DIAG] setRotation entry: beClass={} requested={} apiAvailable={} apiSetRotation={} levelNull={} pos={} clientSide={} loaded={} hasChunk={}",
+                        be.getClass().getName(),
+                        requestedRotation,
+                        apiAvailable,
+                        apiSetRotation == null ? "<none>" : apiSetRotation.getName(),
+                        entryLevel == null,
+                        entryPos,
+                        entryLevel != null && entryLevel.isClientSide(),
+                        entryLevel != null && entryPos != null && entryLevel.isLoaded(entryPos),
+                        entryLevel != null && entryPos != null && entryLevel.hasChunkAt(entryPos));
+            } catch (Throwable ignored) {}
+            logRotationState(entryLevel, entryPos, "setRotation.pre");
+
             // API-first setter
             if (apiAvailable && apiClass != null && apiClass.isInstance(be) && apiSetRotation != null) {
                 try {
                     Class<?> p = apiSetRotation.getParameterTypes()[0];
+                    try { LogUtils.logDebug("[FIF-DIAG] setRotation trying api method {}({})", apiSetRotation.getName(), p.getName()); } catch (Throwable ignored) {}
                     if (p == int.class || p == Integer.class) {
-                        apiSetRotation.invoke(be, newRotation);
-                        try { be.setChanged(); } catch (Throwable ignored) {}
-                        try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                        try { int rb = getRotation(be); LogUtils.logTrace("[FIF] setRotation: apiSetRotation(int) applied on {} -> requested={} readBack={}", be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
-                        return;
+                        apiSetRotation.invoke(be, requestedRotation);
+                        markBlockEntityChanged(be, 3);
+                        logRotationState(entryLevel, entryPos, "setRotation.post.api-int");
+                        return verifyRotationWrite(be, requestedRotation, "apiSetRotation(int)");
                     }
                     if (p == byte.class || p == Byte.class) {
-                        apiSetRotation.invoke(be, (byte) newRotation);
-                        try { be.setChanged(); } catch (Throwable ignored) {}
-                        try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                        try { int rb = getRotation(be); LogUtils.logTrace("[FIF] setRotation: apiSetRotation(byte) applied on {} -> requested={} readBack={}", be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
-                        return;
+                        apiSetRotation.invoke(be, (byte) requestedRotation);
+                        markBlockEntityChanged(be, 3);
+                        logRotationState(entryLevel, entryPos, "setRotation.post.api-byte");
+                        return verifyRotationWrite(be, requestedRotation, "apiSetRotation(byte)");
                     }
+                    try { LogUtils.logDebug("[FIF-DIAG] setRotation api method {} has unsupported parameter type {}", apiSetRotation.getName(), p.getName()); } catch (Throwable ignored) {}
                 } catch (Throwable ignored) {}
             }
 
@@ -450,106 +491,254 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                 if (name.contains("set") && name.contains("rotation") && m.getParameterCount() == 1) {
                     Class<?> p = m.getParameterTypes()[0];
                     try {
+                        try { LogUtils.logDebug("[FIF-DIAG] setRotation trying reflected method {}({})", m.getName(), p.getName()); } catch (Throwable ignored) {}
                         if (p == int.class || p == Integer.class) {
-                            m.invoke(be, newRotation);
-                            try { be.setChanged(); } catch (Throwable ignored) {}
-                            try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                            try { int rb = getRotation(be); LogUtils.logTrace("[FIF] setRotation: reflected method {}(int) applied on {} -> requested={} readBack={}", m.getName(), be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
-                            return;
+                            m.invoke(be, requestedRotation);
+                            markBlockEntityChanged(be, 3);
+                            logRotationState(entryLevel, entryPos, "setRotation.post.reflection-int");
+                            return verifyRotationWrite(be, requestedRotation, "reflected method " + m.getName() + "(int)");
                         }
                         if (p == byte.class || p == Byte.class) {
-                            m.invoke(be, (byte) newRotation);
-                            try { be.setChanged(); } catch (Throwable ignored) {}
-                            try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                            try { int rb = getRotation(be); LogUtils.logTrace("[FIF] setRotation: reflected method {}(byte) applied on {} -> requested={} readBack={}", m.getName(), be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
-                            return;
+                            m.invoke(be, (byte) requestedRotation);
+                            markBlockEntityChanged(be, 3);
+                            logRotationState(entryLevel, entryPos, "setRotation.post.reflection-byte");
+                            return verifyRotationWrite(be, requestedRotation, "reflected method " + m.getName() + "(byte)");
                         }
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable t) {
+                        try { LogUtils.logDebug("[FIF-DIAG] setRotation reflected method {} failed: {}", m.getName(), throwableSummary(t)); } catch (Throwable ignored) {}
+                    }
                 }
             }
 
             try {
                 Field fld = be.getClass().getDeclaredField("rotation");
                 fld.setAccessible(true);
-                fld.setInt(be, newRotation & 7);
-                try { be.setChanged(); } catch (Throwable ignored) {}
-                try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                try { int rb = getRotation(be); LogUtils.logTrace("[FIF] setRotation: wrote 'rotation' field on {} -> requested={} readBack={}", be.getClass().getName(), newRotation & 7, rb); } catch (Throwable ignored) {}
-                return;
-            } catch (Throwable ignored) {}
+                fld.setInt(be, requestedRotation);
+                markBlockEntityChanged(be, 3);
+                try { LogUtils.logDebug("[FIF-DIAG] setRotation wrote field rotation directly"); } catch (Throwable ignored) {}
+                logRotationState(entryLevel, entryPos, "setRotation.post.field");
+                return verifyRotationWrite(be, requestedRotation, "field rotation");
+            } catch (Throwable t) {
+                try { LogUtils.logDebug("[FIF-DIAG] setRotation field write failed: {}", throwableSummary(t)); } catch (Throwable ignored) {}
+            }
 
-            // Block-state fallback: update block-state rotation property when BE setters/fields are not available.
+            // When setters vanish across versions, fall back to cycling the block-state property like the original project did.
             try {
-                Object levelObj = null;
-                try {
-                    Method gm = be.getClass().getMethod("getLevel");
-                    if (gm != null) levelObj = gm.invoke(be);
-                } catch (Throwable ignored) {}
-                if (levelObj == null) {
+                Level level = null;
+                BlockPos pos = null;
+                try { level = be.getLevel(); } catch (Throwable ignored) {}
+                try { pos = be.getBlockPos(); } catch (Throwable ignored) {}
+
+                if (level == null || pos == null) {
                     try {
-                        Field lf = be.getClass().getDeclaredField("level");
-                        lf.setAccessible(true);
-                        levelObj = lf.get(be);
+                        LogUtils.logDebug("[FIF-DIAG] setRotation cannot enter block-state fallback (levelNull={}, posNull={})", level == null, pos == null);
                     } catch (Throwable ignored) {}
-                }
-                if (levelObj instanceof Level level) {
-                    try {
-                        BlockPos pos = null;
-                        try {
-                            Method gp = be.getClass().getMethod("getBlockPos");
-                            if (gp != null) pos = (BlockPos) gp.invoke(be);
-                        } catch (Throwable ignored) {}
-                        if (pos == null) {
-                            try {
-                                Field pf = be.getClass().getDeclaredField("pos");
-                                pf.setAccessible(true);
-                                Object pval = pf.get(be);
-                                if (pval instanceof BlockPos) pos = (BlockPos)pval;
-                            } catch (Throwable ignored) {}
-                        }
-                        if (pos != null) {
-                            BlockState state = level.getBlockState(pos);
-                            try {
-                                for (Property<?> prop : state.getProperties()) {
-                                    String name = prop.getName().toLowerCase(Locale.ROOT);
-                                    if (!(name.contains("rotation") || name.contains("rot"))) continue;
-                                    Collection<?> values = prop.getPossibleValues();
-                                    Object chosen = null;
-                                    for (Object v : values) {
-                                        if (v instanceof Number && ((Number)v).intValue() == (newRotation & 7)) { chosen = v; break; }
-                                        if (v.toString().equalsIgnoreCase(String.valueOf(newRotation & 7))) { chosen = v; break; }
-                                    }
-                                    if (chosen != null) {
-                                        @SuppressWarnings({ "rawtypes", "unchecked" })
-                                        BlockState ns = state.setValue((Property) prop, (Comparable) chosen);
-                                        level.setBlock(pos, ns, 3);
-                                        try { be.setChanged(); } catch (Throwable ignored) {}
-                                        try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                                        try { LogUtils.logTrace("[FIF] setRotation via block-state property {} -> {} on {}", prop.getName(), chosen, be.getClass().getName()); } catch (Throwable ignored) {}
-                                        return;
-                                    } else {
-                                        List<?> list = new java.util.ArrayList<>(values);
-                                        if (!list.isEmpty() && list.get(0) instanceof Number) {
-                                            int idx = (newRotation & 7) % list.size();
-                                            Object pick = list.get(idx);
-                                            @SuppressWarnings({ "rawtypes", "unchecked" })
-                                            BlockState ns = state.setValue((Property) prop, (Comparable) pick);
-                                            level.setBlock(pos, ns, 3);
-                                            try { be.setChanged(); } catch (Throwable ignored) {}
-                                            try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
-                                            try { LogUtils.logTrace("[FIF] setRotation via block-state property {} -> {} (index {}) on {}", prop.getName(), pick, idx, be.getClass().getName()); } catch (Throwable ignored) {}
-                                            return;
-                                        }
-                                    }
-                                }
-                            } catch (Throwable ignored) {}
-                        }
-                    } catch (Throwable ignored) {}
+                } else {
+                    BlockState state = level.getBlockState(pos);
+                    try { LogUtils.logDebug("[FIF-DIAG] setRotation entering block-state cycle fallback at {} state={}", pos, describeRotationState(state)); } catch (Throwable ignored) {}
+                    if (cycleRotationPropertyToTarget(level, pos, state, be, requestedRotation)) {
+                        return true;
+                    }
+                    try { LogUtils.logDebug("[FIF-DIAG] setRotation block-state cycle fallback completed without success at {}", pos); } catch (Throwable ignored) {}
                 }
             } catch (Throwable t) {
-                try { LogUtils.logTrace("[FIF] setRotation block-state fallback failed: {}", t.getMessage()); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF-DIAG] setRotation block-state fallback failed: {}", throwableSummary(t)); } catch (Throwable ignored) {}
             }
         } catch (Throwable ignored) {}
+        try { LogUtils.logDebug("[FIF-DIAG] setRotation failed: no working write path for {}", be.getClass().getName()); } catch (Throwable ignored) {}
+        return false;
+    }
+
+    // Mark the BE dirty and nudge the world so the visual state has a fighting chance to propagate.
+    private static void markBlockEntityChanged(BlockEntity be, int updateFlags) {
+        if (be == null) return;
+        try { be.setChanged(); } catch (Throwable ignored) {}
+        try { invokeApiMarkUpdatedIfPresent(be); } catch (Throwable ignored) {}
+        try {
+            Level level = be.getLevel();
+            if (level == null) return;
+            BlockPos pos = be.getBlockPos();
+            BlockState state = level.getBlockState(pos);
+            try { LogUtils.logDebug("[FIF-DIAG] markBlockEntityChanged pos={} flagsIn={} flagsApplied={} state={}", pos, updateFlags, updateFlags | 1, describeRotationState(state)); } catch (Throwable ignored) {}
+            level.sendBlockUpdated(pos, state, state, updateFlags | 1);
+        } catch (Throwable ignored) {}
+    }
+
+    // Read the rotation back from the block state directly (bypass BE cache).
+    // Production FIF stores rotation on the block state, not the BE, so we must read
+    // from the block state to verify writes, not from potentially stale BE methods.
+    private static boolean verifyRotationWrite(BlockEntity be, int requestedRotation, String pathLabel) {
+        try {
+            int readBack = 0;
+            String propName = "<none>";
+            String propValue = "<none>";
+            try {
+                Level level = be.getLevel();
+                if (level != null) {
+                    BlockState state = level.getBlockState(be.getBlockPos());
+                    Property<?> rotationProp = findRotationProperty(state);
+                    if (rotationProp != null) {
+                        Object value = getPropertyValue(state, rotationProp);
+                        readBack = rotationValueToInt(rotationProp, value);
+                        propName = rotationProp.getName();
+                        propValue = String.valueOf(value);
+                    } else {
+                        try { LogUtils.logDebug("[FIF-DIAG] verifyRotationWrite: no rotation property found on state {}", state); } catch (Throwable ignored) {}
+                    }
+                }
+            } catch (Throwable ignored) {}
+            boolean matches = readBack == (requestedRotation & 7);
+            try {
+                LogUtils.logDebug("[FIF-DIAG] verifyRotationWrite path={} beClass={} requested={} readBack={} verified={} prop={} propValue={}",
+                        pathLabel,
+                        be.getClass().getName(),
+                        requestedRotation & 7,
+                        readBack,
+                        matches,
+                        propName,
+                        propValue);
+            } catch (Throwable ignored) {}
+            return matches;
+        } catch (Throwable ignored) {
+            try { LogUtils.logDebug("[FIF-DIAG] verifyRotationWrite path={} beClass={} could not read back; assuming success", pathLabel, be.getClass().getName()); } catch (Throwable ignored2) {}
+            return true;
+        }
+    }
+
+    // Cycle the rotation property instead of jamming in a guessed raw value; that old trick was ugly, but it worked.
+    private static boolean cycleRotationPropertyToTarget(Level level, BlockPos pos, BlockState state, BlockEntity be, int requestedRotation) {
+        try {
+            Property<?> rotationProp = findRotationProperty(state);
+            if (rotationProp == null) {
+                try { LogUtils.logDebug("[FIF-DIAG] cycleRotationPropertyToTarget: no rotation property found on {} at {} state={}", be.getClass().getName(), pos, state); } catch (Throwable ignored) {}
+                return false;
+            }
+
+            List<?> values = new java.util.ArrayList<>(rotationProp.getPossibleValues());
+            if (values.isEmpty()) return false;
+
+            Object targetValue = findTargetRotationValue(values, requestedRotation);
+            if (targetValue == null) {
+                targetValue = values.get(requestedRotation % values.size());
+            }
+            try {
+                LogUtils.logDebug("[FIF-DIAG] cycleRotationPropertyToTarget start pos={} prop={} requested={} target={} values={}",
+                        pos,
+                        rotationProp.getName(),
+                        requestedRotation & 7,
+                        targetValue,
+                        values);
+            } catch (Throwable ignored) {}
+
+            BlockState cycledState = state;
+            for (int i = 0; i < values.size(); i++) {
+                Object currentValue = getPropertyValue(cycledState, rotationProp);
+                try { LogUtils.logDebug("[FIF-DIAG] cycleRotationPropertyToTarget step={} current={} target={} state={}", i, currentValue, targetValue, describeRotationState(cycledState)); } catch (Throwable ignored) {}
+                if (targetValue.equals(currentValue)) {
+                    boolean setResult = level.setBlock(pos, cycledState, 3);
+                    try { LogUtils.logDebug("[FIF-DIAG] cycleRotationPropertyToTarget setBlock result={} flags=3 at {}", setResult, pos); } catch (Throwable ignored) {}
+                    markBlockEntityChanged(be, 3);
+                    logRotationState(level, pos, "cycle.post-setBlock");
+                    try { LogUtils.logDebug("[FIF-DIAG] setRotation: cycled block-state property {} to {} on {}", rotationProp.getName(), targetValue, be.getClass().getName()); } catch (Throwable ignored) {}
+                    return verifyRotationWrite(be, requestedRotation, "cycled property " + rotationProp.getName());
+                }
+                cycledState = cycleProperty(cycledState, rotationProp);
+            }
+            try { LogUtils.logDebug("[FIF-DIAG] cycleRotationPropertyToTarget exhausted values without target match at {}", pos); } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {}
+        return false;
+    }
+
+    private static String describeRotationState(BlockState state) {
+        if (state == null) return "<null-state>";
+        try {
+            Property<?> rotationProp = findRotationProperty(state);
+            if (rotationProp == null) {
+                return "block=" + state.getBlock().getClass().getName() + ", rotationProp=<none>, full=" + state;
+            }
+            Object value = getPropertyValue(state, rotationProp);
+            int mapped = rotationValueToInt(rotationProp, value);
+            return "block=" + state.getBlock().getClass().getName() + ", rotationProp=" + rotationProp.getName() + ", value=" + value + ", mapped=" + mapped + ", full=" + state;
+        } catch (Throwable t) {
+            return "<state-describe-failed:" + throwableSummary(t) + ">";
+        }
+    }
+
+    private static void logRotationState(Level level, BlockPos pos, String label) {
+        if (level == null || pos == null) {
+            try { LogUtils.logDebug("[FIF-DIAG] {} level/pos unavailable (levelNull={}, posNull={})", label, level == null, pos == null); } catch (Throwable ignored) {}
+            return;
+        }
+        try {
+            BlockState state = level.getBlockState(pos);
+            LogUtils.logDebug("[FIF-DIAG] {} pos={} clientSide={} loaded={} hasChunk={} {}",
+                    label,
+                    pos,
+                    level.isClientSide(),
+                    level.isLoaded(pos),
+                    level.hasChunkAt(pos),
+                    describeRotationState(state));
+        } catch (Throwable t) {
+            try { LogUtils.logDebug("[FIF-DIAG] {} failed to snapshot state at {}: {}", label, pos, throwableSummary(t)); } catch (Throwable ignored) {}
+        }
+    }
+
+    private static String throwableSummary(Throwable t) {
+        if (t == null) return "<null>";
+        String type = t.getClass().getSimpleName();
+        String message = t.getMessage();
+        if (message == null || message.isEmpty()) return type;
+        return type + ": " + message;
+    }
+
+    // Find the property most likely to represent frame rotation without pretending every mod author names things sensibly.
+    private static Property<?> findRotationProperty(BlockState state) {
+        for (Property<?> prop : state.getProperties()) {
+            String name = prop.getName().toLowerCase(Locale.ROOT);
+            if (name.contains("rotation") || name.contains("rot")) {
+                return prop;
+            }
+        }
+        return null;
+    }
+
+    private static Object findTargetRotationValue(List<?> values, int requestedRotation) {
+        for (Object value : values) {
+            if (value instanceof Number && ((Number) value).intValue() == (requestedRotation & 7)) {
+                return value;
+            }
+            if (String.valueOf(requestedRotation & 7).equalsIgnoreCase(String.valueOf(value))) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private static int rotationValueToInt(Property<?> prop, Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).intValue() & 7;
+        }
+        List<?> values = new java.util.ArrayList<>(prop.getPossibleValues());
+        for (int i = 0; i < values.size(); i++) {
+            Object candidate = values.get(i);
+            if (candidate.equals(value)) {
+                return i & 7;
+            }
+            if (String.valueOf(candidate).equalsIgnoreCase(String.valueOf(value))) {
+                return i & 7;
+            }
+        }
+        return 0;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static Object getPropertyValue(BlockState state, Property<?> prop) {
+        return state.getValue((Property) prop);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static BlockState cycleProperty(BlockState state, Property<?> prop) {
+        return state.cycle((Property) prop);
     }
 
     private static void invokeApiMarkUpdatedIfPresent(BlockEntity be) {

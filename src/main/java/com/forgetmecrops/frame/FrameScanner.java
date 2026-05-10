@@ -893,7 +893,7 @@ public class FrameScanner {
                 return;
             }
         } catch (Throwable ignored) {}
-        
+
         try {
             try { LogUtils.logDebug("[ROT] Request scheduleRotation for {} -> {} (gametime={})", pos, newRotation & 7, gameTime); } catch (Throwable ignored) {}
             FrameRegistry.scheduleRotation(dimId, pos, newRotation, gameTime);
@@ -1009,11 +1009,35 @@ public class FrameScanner {
             BlockEntity be = level.getBlockEntity(pos);
             if (be != null) {
                 try {
-                    FIF.setRotation(be, newRotation);
-                    try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Throwable ignored) {}
+                    if (Config.isDebugLogging()) {
+                        try {
+                            BlockState beforeState = level.getBlockState(pos);
+                            LogUtils.logDebug("[ROT-DIAG] Pre FIF.setRotation pos={} requested={} beClass={} state={}", pos, newRotation & 7, be.getClass().getName(), beforeState);
+                        } catch (Throwable ignored) {}
+                    }
+                    boolean applied = FIF.setRotation(be, newRotation);
+                    if (!applied) {
+                        if (Config.isDebugLogging()) {
+                            try {
+                                BlockState afterState = level.getBlockState(pos);
+                                int rb = FIF.getRotation(be);
+                                LogUtils.logDebug("[ROT] FastItemFrames rotation write did not verify at {} => {} (readBack={} stateAfter={} beClass={})", pos, newRotation & 7, rb, afterState, be.getClass().getName());
+                            } catch (Throwable ignored) {
+                                try { LogUtils.logDebug("[ROT] FastItemFrames rotation write did not verify at {} => {}", pos, newRotation & 7); } catch (Throwable ignored2) {}
+                            }
+                        }
+                        return;
+                    }
                     try {
                         int rb = FIF.getRotation(be);
-                        if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack={})", pos, newRotation & 7, rb); } catch (Throwable logEx1) {}
+                        if (Config.isDebugLogging()) {
+                            try {
+                                BlockState afterState = level.getBlockState(pos);
+                                LogUtils.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack={} stateAfter={} beClass={})", pos, newRotation & 7, rb, afterState, be.getClass().getName());
+                            } catch (Throwable logEx1) {
+                                try { LogUtils.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack={})", pos, newRotation & 7, rb); } catch (Throwable ignored) {}
+                            }
+                        }
                     } catch (Throwable exGet) {
                         if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack=?)", pos, newRotation & 7); } catch (Throwable logEx2) {}
                     }
