@@ -57,11 +57,22 @@ public class ForgetMeCrops {
         // FastItemFrames adapter detection is deferred to first use, not here.
         // Why? Because classloading during startup is expensive. We'll probe when we actually need it.
 
-        // Debug logging configuration check — lets players know if they're in verbose mode
+        // Debug-status messaging is now emitted at server/world load time.
+    }
+
+    /**
+     * 📢 Announces the current debug-logging status at server/world load time (not mod init).
+     * <p>
+     * Why the delay? Because during early mod initialization, the config might still be settling
+     * and finalizing. We want to give an HONEST answer about whether debug logging is active.
+     * So we wait until the server/world is actually loaded and ready to go — THEN we announce it.
+     * Your log file will thank you for this restraint.
+     * </p>
+     */
+    public static void logDebugStatusAtWorldLoad() {
         if (CONFIG != null && Config.isDebugLogging()) {
             LogUtils.logDebug("Debug logging is ENABLED! Buckle up for a flood of farming facts and farm-related trivia.");
         } else {
-            // Politely remind players how to enable debug mode if they ever need it
             LogUtils.logInfo("Debug logging is OFF. Want to see all the juicy details? Set debugLogging=true in your config file.");
         }
     }

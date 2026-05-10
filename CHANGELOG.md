@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.18.0
+
+- Move debug-status announcement out of early mod initialization and into server/world load lifecycle so runtime logs reflect the active loaded config state.
+- Mirror the lifecycle behavior across both Fabric and NeoForge ticker paths.
+
 ## 0.16.0
 
 - Fix VS Code debug-task Gradle paths: correct `:versions:1.21.11-<loader>:run*` to `:1.21.11-<loader>:run*`.

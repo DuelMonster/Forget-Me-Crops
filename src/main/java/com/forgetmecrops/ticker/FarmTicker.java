@@ -4,7 +4,7 @@ package com.forgetmecrops.ticker;
 // Stonecutter swaps the event-bus APIs at build time — Fabric gets lambdas on static buses,
 // NeoForge gets method references on an IEventBus instance. Same heart, different nervous system.
 
-//? if fabric {
+import com.forgetmecrops.ForgetMeCrops;
 import com.forgetmecrops.config.Config;
 import com.forgetmecrops.util.log.LogUtils;
 import com.forgetmecrops.frame.FrameRegistry;
@@ -12,9 +12,6 @@ import com.forgetmecrops.frame.FrameScanner;
 import com.forgetmecrops.frame.CatchupManager;
 import com.forgetmecrops.platform.adapter.FastItemFrameAdapterImpl;
 
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.decoration.ItemFrame;
@@ -23,29 +20,21 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.chunk.LevelChunk;
+import java.util.List;
 import java.util.Map;
+
+//? if fabric {
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 //?} else {
-/*import com.forgetmecrops.frame.FrameRegistry;
-import com.forgetmecrops.frame.FrameScanner;
-import com.forgetmecrops.frame.FrameDiscovery;
-import com.forgetmecrops.frame.CatchupManager;
-import com.forgetmecrops.config.Config;
-import com.forgetmecrops.util.log.LogUtils;
-import com.forgetmecrops.platform.adapter.FastItemFrameAdapterImpl;
+/*import com.forgetmecrops.frame.FrameDiscovery;
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.entity.decoration.ItemFrame;
-import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.world.phys.AABB;
-import java.util.List;*/ //?}
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;*/ //?}
 
 /**
  * FarmTicker: discovers farm anchors on chunk load/unload and schedules scans on server tick.
@@ -154,6 +143,12 @@ public class FarmTicker {
             try { LogUtils.logInfo("[TICK] Server stopping — clearing FrameRegistry."); FrameRegistry.clearAll(); } catch (Exception t) { LogUtils.logWarn("[TICK] Failed to clear FrameRegistry on server stop", t); }
         });
 
+        // Announce debug-logging status now that the server is fully loaded and config is settled.
+        // (We don't do this at mod init because config might still be in flux.)
+        ServerLifecycleEvents.SERVER_STARTED.register((MinecraftServer server) -> {
+            try { ForgetMeCrops.logDebugStatusAtWorldLoad(); } catch (Exception t) { LogUtils.logWarn("[TICK] Failed to announce debug logging status on server start", t); }
+        });
+
         ServerTickEvents.END_SERVER_TICK.register((MinecraftServer server) -> {
             try {
                 for (ServerLevel level : server.getAllLevels()) {
@@ -199,6 +194,7 @@ public class FarmTicker {
         bus.addListener(FarmTicker::onChunkLoad);
         bus.addListener(FarmTicker::onChunkUnload);
         bus.addListener(FarmTicker::onServerTick);
+        bus.addListener(FarmTicker::onServerStarted);
         bus.addListener(FarmTicker::onLevelUnload);
     }
 
@@ -325,6 +321,14 @@ public class FarmTicker {
                 tickSnapshotLogged = true;
             }
         } catch (Throwable t) { LogUtils.logWarn("[TICK] Unexpected NeoForge ticker error", t); }
+    }
+
+    private static void onServerStarted(ServerStartedEvent event) {
+        try {
+            ForgetMeCrops.logDebugStatusAtWorldLoad();
+        } catch (Throwable t) {
+            LogUtils.logWarn("[TICK] Failed to announce debug logging status on server start", t);
+        }
     }
     */ //?}
 }
