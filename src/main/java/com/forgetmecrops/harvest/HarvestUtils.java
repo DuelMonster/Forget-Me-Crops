@@ -17,6 +17,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.server.level.ServerLevel;
+import java.lang.reflect.Constructor;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
@@ -103,7 +104,7 @@ public class HarvestUtils {
         try {
             if (ctx.isSkipNextDamage()) { ctx.setSkipNextDamage(false); }
             else { DurabilityLogic.applyDamage(ctx.level, ctx.getHoe(), ctx.level.getRandom()); }
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {}
         if (ctx.getHoe().isEmpty()) { FrameHoeReplacement.tryReplaceBrokenHoe(ctx); }
         else { syncFrameHoe(ctx); }
 
@@ -113,11 +114,11 @@ public class HarvestUtils {
             } else {
                 boolean taken = ChestUtils.removeOne(ctx.chest, cost.getItem());
                 if (taken) { applyReplantState(ctx, pos, state, getReplantState); }
-                else { try { ctx.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3); } catch (Throwable ignored) {} }
+                else { try { ctx.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3); } catch (Throwable t) {} }
             }
         } else {
             // Non-replantable harvest targets (e.g. melon/pumpkin fruit) should be removed.
-            try { ctx.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3); } catch (Throwable ignored) {}
+            try { ctx.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3); } catch (Throwable t) {}
         }
 
         playHarvestBreakSound(ctx, pos, state);
@@ -141,14 +142,14 @@ public class HarvestUtils {
     private static void applyReplantState(HarvestContext ctx, BlockPos pos, BlockState state,
                                           Function<BlockState, BlockState> getReplantState) {
         BlockState replanted = null;
-        try { replanted = getReplantState.apply(state); } catch (Throwable ignored) {}
+        try { replanted = getReplantState.apply(state); } catch (Throwable t) {}
         if (replanted == null) return;
         try {
             if (replanted.getBlock() instanceof CropBlock) {
                 replanted = FrameScanner.setAgeSafe(replanted, 1);
             }
-        } catch (Throwable ignored) {}
-        try { ctx.level.setBlock(pos, replanted, 3); } catch (Throwable ignored) {}
+        } catch (Throwable t) {}
+        try { ctx.level.setBlock(pos, replanted, 3); } catch (Throwable t) {}
     }
 
     /**
@@ -202,7 +203,7 @@ public class HarvestUtils {
      */
     public static void handleBrokenHoe(HarvestContext ctx, ItemStack oldHoe) {
         LogUtils.logDebug("[HOE] Hoe broke during harvest. Previous: {}", oldHoe);
-        try { playHoeBreakEffects(ctx, oldHoe); } catch (Throwable ignored) {}
+        try { playHoeBreakEffects(ctx, oldHoe); } catch (Throwable t) {}
         FrameHoeReplacement.tryReplaceBrokenHoe(ctx);
     }
 
@@ -212,7 +213,7 @@ public class HarvestUtils {
      * If the level or anchor is unavailable, it bails out quietly — no crash for missing drama.
      */
     private static void playHoeBreakEffects(HarvestContext ctx, ItemStack brokenHoe) {
-        try { if (ctx.level == null || ctx.anchor == null) return; } catch (Throwable ignored) {}
+        try { if (ctx.level == null || ctx.anchor == null) return; } catch (Throwable t) {}
         FrameScanner.Anchor anchor = resolveAnchor(ctx);
         if (anchor == null) return;
         SoundEvent breakSound = resolveItemBreakSound();
@@ -221,12 +222,37 @@ public class HarvestUtils {
             try {
                 ctx.level.playSound(null, anchor.framePos, breakSound, SoundSource.BLOCKS, 0.8F, 0.8F + ctx.level.getRandom().nextFloat() * 0.4F);
             } catch (NoSuchMethodError | ClassCastException e) {
-                try { ctx.level.playSound(null, anchor.framePos.getX() + 0.5, anchor.framePos.getY() + 0.5, anchor.framePos.getZ() + 0.5, breakSound, SoundSource.BLOCKS, 0.8F, 0.8F + ctx.level.getRandom().nextFloat() * 0.4F); } catch (Throwable ignored) {}
+                try { ctx.level.playSound(null, anchor.framePos.getX() + 0.5, anchor.framePos.getY() + 0.5, anchor.framePos.getZ() + 0.5, breakSound, SoundSource.BLOCKS, 0.8F, 0.8F + ctx.level.getRandom().nextFloat() * 0.4F); } catch (Throwable t) {}
             }
 
             ItemStack particlesFrom = (brokenHoe == null || brokenHoe.isEmpty()) ? new ItemStack(Items.WOODEN_HOE) : brokenHoe;
-            try { if (ctx.level instanceof net.minecraft.server.level.ServerLevel server) { server.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, particlesFrom), anchor.framePos.getX() + 0.5, anchor.framePos.getY() + 0.5, anchor.framePos.getZ() + 0.5, 10, 0.18, 0.18, 0.18, 0.03); } } catch (Throwable ignored) {}
-        } catch (Throwable ignored) {}
+            try {
+                ItemParticleOption option = createItemParticleOptionCompat(particlesFrom);
+                if (option != null && ctx.level instanceof net.minecraft.server.level.ServerLevel server) {
+                    server.sendParticles(option, anchor.framePos.getX() + 0.5, anchor.framePos.getY() + 0.5, anchor.framePos.getZ() + 0.5, 10, 0.18, 0.18, 0.18, 0.03);
+                }
+            } catch (Throwable t) {}
+        } catch (Throwable t) {}
+    }
+
+    private static ItemParticleOption createItemParticleOptionCompat(ItemStack stack) {
+        try {
+            Constructor<?>[] ctors = ItemParticleOption.class.getConstructors();
+            for (Constructor<?> ctor : ctors) {
+                Class<?>[] params = ctor.getParameterTypes();
+                if (params.length != 2) continue;
+                Object valueArg;
+                if (params[1].isAssignableFrom(ItemStack.class)) {
+                    valueArg = stack;
+                } else if (params[1].isAssignableFrom(Item.class)) {
+                    valueArg = stack.getItem();
+                } else {
+                    continue;
+                }
+                return (ItemParticleOption) ctor.newInstance(ParticleTypes.ITEM, valueArg);
+            }
+        } catch (Throwable t) {}
+        return null;
     }
 
     /**
@@ -242,7 +268,7 @@ public class HarvestUtils {
         try {
             SoundEvent sound = plantedState.getSoundType().getPlaceSound();
             level.playSound(null, pos, sound, SoundSource.BLOCKS, 0.7F, 0.92F + level.getRandom().nextFloat() * 0.16F);
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {}
     }
 
     /**
@@ -258,7 +284,7 @@ public class HarvestUtils {
         try {
             SoundEvent sound = resolveHoeTillSound();
             level.playSound(null, pos, sound, SoundSource.BLOCKS, 0.9F, 0.95F + level.getRandom().nextFloat() * 0.12F);
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {}
     }
 
     /**
@@ -285,7 +311,7 @@ public class HarvestUtils {
                     0.34,
                     0.16,
                     0.018);
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {}
     }
 
     /**
@@ -317,7 +343,7 @@ public class HarvestUtils {
                         0.16,
                         0.038);
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {}
     }
 
     /**
@@ -328,7 +354,7 @@ public class HarvestUtils {
         try {
             SoundEvent sound = harvestedState.getSoundType().getBreakSound();
             ctx.level.playSound(null, pos, sound, SoundSource.BLOCKS, 0.85F, 0.92F + ctx.level.getRandom().nextFloat() * 0.18F);
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {}
     }
 
     /**
@@ -343,13 +369,13 @@ public class HarvestUtils {
                 java.lang.reflect.Method method = value.getClass().getMethod("value");
                 Object wrapped = method.invoke(value);
                 if (wrapped instanceof SoundEvent event) return event;
-            } catch (Throwable ignored) {}
+            } catch (Throwable t) {}
             try {
                 java.lang.reflect.Method method = value.getClass().getMethod("get");
                 Object wrapped = method.invoke(value);
                 if (wrapped instanceof SoundEvent event) return event;
-            } catch (Throwable ignored) {}
-        } catch (Throwable ignored) {}
+            } catch (Throwable t) {}
+        } catch (Throwable t) {}
         return SoundEvents.GRAVEL_HIT;
     }
 
@@ -396,13 +422,13 @@ public class HarvestUtils {
                 java.lang.reflect.Method method = value.getClass().getMethod("value");
                 Object wrapped = method.invoke(value);
                 if (wrapped instanceof SoundEvent event) return event;
-            } catch (Throwable ignored) {}
+            } catch (Throwable t) {}
             try {
                 java.lang.reflect.Method method = value.getClass().getMethod("get");
                 Object wrapped = method.invoke(value);
                 if (wrapped instanceof SoundEvent event) return event;
-            } catch (Throwable ignored) {}
-        } catch (Throwable ignored) {}
+            } catch (Throwable t) {}
+        } catch (Throwable t) {}
         return null;
     }
 
@@ -417,7 +443,7 @@ public class HarvestUtils {
     public static void spinFrame(HarvestContext ctx) {
         try {
             FrameScanner.Anchor anchor = null;
-            try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {}
+            try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable t) {}
             if (anchor == null || ctx.level == null) return;
             BlockPos pos = anchor.framePos;
             try {
@@ -429,23 +455,23 @@ public class HarvestUtils {
                                 for (java.lang.reflect.Method m : f.getClass().getMethods()) {
                                 String name = m.getName().toLowerCase(Locale.ROOT);
                                 if ((name.contains("get") || name.contains("getitem")) && name.contains("rotation") && m.getParameterCount() == 0) {
-                                    try { Object r = m.invoke(f); if (r instanceof Number) { cur = ((Number) r).intValue() & 7; } } catch (Throwable ignored) {}
+                                    try { Object r = m.invoke(f); if (r instanceof Number) { cur = ((Number) r).intValue() & 7; } } catch (Throwable t) {}
                                     break;
                                 }
                             }
-                            try { java.lang.reflect.Field fld = f.getClass().getDeclaredField("rotation"); fld.setAccessible(true); Object v = fld.get(f); if (v instanceof Number) cur = ((Number) v).intValue() & 7; } catch (Throwable ignored) {}
+                            try { java.lang.reflect.Field fld = f.getClass().getDeclaredField("rotation"); fld.setAccessible(true); Object v = fld.get(f); if (v instanceof Number) cur = ((Number) v).intValue() & 7; } catch (Throwable t) {}
                             break;
                         }
                     }
-                } catch (Throwable ignored) {}
+                } catch (Throwable t) {}
 
-                    try { BlockEntity be = ctx.level.getBlockEntity(pos); if (be != null) { try { cur = FIF.getRotation(be); } catch (Throwable ignored) {} } } catch (Throwable ignored) {}
+                    try { BlockEntity be = ctx.level.getBlockEntity(pos); if (be != null) { try { cur = FIF.getRotation(be); } catch (Throwable t) {} } } catch (Throwable t) {}
 
                 int next = (cur + 1) & 7;
-                long gameTime = -1L; try { gameTime = ctx.level.getGameTime(); } catch (Throwable ignored) {}
-                try { FrameRegistry.scheduleRotation(ctx.level.dimension().identifier().toString(), pos, next, gameTime); } catch (Throwable ignored) {}
-            } catch (Throwable ignored) {}
-        } catch (Throwable ignored) {}
+                long gameTime = -1L; try { gameTime = ctx.level.getGameTime(); } catch (Throwable t) {}
+                try { FrameRegistry.scheduleRotation(ctx.level.dimension().identifier().toString(), pos, next, gameTime); } catch (Throwable t) {}
+            } catch (Throwable t) {}
+        } catch (Throwable t) {}
     }
 
     /**
@@ -465,15 +491,16 @@ public class HarvestUtils {
                         anchor.framePos,
                         ctx.getHoe().isEmpty() ? net.minecraft.world.item.ItemStack.EMPTY : ctx.getHoe().copy());
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {}
     }
 
     private static FrameScanner.Anchor resolveAnchor(HarvestContext ctx) {
         if (ctx == null || ctx.anchor == null) return null;
         try {
             return (FrameScanner.Anchor) ctx.anchor;
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
             return null;
         }
     }
 }
+

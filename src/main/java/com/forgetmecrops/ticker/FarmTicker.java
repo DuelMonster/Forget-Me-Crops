@@ -7,6 +7,7 @@ package com.forgetmecrops.ticker;
 import com.forgetmecrops.ForgetMeCrops;
 import com.forgetmecrops.config.Config;
 import com.forgetmecrops.util.log.LogUtils;
+import com.forgetmecrops.util.ExceptionHandler;
 import com.forgetmecrops.frame.FrameRegistry;
 import com.forgetmecrops.frame.FrameScanner;
 import com.forgetmecrops.frame.CatchupManager;
@@ -20,6 +21,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.chunk.LevelChunk;
+import java.util.List;
 import java.util.Map;
 
 //? if fabric {
@@ -72,7 +74,11 @@ public class FarmTicker {
     //? if fabric {
     // Registers all Fabric lifecycle event listeners (chunk load/unload, server tick, server stop).
     public static void init() {
-        ServerChunkEvents.CHUNK_LOAD.register((ServerLevel level, LevelChunk chunk) -> {
+        //? if >=26.1 {
+        /*ServerChunkEvents.CHUNK_LOAD.register((level, chunk, generated) -> {*/
+        //?} else {
+        ServerChunkEvents.CHUNK_LOAD.register((level, chunk) -> {
+        //?}
             try {
                 LogUtils.logTrace("[TICK] Chunk-load event for chunk {} in {}", chunk.getPos(), level.dimension().identifier().toString());
                 String dimId = level.dimension().identifier().toString();
@@ -109,7 +115,7 @@ public class FarmTicker {
             }
         });
 
-        ServerChunkEvents.CHUNK_UNLOAD.register((ServerLevel level, LevelChunk chunk) -> {
+        ServerChunkEvents.CHUNK_UNLOAD.register((level, chunk) -> {
             try {
                 String dimId = level.dimension().identifier().toString();
                 int minX = chunk.getPos().getMinBlockX();
@@ -201,14 +207,14 @@ public class FarmTicker {
         try {
             LogUtils.logInfo("[TICK] world unload — clearing entire FrameRegistry and active scans.");
             FrameRegistry.clearAll();
-            try { FrameScanner.clearAllScans(); } catch (Throwable ignored) {}
+            try { FrameScanner.clearAllScans(); } catch (Throwable t) {}
             try {
                 var levelAccessor = event.getLevel();
                 if (levelAccessor instanceof ServerLevel level) {
                     String dimId = level.dimension().identifier().toString();
                     rediscoveryCountdown.remove(dimId);
                 }
-            } catch (Throwable ignored) {}
+            } catch (Throwable t) {}
         } catch (Throwable t) {
             LogUtils.logWarn("[TICK] Failed to handle level unload", t);
         }
@@ -229,7 +235,7 @@ public class FarmTicker {
 
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box, ef -> ef.getDirection() == Direction.UP);
             for (ItemFrame f : frames) {
-                try { FrameRegistry.unregisterFrame(dimId, f.blockPosition()); } catch (Throwable ignored) {}
+                try { FrameRegistry.unregisterFrame(dimId, f.blockPosition()); } catch (Throwable t) {}
             }
 
             try {
@@ -240,7 +246,7 @@ public class FarmTicker {
                     if (!FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
                     FrameRegistry.unregisterFrame(dimId, pos);
                 }
-            } catch (Throwable ignored) {}
+            } catch (Throwable t) {}
         } catch (Throwable t) {
             LogUtils.logWarn("[TICK] NeoForge chunk-unload cleanup error", t);
         }
@@ -331,3 +337,4 @@ public class FarmTicker {
     }
     */ //?}
 }
+

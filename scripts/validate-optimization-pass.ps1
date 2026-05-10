@@ -19,7 +19,6 @@ $javaFiles = @($staged | Where-Object { $_ -like '*.java' })
 $sourceFiles = @($staged | Where-Object { $_ -match '^(src/main|src/test)/' })
 
 $errors = New-Object System.Collections.Generic.List[string]
-$warnings = New-Object System.Collections.Generic.List[string]
 
 foreach ($relative in $javaFiles) {
     $fullPath = Join-Path $repoRoot $relative
@@ -50,9 +49,10 @@ foreach ($relative in $javaFiles) {
         }
     }
 
-    $catchIgnoredCount = (@($lines | Where-Object { $_ -match 'catch\s*\(\s*Throwable\s+ignored\s*\)' })).Count
-    if ($catchIgnoredCount -gt 0) {
-        $warnings.Add("$relative still has $catchIgnoredCount catch(Throwable ignored) blocks; prefer util.ExceptionHandler where possible.")
+    $catchIgnoredMatches = @($lines | Where-Object { $_ -match 'catch\s*\(\s*Throwable\s+ignored\s*\)' })
+    foreach ($match in $catchIgnoredMatches) {
+        $lineNum = [array]::IndexOf($lines, $match) + 1
+        $errors.Add("$relative uses catch(Throwable ignored) at line $lineNum; use util.ExceptionHandler instead")
     }
 }
 
@@ -64,14 +64,6 @@ foreach ($relative in $sourceFiles) {
         if ($lines[$i] -match '\s+$') {
             $errors.Add("$relative has trailing whitespace at line $($i + 1)")
         }
-    }
-}
-
-if ($warnings.Count -gt 0) {
-    Write-Host ''
-    Write-Host 'Optimization advisory warnings:' -ForegroundColor Yellow
-    foreach ($w in $warnings) {
-        Write-Host "- $w" -ForegroundColor Yellow
     }
 }
 

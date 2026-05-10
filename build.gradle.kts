@@ -28,6 +28,7 @@ val minecraft = property("deps.minecraft") as String
 val loader = name.substringAfterLast("-")
 val isFabric = loader == "fabric"
 val isNeoForge = loader == "neoforge"
+val javaRelease = if (minecraft.startsWith("26.")) 25 else 21
 
 // ────────────────────────────────────────────────────────────
 //  Modstitch core configuration
@@ -52,7 +53,7 @@ modstitch {
             "mod_author"              to "DuelMonster",
             "mod_homepage"            to "https://github.com/duelmonster/Forget-Me-Crops",
             "mod_issue_tracker"       to "https://github.com/duelmonster/Forget-Me-Crops/issues",
-            "minecraft_version_range" to "[1.21.11, 1.22)",
+            "minecraft_version_range" to "[1.21.11,)",
             "yacl_version_range"      to "[3.8.2,)",
             "neoforge_loader_range"   to "[10,)"
         ))
@@ -70,7 +71,7 @@ modstitch {
                 setConfigName("Fabric Client")
                 ideConfigGenerated(false)
                 runDir("runs/client")
-                programArgs("--username", "DuelMonster")
+                programArgs("--username", "DuelMonster", "--width", "1960", "--height", "1080")
             }
             runs.named("server") {
                 setConfigName("Fabric Server")
@@ -106,9 +107,13 @@ modstitch {
                     gameDirectory = project.file("runs/server")
                 }
             }
-            parchment {
-                minecraftVersion = findProperty("deps.parchment_mc") as? String ?: minecraft
-                mappingsVersion = findProperty("deps.parchment") as? String ?: ""
+            val parchmentMc = findProperty("deps.parchment_mc") as? String
+            val parchmentMappings = findProperty("deps.parchment") as? String
+            if (!parchmentMc.isNullOrBlank() && !parchmentMappings.isNullOrBlank()) {
+                parchment {
+                    minecraftVersion = parchmentMc
+                    mappingsVersion = parchmentMappings
+                }
             }
         }
     }
@@ -136,11 +141,16 @@ stonecutter {
     constants.match(loader, "fabric", "neoforge")
 }
 
-// Java 21 bytecode target — required for MC 1.20.6+.
-// In Modstitch 0.8.x, javaTarget was removed from the modstitch{} extension;
-// configure it directly on the compile tasks instead.
+// Java bytecode target per release line.
+// 1.21.x stays on Java 21; 26.x requires Java 25.
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(javaRelease))
+    }
+}
+
 tasks.withType<JavaCompile> {
-    options.release.set(21)
+    options.release.set(javaRelease)
 }
 
 // Ensure Stonecutter preprocessing runs before Java compilation so
@@ -174,9 +184,10 @@ tasks.register("copyRelatedMods") {
         val actualRoot = rootProject.projectDir
         val nodeVersionDir = project.projectDir // e.g., versions/1.21.11-fabric
         
-        // Extract the loader name (fabric or neoforge) from the project name
-        val projectLoader = project.name.substringAfterLast("-") // e.g., "1.21.11-fabric" → "fabric"
-        val loaderModsDir = File(actualRoot, "related_mods/$projectLoader")
+        // Extract the loader name and MC version from the project name (e.g., "1.21.11-fabric")
+        val projectLoader = project.name.substringAfterLast("-") // e.g., "fabric"
+        val projectVersion = project.name.substringBeforeLast("-") // e.g., "1.21.11"
+        val loaderModsDir = File(actualRoot, "related_mods/$projectLoader/$projectVersion")
         
         if (loaderModsDir.exists() && loaderModsDir.isDirectory) {
             val clientModsDir = File(nodeVersionDir, "runs/client/mods")
@@ -200,6 +211,64 @@ tasks.register("copyRelatedMods") {
 afterEvaluate {
     tasks.matching { it.name.matches(Regex("run.*")) }.configureEach {
         dependsOn("copyRelatedMods")
+    }
+}
+
+// Prevent ModDevGradle from auto-writing NeoForge launch entries into .vscode/launch.json.
+// Use configureEach so the rule applies even if the task is registered after project evaluation.
+tasks.configureEach {
+    if (name == "neoForgeIdeSync") {
+        enabled = false
+    }
+}
+
+if (isNeoForge) {
+    fun sanitizeVscodeLaunchJsonFile() {
+        val launchFile = rootProject.file(".vscode/launch.json")
+        if (!launchFile.exists()) return
+
+        try {
+            val original = launchFile.readText()
+            val parsed = groovy.json.JsonSlurper().parseText(original)
+            val root = parsed as? MutableMap<*, *> ?: return
+            val configurations = root["configurations"] as? List<*> ?: return
+
+            val filtered = configurations.filterNot { entry ->
+                val mapEntry = entry as? Map<*, *> ?: return@filterNot false
+                val name = mapEntry["name"] as? String ?: return@filterNot false
+                name.startsWith("NeoForge ")
+            }
+
+            if (filtered.size != configurations.size) {
+                val mutableRoot = root.toMutableMap()
+                mutableRoot["configurations"] = filtered
+                val cleaned = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(mutableRoot))
+                launchFile.writeText(cleaned + System.lineSeparator())
+            }
+        } catch (_: Exception) {
+            // Never fail a build because of launch.json sanitization.
+        }
+    }
+
+    tasks.register("sanitizeVscodeLaunchJson") {
+        group = "ide"
+        description = "Removes auto-generated NeoForge launch profiles from .vscode/launch.json."
+
+        doLast {
+            sanitizeVscodeLaunchJsonFile()
+        }
+    }
+
+    tasks.matching {
+        it.name == "neoForgeIdeSync" ||
+        it.name == "prepareClientRun" ||
+        it.name == "prepareServerRun"
+    }.configureEach {
+        finalizedBy("sanitizeVscodeLaunchJson")
+    }
+
+    gradle.buildFinished {
+        sanitizeVscodeLaunchJsonFile()
     }
 }
 
@@ -317,8 +386,11 @@ publishing {
 //    ./gradlew chiseledPublishAll   (publishes all nodes)
 // ────────────────────────────────────────────────────────────
 
-// Determine the production JAR task name for this node
-val prodJarTask: String = if (isFabric) "remapJar" else "jar"
+// Determine the production JAR task name for this node.
+// Older Fabric Loom nodes expose "remapJar" as the final artifact; newer ones
+// (and all NeoForge nodes) use plain "jar". Check at configuration time so that
+// both old and new Loom versions are handled correctly.
+val prodJarTask: String = if (tasks.findByName("remapJar") != null) "remapJar" else "jar"
 
 val modrinthToken = System.getenv("MODRINTH_TOKEN")
 val curseForgeToken = System.getenv("CURSEFORGE_TOKEN")

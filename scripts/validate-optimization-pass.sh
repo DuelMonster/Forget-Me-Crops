@@ -11,7 +11,6 @@ if (( ${#staged[@]} == 0 )); then
 fi
 
 errors=()
-warnings=()
 
 for relative in "${staged[@]}"; do
   [[ -z "$relative" ]] && continue
@@ -48,9 +47,10 @@ for relative in "${staged[@]}"; do
       done < <(grep -nE '[[:space:]]+$' "$full_path" | cut -d: -f1)
     fi
 
-    count=$(grep -cE 'catch\s*\(\s*Throwable\s+ignored\s*\)' "$full_path" || true)
-    if (( count > 0 )); then
-      warnings+=("$relative still has $count catch(Throwable ignored) blocks; prefer util.ExceptionHandler where possible.")
+    if grep -nE 'catch\s*\(\s*Throwable\s+ignored\s*\)' "$full_path" >/dev/null; then
+      while IFS= read -r row; do
+        errors+=("$relative uses catch(Throwable ignored) at line $row; use util.ExceptionHandler instead")
+      done < <(grep -nE 'catch\s*\(\s*Throwable\s+ignored\s*\)' "$full_path" | cut -d: -f1)
     fi
   fi
 
@@ -62,14 +62,6 @@ for relative in "${staged[@]}"; do
     fi
   fi
 done
-
-if (( ${#warnings[@]} > 0 )); then
-  echo
-  echo "Optimization advisory warnings:"
-  for w in "${warnings[@]}"; do
-    echo "- $w"
-  done
-fi
 
 if (( ${#errors[@]} > 0 )); then
   echo

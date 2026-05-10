@@ -3,6 +3,7 @@ import com.forgetmecrops.util.log.LogUtils;
 import com.forgetmecrops.config.Config;
 import com.forgetmecrops.harvest.CropRegistry;
 
+import com.forgetmecrops.util.ExceptionHandler;
 import com.forgetmecrops.platform.adapter.FIF;
 import com.forgetmecrops.platform.adapter.FastItemFrameAdapterImpl;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -54,11 +55,11 @@ public class FrameDiscovery {
      */
     public static boolean registerVanillaFrameIfValid(String dimId, ServerLevel level, ItemFrame f) {
         try {
-            try { LogUtils.logDebug("[TICK] Frame at {} direction={}", f.blockPosition(), f.getDirection()); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[TICK] Frame at {} direction={}", f.blockPosition(), f.getDirection()); } catch (Throwable t) {}
             var held = f.getItem();
             if (f.getDirection() != Direction.UP) { LogUtils.logDebug("[TICK] Frame {} skipped: not facing UP ({}).", f.blockPosition(), f.getDirection()); return false; }
             BlockPos pos = f.blockPosition();
-            try { LogUtils.logInfo("[TICK] registerVanillaFrameIfValid: pos={} dir={} held={} count={}", pos, f.getDirection(), (held == null || held.isEmpty()) ? "empty" : held.getItem().getClass().getName(), held == null ? 0 : held.getCount()); } catch (Throwable ignored) {}
+            try { LogUtils.logInfo("[TICK] registerVanillaFrameIfValid: pos={} dir={} held={} count={}", pos, f.getDirection(), (held == null || held.isEmpty()) ? "empty" : held.getItem().getClass().getName(), held == null ? 0 : held.getCount()); } catch (Throwable t) {}
             BlockPos chestPos = pos;
             BlockEntity be = level.getBlockEntity(chestPos);
             if (!(be instanceof Container)) {
@@ -72,23 +73,23 @@ public class FrameDiscovery {
                     chest = resolvedChest;
                 }
                 boolean chestWaterlogged = false;
-                try { BlockState cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
+                try { BlockState cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable t) {}
                 int rX = Math.min(5, Math.max(1, Config.getScanRangeX()));
                 int rZ = Math.min(5, Math.max(1, Config.getScanRangeZ()));
                 boolean nearbyFarmlandSoil = isNearbyFarmlandSoil(level, chestPos, rX, rZ);
                 boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
                 boolean isNetherWartFarm = isNearbyNetherWartFarm(level, chestPos, rX, rZ);
-                try { LogUtils.logInfo("[TICK] Chest check pos={} be={} waterlogged={} rX={} rZ={} nearbyFarmlandSoil={} nearbyFarmlandCrop={} isNetherWartFarm={}", chestPos, be.getClass().getName(), chestWaterlogged, rX, rZ, nearbyFarmlandSoil, nearbyFarmlandCrop, isNetherWartFarm); } catch (Throwable ignored) {}
+                try { LogUtils.logInfo("[TICK] Chest check pos={} be={} waterlogged={} rX={} rZ={} nearbyFarmlandSoil={} nearbyFarmlandCrop={} isNetherWartFarm={}", chestPos, be.getClass().getName(), chestWaterlogged, rX, rZ, nearbyFarmlandSoil, nearbyFarmlandCrop, isNetherWartFarm); } catch (Throwable t) {}
                 if (nearbyFarmlandCrop && !chestWaterlogged && !isNetherWartFarm) {
                     LogUtils.logDebug("[TICK] Skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                     return false;
                 }
                 if (held == null || held.isEmpty()) {
-                    try { LogUtils.logDebug("[TICK] Discovered empty frame at {} above chest {}; registering inactive.", pos, chestPos); } catch (Throwable ignored) {}
+                    try { LogUtils.logDebug("[TICK] Discovered empty frame at {} above chest {}; registering inactive.", pos, chestPos); } catch (Throwable t) {}
                     FrameRegistry.registerFrame(dimId, pos, chest, ItemStack.EMPTY);
                     return true;
                 }
-                try { LogUtils.logInfo("[TICK] Frame {} holds item: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable ignored) {}
+                try { LogUtils.logInfo("[TICK] Frame {} holds item: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable t) {}
                 if (!(held.getItem() instanceof HoeItem)) { LogUtils.logDebug("[TICK] Frame {} skipped: held item is not a hoe.", pos); return false; }
                 LogUtils.logDebug("[TICK] Discovered anchor (vanilla) at {} in {}; registering active.", pos, dimId);
                 FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
@@ -121,64 +122,66 @@ public class FrameDiscovery {
      */
     public static boolean registerFIFIfValid(String dimId, ServerLevel level, BlockEntity be, BlockPos pos) {
         try {
-            try { LogUtils.logInfo("[FIF] Inspecting potential FIF at {} in {} (be={})", pos, dimId, be.getClass().getName()); } catch (Throwable ignored) {}
+            try { LogUtils.logInfo("[FIF] Inspecting potential FIF at {} in {} (be={})", pos, dimId, be.getClass().getName()); } catch (Throwable t) {}
             // Diagnostic snapshot: game time, system time, block-entity identity and chunk-loaded state
-            try {
-                long gameTime = -1L;
-                try { gameTime = level.getGameTime(); } catch (Throwable ignored) {}
+            ExceptionHandler.silentTry(() -> {
+                final java.util.concurrent.atomic.AtomicLong gameTime = new java.util.concurrent.atomic.AtomicLong(-1L);
+                ExceptionHandler.silentTry(() -> gameTime.set(level.getGameTime()));
                 long sysTime = System.currentTimeMillis();
-                BlockEntity levelBe = null;
-                try { levelBe = level.getBlockEntity(pos); } catch (Throwable ignored) {}
+                final java.util.concurrent.atomic.AtomicReference<BlockEntity> levelBeRef = new java.util.concurrent.atomic.AtomicReference<>(null);
+                ExceptionHandler.silentTry(() -> levelBeRef.set(level.getBlockEntity(pos)));
+                BlockEntity levelBe = levelBeRef.get();
                 boolean beEquals = levelBe == be;
                 int beHash = System.identityHashCode(be);
                 int levelBeHash = levelBe == null ? -1 : System.identityHashCode(levelBe);
-                boolean chunkLoadedViaAdapter = false;
-                try {
+                final java.util.concurrent.atomic.AtomicBoolean chunkLoadedViaAdapter = new java.util.concurrent.atomic.AtomicBoolean(false);
+                ExceptionHandler.silentTry(() -> {
                     int cx = pos.getX() >> 4;
                     int cz = pos.getZ() >> 4;
+                    net.minecraft.world.level.ChunkPos targetChunk = new net.minecraft.world.level.ChunkPos(cx, cz);
                     for (LevelChunk lc : FastItemFrameAdapterImpl.getLoadedChunks(level)) {
-                        if (lc != null && lc.getPos() != null && lc.getPos().x == cx && lc.getPos().z == cz) { chunkLoadedViaAdapter = true; break; }
+                        if (lc != null && lc.getPos() != null && lc.getPos().equals(targetChunk)) { chunkLoadedViaAdapter.set(true); break; }
                     }
-                } catch (Throwable ignored) {}
-                try { LogUtils.logDebug("[FIF] DIAG register snapshot pos={} gametime={} systime={} beParamClass={} beParamHash={} levelBeClass={} levelBeHash={} beEquals={} chunkLoadedAdapter={}", pos, gameTime, sysTime, be.getClass().getName(), beHash, levelBe == null ? "null" : levelBe.getClass().getName(), levelBeHash, beEquals, chunkLoadedViaAdapter); } catch (Throwable ignored) {}
-            } catch (Throwable ignored) {}
+                });
+                ExceptionHandler.silentTry(() -> LogUtils.logDebug("[FIF] DIAG register snapshot pos={} gametime={} systime={} beParamClass={} beParamHash={} levelBeClass={} levelBeHash={} beEquals={} chunkLoadedAdapter={}", pos, gameTime.get(), sysTime, be.getClass().getName(), beHash, levelBe == null ? "null" : levelBe.getClass().getName(), levelBeHash, beEquals, chunkLoadedViaAdapter.get()));
+            });
             net.minecraft.world.item.ItemStack held = FIF.extractHeldItem(be);
             if (held != null && !held.isEmpty()) {
-                try { LogUtils.logDebug("[FIF] Held item at {}: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] Held item at {}: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable t) {}
                 boolean isHoe = held.getItem() instanceof HoeItem;
-                try { LogUtils.logDebug("[FIF] Held is HoeItem: {}", isHoe); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] Held is HoeItem: {}", isHoe); } catch (Throwable t) {}
                 if (!isHoe) return false;
             } else {
-                try { LogUtils.logDebug("[FIF] No held item at {} (held == null or empty) — will register inactive if chest valid.", pos); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] No held item at {} (held == null or empty) — will register inactive if chest valid.", pos); } catch (Throwable t) {}
             }
             BlockPos chestPos = pos.below();
             var chestBe = level.getBlockEntity(chestPos);
-            try { LogUtils.logDebug("[FIF] BlockEntity at chest pos {}: {}", chestPos, chestBe == null ? "null" : chestBe.getClass().getName()); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[FIF] BlockEntity at chest pos {}: {}", chestPos, chestBe == null ? "null" : chestBe.getClass().getName()); } catch (Throwable t) {}
             if (!(chestBe instanceof Container)) {
-                try { LogUtils.logDebug("[FIF] No Container at {} — aborting FIF anchor.", chestPos); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] No Container at {} — aborting FIF anchor.", chestPos); } catch (Throwable t) {}
                 return false;
             }
             Container chest = resolveAnchorContainer(level, chestPos, chestBe);
             if (chest == null) {
-                try { LogUtils.logDebug("[FIF] Could not resolve usable container at {} — aborting FIF anchor.", chestPos); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] Could not resolve usable container at {} — aborting FIF anchor.", chestPos); } catch (Throwable t) {}
                 return false;
             }
             boolean chestWaterlogged = false;
             BlockState cs = null;
-            try { cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable ignored) {}
-            try { LogUtils.logDebug("[FIF] Chest waterlogged at {}: {}, blockState={}", chestPos, chestWaterlogged, cs == null ? "null" : cs.getBlock().getClass().getName()); } catch (Throwable ignored) {}
+            try { cs = level.getBlockState(chestPos); chestWaterlogged = cs.getValue(BlockStateProperties.WATERLOGGED); } catch (Throwable t) {}
+            try { LogUtils.logDebug("[FIF] Chest waterlogged at {}: {}, blockState={}", chestPos, chestWaterlogged, cs == null ? "null" : cs.getBlock().getClass().getName()); } catch (Throwable t) {}
             int rX = Math.min(5, Math.max(1, Config.getScanRangeX()));
             int rZ = Math.min(5, Math.max(1, Config.getScanRangeZ()));
             boolean nearbyFarmlandSoil = isNearbyFarmlandSoil(level, chestPos, rX, rZ);
             boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
             boolean isNetherWartFarm = isNearbyNetherWartFarm(level, chestPos, rX, rZ);
-            try { LogUtils.logInfo("[FIF] chestPos={} be={} rX={} rZ={} nearbyFarmlandSoil={} nearbyFarmlandCrop={} chestWaterlogged={} isNetherWartFarm={}", chestPos, chestBe.getClass().getName(), rX, rZ, nearbyFarmlandSoil, nearbyFarmlandCrop, chestWaterlogged, isNetherWartFarm); } catch (Throwable ignored) {}
+            try { LogUtils.logInfo("[FIF] chestPos={} be={} rX={} rZ={} nearbyFarmlandSoil={} nearbyFarmlandCrop={} chestWaterlogged={} isNetherWartFarm={}", chestPos, chestBe.getClass().getName(), rX, rZ, nearbyFarmlandSoil, nearbyFarmlandCrop, chestWaterlogged, isNetherWartFarm); } catch (Throwable t) {}
             if (nearbyFarmlandCrop && !chestWaterlogged && !isNetherWartFarm) {
                 LogUtils.logDebug("[TICK] FIF anchor at {} in {} skipped: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                 return false;
             }
             if (held == null || held.isEmpty()) {
-                try { LogUtils.logDebug("[FIF] Registering inactive FIF anchor at {} above chest {}.", pos, chestPos); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[FIF] Registering inactive FIF anchor at {} above chest {}.", pos, chestPos); } catch (Throwable t) {}
                 FrameRegistry.registerFrame(dimId, pos, chest, ItemStack.EMPTY);
                 return true;
             }
@@ -284,8 +287,9 @@ public class FrameDiscovery {
                     }
                 }
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {}
 
         return baseContainer;
     }
 }
+

@@ -71,29 +71,32 @@ Sweet berry bushes are harvested without destroying the bush — the age is simp
 
 ### Requirements
 
-| Component   | Version  |
-|-------------|----------|
-| Minecraft   | 1.21.11  |
-| Java        | 21       |
+| Component   | Version              |
+|-------------|----------------------|
+| Minecraft   | 1.21.11, 26.1.2      |
+| Java        | 21 (1.21.x), 25 (26.x) |
 
 ### Fabric
 
-| Component   | Version              |
-|-------------|----------------------|
-| Fabric Loader | 0.19.2             |
-| Fabric API  | 0.139.5+1.21.11      |
+| Minecraft Line | Fabric Loader | Fabric API         | Mod Menu         |
+|----------------|---------------|--------------------|------------------|
+| 1.21.11        | 0.19.2        | 0.140.0+1.21.11    | 17.0.0           |
+| 26.1.2         | 0.19.2        | 0.148.0+26.1.2     | 18.0.0-beta.1    |
 
-Drop `Forget-Me-Crops-1.21.11-<version>-Fabric.jar` into your `mods/` folder alongside Fabric API.
+Drop the matching `Forget-Me-Crops_<version>+<minecraft>-fabric.jar` into your `mods/` folder alongside Fabric API.
 Mod Menu is optional but recommended — it gives you an in-game config screen.
 
 ### NeoForge
 
-| Component  | Version  |
-|------------|----------|
-| NeoForge   | 21.11.42 |
+| Minecraft Line | NeoForge         |
+|----------------|------------------|
+| 1.21.11        | 21.11.42         |
+| 26.1.2         | 26.1.2.43-beta   |
 
-Drop `Forget-Me-Crops-1.21.11-<version>-NeoForge.jar` into your `mods/` folder.
+Drop the matching `Forget-Me-Crops_<version>+<minecraft>-neoforge.jar` into your `mods/` folder.
 The built-in NeoForge config screen is available from the Mods list in the main menu.
+
+YACL is pinned per release line (`3.8.2+1.21.11` on `1.21.11`, `3.9.3+26.1` on `26.1.2`) to match upstream compatibility.
 
 Both loaders use a single unified mixin config: `forgetmecrops.mixins.json`.
 

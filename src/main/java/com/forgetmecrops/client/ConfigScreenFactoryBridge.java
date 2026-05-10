@@ -18,6 +18,4 @@ public final class ConfigScreenFactoryBridge implements IConfigScreenFactory {
     public Screen createScreen(ModContainer container, Screen parent) {
         return ConfigScreen.create(parent);
     }
-}*///?} else {
-// This file intentionally empty on Fabric — see ModMenuEntrypoint.java instead.
-//?}
+}*///?}

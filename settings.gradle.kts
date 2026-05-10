@@ -38,9 +38,10 @@ stonecutter {
         fun mc(mcVersion: String, loaders: Iterable<String>) =
             loaders.forEach { version("$mcVersion-$it", mcVersion) }
 
-        // The one Minecraft version this mod currently supports.
-        // Add more mc(…) calls here when expanding to additional versions.
+        // Supported stable release lines.
+        // Keep newest entries last for easier maintenance.
         mc("1.21.11", loaders = listOf("fabric", "neoforge"))
+        mc("26.1.2", loaders = listOf("fabric", "neoforge"))
 
         // VCS reset point: the branch that "clean source" lives in.
         // Running the "Reset active version" Stonecutter task restores the source

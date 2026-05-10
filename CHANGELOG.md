@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.19.0
+
+- Add Stonecutter support nodes for Minecraft `26.1.2` on both loaders: `26.1.2-fabric` and `26.1.2-neoforge`.
+- Expand root Stonecutter registration in `settings.gradle.kts` to build `1.21.11` and `26.1.2` for Fabric + NeoForge.
+- Add Fabric `26.1.2` per-node dependency pins:
+  - Fabric Loader: `0.19.2`
+  - Fabric API: `0.148.0+26.1.2`
+  - Mod Menu: `18.0.0-beta.1`
+  - YACL: `3.9.3+26.1`
+- Keep NeoForge `26.1.2` dependency pins:
+  - NeoForge: `26.1.2.43-beta`
+  - YACL: `3.8.1+1.21.11`
+- Update Fabric 26.x build mode to `modstitch.platform=fabric-loom`.
+- Update metadata token `minecraft_version_range` from `[1.21.11, 1.22)` to `[1.21.11,)` so manifests include the new release line.
+- Make NeoForge Parchment mapping configuration conditional: only apply Parchment when both `deps.parchment_mc` and `deps.parchment` are present in the node properties.
+- Fix Fabric chunk-load event wiring across versions: use Stonecutter version-conditional callback signatures (2-arg on `1.21.11`, 3-arg on `26.1.2`).
+
 ## 0.18.0
 
 - Fix FOLLOW_ROTATION mode to cycle through all 8 steps per ring without per-tick pending-queue overwrites.

@@ -1,5 +1,5 @@
 {
-    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.configuration.updateBuildConfiguration": "interactive",
     "java.project.sourcePaths": ["common/src/main/java", "fabric/src/main/java", "neoforge/src/main/java"],
     "java.project.outputPath": "build/classes/java/main",
     "java.compile.nullAnalysis.mode": "automatic",
