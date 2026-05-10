@@ -97,3 +97,7 @@ bash .git/hooks/commit-msg <(echo "Your commit message here")
 ## Questions?
 
 Refer to [commit.rules.md](./commit.rules.md) for the authoritative standard, or check the `.git/hooks/commit-msg` validation logic.
+
+## Related Guide
+
+For daily versioning policy, see [VERSION_BUMP_RULE.md](./VERSION_BUMP_RULE.md).
