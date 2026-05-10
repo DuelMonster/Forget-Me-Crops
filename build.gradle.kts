@@ -48,7 +48,7 @@ modstitch {
             "mod_id"                  to "forgetmecrops",
             "mod_name"                to "Forget-Me-Crops",
             "mod_description"         to "Automates crop harvesting for both Fabric and NeoForge.",
-            "mod_license"             to "CC0-1.0",
+            "mod_license"             to "MIT",
             "mod_author"              to "DuelMonster",
             "mod_homepage"            to "https://github.com/duelmonster/Forget-Me-Crops",
             "mod_issue_tracker"       to "https://github.com/duelmonster/Forget-Me-Crops/issues",
@@ -101,11 +101,9 @@ modstitch {
                     programArgument("1960")
                     programArgument("--height")
                     programArgument("1080")
-                    ideConfigGenerated = false
                 }
                 named("server") {
                     gameDirectory = project.file("runs/server")
-                    ideConfigGenerated = false
                 }
             }
             parchment {
@@ -262,8 +260,8 @@ publishing {
                 url.set("https://github.com/duelmonster/Forget-Me-Crops")
                 licenses {
                     license {
-                        name.set("CC0-1.0")
-                        url.set("https://creativecommons.org/publicdomain/zero/1.0/")
+                        name.set("MIT")
+                        url.set("https://opensource.org/licenses/MIT")
                     }
                 }
                 scm {
