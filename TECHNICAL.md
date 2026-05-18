@@ -564,6 +564,10 @@ Local Maven publishes to `~/.m2/repository` unconditionally.
 
 To keep docs aligned with `.brainbox/rules/documentation.rules.md`, this workspace now includes a lightweight docs compliance check script:
 
+### Contributor Hook Setup
+
+If you are contributing changes, enable versioned repository hooks so docs and optimization checks run automatically before commits.
+
 - `scripts/validate-docs.ps1` (PowerShell)
 - `scripts/validate-docs.sh` (Bash)
 - `scripts/validate-optimization-pass.ps1` (PowerShell)

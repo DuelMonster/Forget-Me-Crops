@@ -1,4 +1,4 @@
-Make sure the README, TECHNICAL docs are fully updated, acurate and cover all aspects of the project. Rewrite when needed and ensure to keep the formatting similar (like tables formated with space padding).
+Make sure the README, TECHNICAL docs are fully updated, accurate and cover all aspects of the project. Rewrite when needed and ensure to keep the formatting similar (like tables formatted with space padding).
 Follow these rules:
 
 README:

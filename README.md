@@ -1,69 +1,98 @@
 # Forget-Me-Crops
 
-> *Because nobody ever got rich standing next to a wheat field with a hoe.*
+> *Because your crops should fear your efficiency, not your attention span.*
 
-Forget-Me-Crops automates crop harvesting for Fabric and NeoForge. Put a hoe in an item frame on top of a chest, grow crops around it, and the farm handles itself — harvesting mature crops, stowing the drops in the chest, replanting from stock, and even fixing the occasional dirt gap you accidentally trampled or hoed into existence.
+Forget-Me-Crops is a farm automation mod for Fabric and NeoForge.
+Set up one anchor (waterlogged chest + top-mounted item frame + hoe), plant around it, and the mod handles harvesting, replanting, drop storage, and basic farm repair automatically.
 
-For the full implementation deep-dive — scan internals, package structure, build instructions, and everything else that starts with the word "BFS" — see [TECHNICAL.md](TECHNICAL.md).
+If you want implementation internals and developer docs, head to [TECHNICAL.md](TECHNICAL.md). This README is intentionally player-focused.
 
 ---
 
 ## Overview
 
-Forget-Me-Crops scans the crops around a designated item-frame anchor every few seconds, harvests anything ripe, and deposits the drops straight into the attached chest. No player interaction needed. The frame gently rotates as it works so you can tell at a glance that something is actually happening.
+Forget-Me-Crops turns a normal crop area into a self-running farm zone centered on an anchor.
 
-Farms stay active as long as their chunks are loaded, so vanilla chunk loaders and any modded loaders you already have work fine.
+In short: you build the farm once, the mod does the repetitive part forever, and your knees are saved from crouch-harvest duty.
 
 ---
 
 ## Features
 
-- Fully automatic harvesting into an attached chest
-- Replants crops from chest stock after harvest
-- Self-repairs: retills dirt/grass back into farmland, replants empty patches
-- Replaces a broken hoe from chest stock automatically
-- If an anchor frame is rebuilt empty, pulls a hoe from chest stock and resumes scanning immediately
-- Detects when the frame or chest is removed and unregisters cleanly
-- Single-pass spiral scan combines harvesting, replanting, and farm repair actions
-- Incremental scanning spreads work across multiple ticks to keep lag spikes small
-- BFS-based connected-farm discovery avoids cross-contaminating neighboring farms
-- In-world feedback during scan work: planting/tilling/harvest sounds plus dust/harvest particles
-- Fortune and Silk Touch enchantments are respected for drop calculations
-- YACL (YetAnotherConfigLib) config screen with responsive tooltips
-- Fabric Mod Menu integration when Mod Menu is installed
-- Works alongside [FastItemFrames by Fuzss](https://modrinth.com/mod/fastitemframes)
+- Harvests mature supported crops automatically
+- Deposits drops into the linked chest
+- Replants using fresh drops first, then chest stock
+- Retills nearby dirt/grass gaps back into farmland when possible
+- Replants empty farmland and soul-sand tiles using nearby crop consensus
+- Replaces broken (or missing) hoes from chest stock when available
+- Rotates the frame during scanning so activity is visible
 
 ---
 
 ## How It Works
 
-1. Every `tickInterval` ticks the mod checks each registered anchor.
-2. If a hoe is present and the chest has space, a `FarmScanTask` is created.
-3. The task discovers the farm area with a BFS pass, then sweeps it in an outward spiral.
-4. Mature crops are harvested and drops inserted into the chest; the seed/replant item is consumed from the drops (or chest) and the crop is immediately replanted.
-5. The same spiral pass also repairs farm gaps in-line: empty farmland/soul-sand tiles are replanted and connected dirt/grass patches (air above, within scan bounds) are retilled and replanted.
-6. The item frame rotates as work progresses so you can see which ring is currently being processed.
-7. Scan work produces local feedback (tilling/plant/harvest sounds, spiral dust, and harvest dust bursts) so activity is visible during the pass.
-8. When the task finishes (or the chest fills), it cleans up and the anchor goes back on its cooldown timer.
-9. If a frame is restored empty and a hoe is available in the chest, the registry marks the anchor ready immediately instead of waiting a full `tickInterval`.
+Each anchor runs on a timer (`tickInterval`, default 300 ticks / 15s):
+
+1. The anchor is validated (frame still present, chest still valid, hoe available).
+2. The mod discovers connected farm tiles around that anchor.
+3. It scans in an outward spiral, spread across multiple ticks to avoid lag spikes.
+4. During that same pass, it harvests ripe crops, replants, and repairs eligible gaps.
+5. If the chest fills, it pauses that anchor and retries after `chestFullCooldownTicks`.
+6. When done, it returns to cooldown and waits for the next cycle.
+
+Notes:
+
+- Farms run only while their chunks are loaded.
+- If a frame exists but is empty, the mod can pull a hoe from chest stock and resume automatically.
+- If the frame or chest is removed, that anchor is unregistered cleanly.
+
+---
+
+## Create An Anchor (Quick Setup)
+
+1. Place a chest at the same height as your crop layer.
+2. Waterlog the chest (required for normal crop farms).
+3. Attach an item frame to the top face of that chest.
+4. Put any hoe in the frame.
+5. Plant supported crops around that same Y-level.
+
+That is it. Your farm now has a tiny spinning foreman.
+
+### Anchor Rules (Important)
+
+- Scanning only happens on the same Y level as the item frame.
+- Crops above or below that layer are ignored.
+- Normal farmland crop anchors require a waterlogged chest.
+- Nether Wart farms on soul sand can use a dry chest.
+- Scan bounds come from `scanRangeX` and `scanRangeZ` (default 4 each direction).
+
+### Common Setup Mistakes
+
+- Frame placed on the side of the chest instead of the top.
+- Chest not waterlogged for normal crops.
+- Farm planted one block above or below the anchor layer.
+- No valid hoe in the frame or chest.
 
 ---
 
 ## Supported Crops
 
-| Crop            | Harvest condition            | Replant behaviour                            |
-|-----------------|------------------------------|----------------------------------------------|
-| Wheat           | Fully grown (age 7)          | One wheat seed consumed from drops           |
-| Carrots         | Fully grown (age 7)          | One carrot consumed from drops               |
-| Potatoes        | Fully grown (age 7)          | One potato consumed from drops               |
-| Beetroots       | Fully grown (age 3)          | One beetroot seed consumed from drops        |
-| Torchflower     | Fully grown                  | Replanted; seed not consumed from drops      |
-| Sweet Berries   | Stage 3 (age 3)              | Bush reset to stage 1; not broken            |
-| Nether Wart     | Fully grown (age 3)          | One nether wart consumed from drops          |
-| Melon           | Fruit block present          | Stem left in place; regrows naturally        |
-| Pumpkin         | Fruit block present          | Stem left in place; regrows naturally        |
+| Crop            | Harvest condition            | Replant behavior                              |
+|-----------------|------------------------------|-----------------------------------------------|
+| Wheat           | Fully grown (age 7)          | 1 wheat seed consumed                         |
+| Carrots         | Fully grown (age 7)          | 1 carrot consumed                             |
+| Potatoes        | Fully grown (age 7)          | 1 potato consumed                             |
+| Beetroots       | Fully grown (age 3)          | 1 beetroot seed consumed                      |
+| Torchflower     | Fully grown                  | Replanted (torchflower seed item)             |
+| Sweet Berries   | Stage 3 (age 3)              | Bush reset to age 1 (bush is not broken)      |
+| Nether Wart     | Fully grown (age 3)          | 1 nether wart consumed                        |
+| Melon           | Fruit block present          | Fruit harvested, stem remains                 |
+| Pumpkin         | Fruit block present          | Fruit harvested, stem remains                 |
 
-Sweet berry bushes are harvested without destroying the bush — the age is simply rolled back to 1. Melon and pumpkin fruits are broken and the drops collected; the stems are never touched so they regrow on their own timeline.
+Special behavior:
+
+- Sweet berry bushes are harvested in-place (age rolls back to 1).
+- Melon and pumpkin stems are never broken; only the fruit is harvested.
 
 ---
 
@@ -71,115 +100,100 @@ Sweet berry bushes are harvested without destroying the bush — the age is simp
 
 ### Requirements
 
-| Component   | Version              |
-|-------------|----------------------|
-| Minecraft   | 1.21.11, 26.1.2      |
+| Component   | Version                |
+|-------------|------------------------|
+| Minecraft   | 1.21.11, 26.1.2        |
 | Java        | 21 (1.21.x), 25 (26.x) |
 
 ### Fabric
 
-| Minecraft Line | Fabric Loader | Fabric API         | Mod Menu         |
-|----------------|---------------|--------------------|------------------|
-| 1.21.11        | 0.19.2        | 0.140.0+1.21.11    | 17.0.0           |
-| 26.1.2         | 0.19.2        | 0.148.0+26.1.2     | 18.0.0-beta.1    |
+| Minecraft Line | Fabric Loader | Fabric API      | Mod Menu      |
+|----------------|---------------|-----------------|---------------|
+| 1.21.11        | 0.19.2        | 0.140.0+1.21.11 | 17.0.0        |
+| 26.1.2         | 0.19.2        | 0.148.0+26.1.2  | 18.0.0-beta.1 |
 
-Drop the matching `Forget-Me-Crops_<version>+<minecraft>-fabric.jar` into your `mods/` folder alongside Fabric API.
-Mod Menu is optional but recommended — it gives you an in-game config screen.
+Drop the matching `Forget-Me-Crops_<version>+<minecraft>-fabric.jar` into your `mods/` folder with Fabric API.
+Mod Menu is optional, but recommended for in-game config editing.
 
 ### NeoForge
 
-| Minecraft Line | NeoForge         |
-|----------------|------------------|
-| 1.21.11        | 21.11.42         |
-| 26.1.2         | 26.1.2.43-beta   |
+| Minecraft Line | NeoForge       |
+|----------------|----------------|
+| 1.21.11        | 21.11.42       |
+| 26.1.2         | 26.1.2.43-beta |
 
 Drop the matching `Forget-Me-Crops_<version>+<minecraft>-neoforge.jar` into your `mods/` folder.
-The built-in NeoForge config screen is available from the Mods list in the main menu.
+Use the Mods list Configure button for the config UI.
 
-YACL is pinned per release line (`3.8.2+1.21.11` on `1.21.11`, `3.9.3+26.1` on `26.1.2`) to match upstream compatibility.
+YACL is pinned per line for compatibility:
 
-Both loaders use a single unified mixin config: `forgetmecrops.mixins.json`.
+- `3.8.2+1.21.11` on 1.21.11
+- `3.9.3+26.1` on 26.1.2
 
-### Quick Setup
-
-1. Place a chest at the same height as the crop layer you want automated.
-2. Waterlog that chest (required for normal crop farms; Nether Wart farms may use a dry chest).
-3. Attach an item frame to the **top face** of the chest.
-4. Put any hoe into the item frame.
-5. Grow supported crops around the chest on that same Y level.
-
-**Important placement rules:**
-
-- Forget-Me-Crops only scans on the same Y level as the item frame. Crops above or below that layer are ignored.
-- Normal crop anchors need a waterlogged chest. Nether Wart farms on soul sand do not.
-- The scan range is controlled by `scanRangeX` and `scanRangeZ` in the config (default: 4 blocks in each direction).
-- Anchor validation runs at scan time — if the frame or chest disappears the anchor is automatically unregistered.
+Both loaders use the same unified mixin config: `forgetmecrops.mixins.json`.
 
 ---
 
 ## Configuration
 
-Config files are written to `config/forgetmecrops-server.toml` and `config/forgetmecrops-client.toml` in your instance directory.
+Config files are stored in your instance folder:
 
-On **Fabric**, if Mod Menu is installed, these can also be edited in-game via the mod's Configure button.
-On **NeoForge**, the Mods list Configure button opens the same shared YACL screen.
+- `config/forgetmecrops-server.toml`
+- `config/forgetmecrops-client.toml`
 
-Both loaders delegate to the same `ConfigScreen` builder in `common`, powered by YACL options and controllers.
-NeoForge exposes the Configure button through its extension-point registration path, so current builds show the button enabled in the Mods list.
-Numeric server settings now use integer sliders with explicit ranges from `ConfigDefaults`.
-Enum-mode tooltips in that screen use localized player-friendly labels from the language file (for example `Single Step` instead of `SINGLE_STEP`).
-Tooltips now also include each option's default value so players can compare changes against baseline behavior directly in the screen.
+On Fabric, Mod Menu opens the same shared config screen.
+On NeoForge, the Mods menu Configure button opens that same screen.
 
 ### Server Config
 
-| Option                     | Default         | Config-Screen Range | What it does                                                                                   |
-|----------------------------|-----------------|---------------------|------------------------------------------------------------------------------------------------|
-| `tickInterval`             | `300`           | `1` to `1200`       | How often each anchor runs, in ticks. `300` is 15 seconds at 20 TPS.                          |
-| `frameRediscoveryInterval` | `300`           | `15` to `1200`      | How often loaded chunks are rescanned to refresh the frame registry, in ticks.                 |
-| `scanRangeX`               | `4`             | `1` to `16`         | Scan radius along X from the anchor. `4` covers 4 blocks in each direction (9 blocks wide).   |
-| `scanRangeZ`               | `4`             | `1` to `16`         | Scan radius along Z from the anchor. `4` covers 4 blocks in each direction (9 blocks wide).   |
-| `durabilityMode`           | `normal`        | n/a                 | Controls hoe wear during harvesting and repairs. See table below.                              |
-| `mendingProtection`        | `true`          | n/a                 | When `true`, hoes with Mending are protected from durability loss caused by this mod. |
-| `chestFullCooldownTicks`   | `300`           | `10` to `300`       | How many ticks to wait before retrying when the attached chest is full.                        |
-| `maxSpiralDurationTicks`   | `200`           | `10` to `400`       | Maximum ticks to spread one scan cycle across. Higher values reduce per-tick load.             |
-| `rotationMode`             | `FULL_ROTATION` | n/a                 | How the item frame rotates during a harvest cycle. See table below.                            |
-| `debugLogging`             | `false`         | n/a                 | Writes detailed farm activity to the log. Useful for troubleshooting; leave off normally.      |
-| `seedClutterMode`          | `reduced`       | n/a                 | Controls how excess seed drops are handled before chest insertion. See section below.          |
-| `seedReservePerType`       | `80`            | `0` to `1152`       | Minimum seeds to keep per type in the chest. Replanting will not pull seeds below this amount. |
+| Option                     | Default         | Config Screen Range | What it does                                                                                     |
+|----------------------------|-----------------|---------------------|--------------------------------------------------------------------------------------------------|
+| `tickInterval`             | `300`           | `1` to `1200`       | How often an anchor runs, in ticks (`300` = 15 seconds at 20 TPS).                              |
+| `frameRediscoveryInterval` | `300`           | `15` to `1200`      | How often loaded chunks are rescanned to refresh anchor discovery.                               |
+| `scanRangeX`               | `4`             | `1` to `16`         | Radius along X from anchor (`4` means 4 blocks each direction, 9 wide total).                   |
+| `scanRangeZ`               | `4`             | `1` to `16`         | Radius along Z from anchor (`4` means 4 blocks each direction, 9 wide total).                   |
+| `durabilityMode`           | `normal`        | n/a                 | Hoe durability behavior.                                                                          |
+| `mendingProtection`        | `true`          | n/a                 | If true, hoes with Mending take no mod-caused durability loss.                                   |
+| `chestFullCooldownTicks`   | `300`           | `10` to `300`       | Wait time before retrying when chest is full.                                                    |
+| `maxSpiralDurationTicks`   | `200`           | `10` to `400`       | Maximum ticks to spread one scan across (higher = less per-tick load).                          |
+| `rotationMode`             | `FULL_ROTATION` | n/a                 | Frame rotation behavior during scans.                                                            |
+| `debugLogging`             | `false`         | n/a                 | Enables verbose farm logging in your logs (troubleshooting use).                                 |
+| `seedClutterMode`          | `reduced`       | n/a                 | Controls extra seed handling before chest insertion.                                             |
+| `seedReservePerType`       | `80`            | `0` to `1152`       | Minimum seeds kept per seed type when pulling from chest for replanting.                        |
 
 ### Client Config
 
-| Option             | Default | What it does                                          |
-|--------------------|---------|-------------------------------------------------------|
-| `harvestParticles` | `true`  | Toggles scan visual particles (spiral dust + harvest burst particles). |
+| Option             | Default | What it does                                                        |
+|--------------------|---------|---------------------------------------------------------------------|
+| `harvestParticles` | `true`  | Toggles scan particles (spiral trail plus harvest burst effects).  |
 
 ### Durability Mode
 
-| Mode                | Behaviour                                                               |
-|---------------------|-------------------------------------------------------------------------|
-| `normal`            | Vanilla-style durability loss; Unbreaking enchantment is respected.     |
-| `ignore_unbreaking` | Normal durability loss but the Unbreaking enchantment is ignored.       |
-| `none`              | No durability loss from harvesting or farm maintenance whatsoever.      |
+| Mode                | Behavior                                                               |
+|---------------------|------------------------------------------------------------------------|
+| `normal`            | Vanilla-style loss; Unbreaking is respected.                           |
+| `ignore_unbreaking` | Durability loss is applied while ignoring Unbreaking reduction.        |
+| `none`              | No durability loss from this mod's harvest/repair actions.             |
 
 ### Rotation Mode
 
-| Mode                        | Behaviour                                                                                        |
-|-----------------------------|--------------------------------------------------------------------------------------------------|
-| `SINGLE_STEP`               | Advances the frame by one step for each harvest cycle that collects at least one crop.           |
-| `FULL_ROTATION`             | Animates through all 8 frame positions once across the full harvest pass.                        |
-| `FOLLOW_ROTATION`           | Rotates through all 8 positions multiple times, roughly tracking the outward ring being scanned. |
+| Mode              | Behavior                                                                                 |
+|-------------------|------------------------------------------------------------------------------------------|
+| `SINGLE_STEP`     | Moves 1 frame step when a cycle harvested at least one crop.                            |
+| `FULL_ROTATION`   | Runs one full 8-step rotation across the scan cycle.                                    |
+| `FOLLOW_ROTATION` | Rotates repeatedly to track outward scan progression (ring-following behavior).         |
 
 ### Seed Clutter Mode
 
-Controls how extra seed drops are filtered before being put into the chest, and how the replant logic draws seeds.
+Controls how extra seed drops are handled before insertion and how replanting pulls seeds.
 
-| Mode      | Behaviour                                                                                                                                                     |
-|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `none`    | Seed drops are discarded before chest insertion. Replanting still pulls one seed from the fresh drops first; if none, the chest is used (subject to reserve). |
-| `normal`  | One seed from the fresh drops is consumed for replanting. Remaining seed drops go into the chest unchanged. Chest removals respect `seedReservePerType`.      |
-| `reduced` | Same as `normal` (one drop seed consumed for replant), then the remaining seed drops of that harvest are halved (rounded down) before chest insertion.         |
+| Mode      | Behavior                                                                                                                                                         |
+|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `none`    | Seed drops are discarded before chest insertion. Replant still uses one fresh drop seed first; if needed, it then pulls from chest (subject to reserve).      |
+| `normal`  | Replant consumes one fresh drop seed first. Remaining seed drops are inserted normally. Chest pulls for replanting respect `seedReservePerType`.               |
+| `reduced` | Same as `normal`, then remaining seed drops from that harvest are halved (rounded down) before insertion.                                                      |
 
-The halving in `reduced` mode does **not** apply when the seed item is also the crop fruit (carrots, potatoes, nether wart, torchflower-type crops). The `seedReservePerType` threshold is enforced whenever the mod removes seeds from the chest for replanting — it will refuse to pull seeds if doing so would drop any type below the reserve.
+In `reduced` mode, halving does not apply when the seed item is also the crop fruit (carrot, potato, nether wart, torchflower-type crops).
 
 ---
 
@@ -187,39 +201,43 @@ The halving in `reduced` mode does **not** apply when the seed item is also the 
 
 ### FastItemFrames
 
-Forget-Me-Crops works with [FastItemFrames by Fuzss](https://modrinth.com/mod/fastitemframes). When that mod is installed, Forget-Me-Crops automatically uses its block-entity based frame lookup instead of the vanilla entity query, which is faster on large farms. The Fabric build uses accessor mixins for chunk access so the remapped production jar works correctly — not just in dev runs.
+Forget-Me-Crops supports [FastItemFrames by Fuzss](https://modrinth.com/mod/fastitemframes).
+When installed, frame lookup and rotation logic uses FastItemFrames integration paths for better large-farm performance.
 
 ### Other Mods
 
-- Any vanilla-compatible chunk loader keeps anchors ticking while no player is nearby.
-- Forget-Me-Crops does not modify any block behaviour directly; it reads and sets blocks through the normal level API, so it should coexist cleanly with crop growth mods.
-- The mod does not register custom blocks, items, or entities — there is nothing to conflict with at registry time.
+- Any chunk loader that keeps chunks loaded will keep anchors active.
+- The mod uses normal world/block APIs (no custom block/item/entity registries), so registry conflicts are minimal.
+- It generally coexists cleanly with growth-rate and crop-behavior mods, though balance may differ depending on your pack.
+
+---
+
+## FAQ
+
+### Does it work in unloaded chunks?
+
+No. Chunks must be loaded.
+
+### Why is my farm not running?
+
+Check this quick list:
+
+- Frame is on top face of the chest
+- Chest is waterlogged (unless this is a Nether Wart farm)
+- Hoe exists in frame (or in chest for auto-replace)
+- Crops are on the same Y level as the anchor
+- Chest has free space
+- Crop type is supported
+
+### Can it handle mixed crops?
+
+It can harvest supported crops in range, but replanting uses nearby crop consensus per tile. Cleaner single-crop zones give cleaner results.
 
 ---
 
 ## Technical Documentation
 
-For implementation internals, package structure, scan algorithm details, rotation system internals, loot handling, and build instructions, see **[TECHNICAL.md](TECHNICAL.md)**.
-
-### Contributor Hook Setup
-
-If you are contributing changes, enable versioned repository hooks so docs checks run automatically before commits.
-
-PowerShell (Windows):
-
-```powershell
-./scripts/setup-hooks.ps1
-```
-
-Bash (Linux/macOS/Git Bash):
-
-```bash
-./scripts/setup-hooks.sh
-```
-
-This configures `core.hooksPath` to `.githooks`, where the shared `pre-commit` hook runs `scripts/validate-docs.ps1`/`scripts/validate-docs.sh`.
-
-The same shared hook also runs `scripts/validate-optimization-pass.ps1`/`scripts/validate-optimization-pass.sh` to apply automated checks aligned with `.brainbox/rules/todo.optimisation.pass.md`.
+For implementation internals, package structure, scan algorithms, platform glue, and build details, see [TECHNICAL.md](TECHNICAL.md).
 
 ---
 
