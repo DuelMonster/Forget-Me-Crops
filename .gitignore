@@ -23,8 +23,9 @@ eclipse
 run
 runs
 
-# Local third-party artifacts
+# Local artifacts
 related_mods/
 releases/
 versions/
 *grow*
+local.properties

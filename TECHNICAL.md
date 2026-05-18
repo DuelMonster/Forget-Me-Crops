@@ -556,7 +556,7 @@ Maven and Modrinth/CurseForge publishing is configured in `build.gradle.kts` and
 automatically when the corresponding environment variables or `gradle.properties` tokens are set:
 
 | Variable            | Destination                    |
-|---------------------|-------------------------------|
+|---------------------|--------------------------------|
 | `MODRINTH_TOKEN`    | Modrinth releases              |
 | `CURSEFORGE_TOKEN`  | CurseForge releases            |
 | `GITHUB_TOKEN`      | GitHub Packages Maven          |
