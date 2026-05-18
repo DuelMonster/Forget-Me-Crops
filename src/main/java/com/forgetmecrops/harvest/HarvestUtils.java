@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.Locale;
 import com.forgetmecrops.platform.adapter.FIF;
+import net.minecraft.world.Container;
+import com.forgetmecrops.frame.FrameDiscovery;
 import com.forgetmecrops.frame.FrameRegistry;
 import com.forgetmecrops.frame.FrameScanner;
 import com.forgetmecrops.util.hoe.FrameHoeReplacement;
@@ -67,11 +69,12 @@ public class HarvestUtils {
      */
     public static void harvestCrop(HarvestContext ctx, BlockPos pos, BlockState state, Function<BlockState, Boolean> isMature, Function<BlockState, BlockState> getReplantState) {
         if (ValidationUtils.isAnyNull(ctx.level, ctx.chest) || ctx.getHoe().isEmpty()) return;
+        List<Container> outputContainers = resolveOutputContainers(ctx);
 
         Block block = state.getBlock();
         if (!isMature.apply(state)) return;
 
-        if (!ChestUtils.hasSpace(ctx.chest)) {
+        if (!ChestUtils.hasHarvestOutputSpace(ctx.chest, outputContainers)) {
             ctx.setChestFull(true);
             return;
         }
@@ -99,7 +102,10 @@ public class HarvestUtils {
         }
 
         applyPostReplantSeedClutterPolicy(drops, seedItem, seedIsCropFruit);
-        ChestUtils.insertAll(ctx.chest, drops);
+        boolean storedAllDrops = ChestUtils.insertHarvestOutputs(ctx.chest, outputContainers, drops);
+        if (!storedAllDrops) {
+            ctx.setChestFull(true);
+        }
 
         try {
             if (ctx.isSkipNextDamage()) { ctx.setSkipNextDamage(false); }
@@ -127,6 +133,16 @@ public class HarvestUtils {
             emitHarvestBurstParticles(ctx.level, pos, state);
         }
         ctx.incrementHarvested();
+    }
+
+    private static List<Container> resolveOutputContainers(HarvestContext ctx) {
+        if (ctx == null || ctx.chest == null || !(ctx.level instanceof ServerLevel serverLevel)) return java.util.Collections.emptyList();
+        try {
+            if (ctx.anchor instanceof FrameScanner.Anchor anchor && anchor.framePos != null) {
+                return FrameDiscovery.discoverAdditionalOutputContainersForAnchor(serverLevel, anchor.framePos, ctx.chest);
+            }
+        } catch (Throwable t) {}
+        return java.util.Collections.emptyList();
     }
 
     /**

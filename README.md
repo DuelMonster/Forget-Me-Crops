@@ -20,11 +20,11 @@ In short: you build the farm once, the mod does the repetitive part forever, and
 ## Features
 
 - Harvests mature supported crops automatically
-- Deposits drops into the linked chest
+- Sends ripe drops and extra seeds to nearby chests/barrels first, then uses the anchor chest as overflow
 - Replants using fresh drops first, then chest stock
 - Retills nearby dirt/grass gaps back into farmland when possible
 - Replants empty farmland and soul-sand tiles using nearby crop consensus
-- Replaces broken (or missing) hoes from chest stock when available
+- Replaces broken (or missing) hoes from the anchor chest below the frame when available
 - Rotates the frame during scanning so activity is visible
 
 ---
@@ -37,14 +37,15 @@ Each anchor runs on a timer (`tickInterval`, default 300 ticks / 15s):
 2. The mod discovers connected farm tiles around that anchor.
 3. It scans in an outward spiral, spread across multiple ticks to avoid lag spikes.
 4. During that same pass, it harvests ripe crops, replants, and repairs eligible gaps.
-5. If the chest fills, it pauses that anchor and retries after `chestFullCooldownTicks`.
+5. If all nearby output storage plus the anchor chest fill up, it pauses that anchor and retries after `chestFullCooldownTicks`.
 6. When done, it returns to cooldown and waits for the next cycle.
 
 Notes:
 
 - Farms run only while their chunks are loaded.
-- If a frame exists but is empty, the mod can pull a hoe from chest stock and resume automatically.
+- If a frame exists but is empty, the mod can pull a hoe from the anchor chest below the frame and resume automatically.
 - If the frame or chest is removed, that anchor is unregistered cleanly.
+- Nearby chests and barrels inside the farm radius are treated as harvest-output storage only.
 
 ---
 
@@ -55,6 +56,8 @@ Notes:
 3. Attach an item frame to the top face of that chest.
 4. Put any hoe in the frame.
 5. Plant supported crops around that same Y-level.
+
+Optional: place extra chests or barrels on frame Y or frame Y-1. Extra output discovery uses `scanRangeX + 1` and `scanRangeZ + 1`, so storage one block outside the crop scan footprint can still be used.
 
 That is it. Your farm now has a tiny spinning foreman.
 
@@ -125,7 +128,7 @@ Mod Menu is optional, but recommended for in-game config editing.
 Drop the matching `Forget-Me-Crops_<version>+<minecraft>-neoforge.jar` into your `mods/` folder.
 Use the Mods list Configure button for the config UI.
 
-YACL is pinned per line for compatibility:
+YetAnotherConfigLib is pinned per line for compatibility:
 
 - `3.8.2+1.21.11` on 1.21.11
 - `3.9.3+26.1` on 26.1.2
@@ -189,8 +192,8 @@ Controls how extra seed drops are handled before insertion and how replanting pu
 
 | Mode      | Behavior                                                                                                                                                         |
 |-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `none`    | Seed drops are discarded before chest insertion. Replant still uses one fresh drop seed first; if needed, it then pulls from chest (subject to reserve).      |
-| `normal`  | Replant consumes one fresh drop seed first. Remaining seed drops are inserted normally. Chest pulls for replanting respect `seedReservePerType`.               |
+| `none`    | Seed drops are discarded before insertion. Replant still uses one fresh drop seed first; if needed, it then pulls from the anchor chest (subject to reserve). |
+| `normal`  | Replant consumes one fresh drop seed first. Remaining seed drops are inserted into nearby output storage first, then the anchor chest as overflow. Anchor chest pulls for replanting respect `seedReservePerType`. |
 | `reduced` | Same as `normal`, then remaining seed drops from that harvest are halved (rounded down) before insertion.                                                      |
 
 In `reduced` mode, halving does not apply when the seed item is also the crop fruit (carrot, potato, nether wart, torchflower-type crops).

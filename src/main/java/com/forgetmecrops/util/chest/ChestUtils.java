@@ -10,6 +10,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import com.forgetmecrops.harvest.CropRegistry;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
 
 /**
@@ -37,6 +39,7 @@ public class ChestUtils {
      */
     public static boolean hasSpace(Container chest) {
         if (chest == null) return false;
+        if (chest instanceof BlockEntity be && be.isRemoved()) return false;
         for (int i = 0; i < chest.getContainerSize(); i++) {
             ItemStack s = chest.getItem(i);
             if (s.isEmpty()) return true;
@@ -53,42 +56,54 @@ public class ChestUtils {
      */
     public static void insertAll(Container chest, List<ItemStack> drops) {
         if (chest == null || drops == null || drops.isEmpty()) return;
-        boolean changed = false;
         for (ItemStack drop : drops) {
             if (drop == null || drop.isEmpty()) continue;
             ItemStack remaining = drop.copy();
-            for (int i = 0; i < chest.getContainerSize(); i++) {
-                ItemStack slot = chest.getItem(i);
-                if (!slot.isEmpty() && slot.getItem() == remaining.getItem()) {
-                    int space = slot.getMaxStackSize() - slot.getCount();
-                    if (space > 0) {
-                        int move = Math.min(space, remaining.getCount());
-                        ItemStack newSlot = slot.copy();
-                        newSlot.setCount(slot.getCount() + move);
-                        chest.setItem(i, newSlot);
-                        try { LogUtils.logDebug("[CHEST] insertAll: merged {} x{} into slot {} (slotnow={})", remaining.getItem(), move, i, newSlot.getCount()); } catch (Throwable ignored) {}
-                        remaining.setCount(remaining.getCount() - move);
-                        changed = true;
-                        if (remaining.isEmpty()) break;
+            insertIntoContainer(chest, remaining, remaining.getCount());
+        }
+    }
+
+    public static boolean hasHarvestOutputSpace(Container anchorChest, List<Container> outputContainers) {
+        for (Container output : collectUniqueContainers(outputContainers, anchorChest)) {
+            if (hasSpace(output)) return true;
+        }
+        return hasSpace(anchorChest);
+    }
+
+    public static boolean insertHarvestOutputs(Container anchorChest, List<Container> outputContainers, List<ItemStack> drops) {
+        if (drops == null || drops.isEmpty()) return true;
+
+        List<Container> extraOutputs = collectUniqueContainers(outputContainers, anchorChest);
+        int nextOutputIndex = 0;
+
+        for (ItemStack drop : drops) {
+            if (drop == null || drop.isEmpty()) continue;
+            ItemStack remaining = drop.copy();
+
+            if (!extraOutputs.isEmpty()) {
+                int consecutiveMisses = 0;
+                while (!remaining.isEmpty() && consecutiveMisses < extraOutputs.size()) {
+                    Container target = extraOutputs.get(nextOutputIndex);
+                    nextOutputIndex = (nextOutputIndex + 1) % extraOutputs.size();
+                    int moved = insertIntoContainer(target, remaining, 1);
+                    if (moved > 0) {
+                        consecutiveMisses = 0;
+                    } else {
+                        consecutiveMisses++;
                     }
                 }
             }
+
             if (!remaining.isEmpty()) {
-                for (int i = 0; i < chest.getContainerSize(); i++) {
-                    ItemStack slot = chest.getItem(i);
-                    if (slot.isEmpty()) {
-                        chest.setItem(i, remaining.copy());
-                        try { LogUtils.logDebug("[CHEST] insertAll: placed {} x{} into empty slot {}", remaining.getItem(), remaining.getCount(), i); } catch (Throwable ignored) {}
-                        remaining.setCount(0);
-                        changed = true;
-                        break;
-                    }
-                }
+                insertIntoContainer(anchorChest, remaining, remaining.getCount());
+            }
+
+            if (!remaining.isEmpty()) {
+                try { LogUtils.logDebug("[CHEST] insertHarvestOutputs: ran out of space for {} x{}", remaining.getItem(), remaining.getCount()); } catch (Throwable t) {}
+                return false;
             }
         }
-        if (changed && chest instanceof BlockEntity be) {
-            ExceptionHandler.silentTry(() -> be.setChanged());
-        }
+        return true;
     }
 
     /**
@@ -115,7 +130,7 @@ public class ChestUtils {
         if (respectSeedReserve && isSeedItem(item) && !CropRegistry.isSeedAlsoCropFruit(item)) {
             int existing = countItem(chest, item);
             if (existing <= Config.getSeedReservePerType()) {
-                try { LogUtils.logDebug("[CHEST] removeOne: refusing to remove {} because existing {} <= reserve {}", item, existing, Config.getSeedReservePerType()); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[CHEST] removeOne: refusing to remove {} because existing {} <= reserve {}", item, existing, Config.getSeedReservePerType()); } catch (Throwable t) {}
                 return false;
             }
         }
@@ -131,13 +146,13 @@ public class ChestUtils {
                     chest.setItem(i, ItemStack.EMPTY);
                 }
                 if (chest instanceof BlockEntity be) {
-                    try { be.setChanged(); } catch (Throwable ignored) {}
+                    try { be.setChanged(); } catch (Throwable t) {}
                 }
-                try { LogUtils.logDebug("[CHEST] removeOne: removed one {} from chest (slot {}) - remaining total {}", item, i, countItem(chest, item)); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[CHEST] removeOne: removed one {} from chest (slot {}) - remaining total {}", item, i, countItem(chest, item)); } catch (Throwable t) {}
                 return true;
             }
         }
-        try { LogUtils.logDebug("[CHEST] removeOne: no {} found in chest", item); } catch (Throwable ignored) {}
+        try { LogUtils.logDebug("[CHEST] removeOne: no {} found in chest", item); } catch (Throwable t) {}
         return false;
     }
 
@@ -154,7 +169,7 @@ public class ChestUtils {
             if (slot != null && !slot.isEmpty() && slot.getItem() instanceof HoeItem) {
                 ItemStack taken = slot.copy();
                 taken.setCount(1);
-                try { LogUtils.logDebug("[CHEST] takeFirstHoe: found hoe in slot {} -> item={} damage={} countInSlot={}", i, taken.getItem(), taken.getDamageValue(), slot.getCount()); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[CHEST] takeFirstHoe: found hoe in slot {} -> item={} damage={} countInSlot={}", i, taken.getItem(), taken.getDamageValue(), slot.getCount()); } catch (Throwable t) {}
                 if (slot.getCount() > 1) {
                     ItemStack remaining = slot.copy();
                     remaining.setCount(slot.getCount() - 1);
@@ -163,7 +178,7 @@ public class ChestUtils {
                     chest.setItem(i, ItemStack.EMPTY);
                 }
                 if (chest instanceof BlockEntity be) {
-                    try { be.setChanged(); } catch (Throwable ignored) {}
+                    try { be.setChanged(); } catch (Throwable t) {}
                 }
                 return taken;
             }
@@ -198,5 +213,72 @@ public class ChestUtils {
             if (s != null && !s.isEmpty() && s.getItem() == item) cnt += s.getCount();
         }
         return cnt;
+    }
+
+    private static List<Container> collectUniqueContainers(List<Container> containers, Container excluded) {
+        List<Container> unique = new ArrayList<>();
+        IdentityHashMap<Container, Boolean> seen = new IdentityHashMap<>();
+        if (containers == null) return unique;
+        for (Container container : containers) {
+            if (container == null || container == excluded) continue;
+            if (container instanceof BlockEntity be && be.isRemoved()) continue;
+            if (seen.put(container, Boolean.TRUE) == null) {
+                unique.add(container);
+            }
+        }
+        return unique;
+    }
+
+    private static int insertIntoContainer(Container chest, ItemStack remaining, int maxToMove) {
+        if (chest == null || remaining == null || remaining.isEmpty() || maxToMove <= 0) return 0;
+        if (chest instanceof BlockEntity be && be.isRemoved()) return 0;
+
+        int moved = 0;
+        moved += mergeIntoMatchingStacks(chest, remaining, maxToMove - moved);
+        if (moved < maxToMove && !remaining.isEmpty()) {
+            moved += placeIntoEmptySlots(chest, remaining, maxToMove - moved);
+        }
+        if (moved > 0 && chest instanceof BlockEntity be) {
+            ExceptionHandler.silentTry(() -> be.setChanged());
+        }
+        return moved;
+    }
+
+    private static int mergeIntoMatchingStacks(Container chest, ItemStack remaining, int maxToMove) {
+        int moved = 0;
+        for (int i = 0; i < chest.getContainerSize() && moved < maxToMove && !remaining.isEmpty(); i++) {
+            ItemStack slot = chest.getItem(i);
+            if (!slot.isEmpty() && slot.getItem() == remaining.getItem()) {
+                int allowed = Math.min(maxToMove - moved, remaining.getCount());
+                int space = slot.getMaxStackSize() - slot.getCount();
+                if (space > 0) {
+                    int move = Math.min(space, allowed);
+                    ItemStack newSlot = slot.copy();
+                    newSlot.setCount(slot.getCount() + move);
+                    chest.setItem(i, newSlot);
+                    try { LogUtils.logDebug("[CHEST] insert: merged {} x{} into slot {} (slotnow={})", remaining.getItem(), move, i, newSlot.getCount()); } catch (Throwable t) {}
+                    remaining.setCount(remaining.getCount() - move);
+                    moved += move;
+                }
+            }
+        }
+        return moved;
+    }
+
+    private static int placeIntoEmptySlots(Container chest, ItemStack remaining, int maxToMove) {
+        int moved = 0;
+        for (int i = 0; i < chest.getContainerSize() && moved < maxToMove && !remaining.isEmpty(); i++) {
+            ItemStack slot = chest.getItem(i);
+            if (slot.isEmpty()) {
+                int move = Math.min(Math.min(remaining.getMaxStackSize(), maxToMove - moved), remaining.getCount());
+                ItemStack placed = remaining.copy();
+                placed.setCount(move);
+                chest.setItem(i, placed);
+                try { LogUtils.logDebug("[CHEST] insert: placed {} x{} into empty slot {}", remaining.getItem(), move, i); } catch (Throwable t) {}
+                remaining.setCount(remaining.getCount() - move);
+                moved += move;
+            }
+        }
+        return moved;
     }
 }

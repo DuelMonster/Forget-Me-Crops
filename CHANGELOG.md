@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 0.20.0
+
+- Route harvested ripe crops and excess seeds into nearby extra storage first (chests/barrels), with anchor chest overflow fallback.
+- Keep replacement hoe sourcing and chest-backed seed reserve/replant pulls anchored to the chest below the frame.
+- Add extra-storage discovery around anchors at both frame Y and frame Y-1.
+- Expand extra-storage discovery radius to `scanRangeX + 1` and `scanRangeZ + 1`, allowing output storage one block outside crop scan bounds.
+- Update README and TECHNICAL docs to describe the new output-routing and storage-discovery rules.
+
 ## 0.19.0
 
 - Add Stonecutter support nodes for Minecraft `26.1.2` on both loaders: `26.1.2-fabric` and `26.1.2-neoforge`.
@@ -8,10 +16,10 @@
   - Fabric Loader: `0.19.2`
   - Fabric API: `0.148.0+26.1.2`
   - Mod Menu: `18.0.0-beta.1`
-  - YACL: `3.9.3+26.1`
+  - YetAnotherConfigLib: `3.9.3+26.1`
 - Keep NeoForge `26.1.2` dependency pins:
   - NeoForge: `26.1.2.43-beta`
-  - YACL: `3.8.1+1.21.11`
+  - YetAnotherConfigLib: `3.8.1+1.21.11`
 - Update Fabric 26.x build mode to `modstitch.platform=fabric-loom`.
 - Update metadata token `minecraft_version_range` from `[1.21.11, 1.22)` to `[1.21.11,)` so manifests include the new release line.
 - Make NeoForge Parchment mapping configuration conditional: only apply Parchment when both `deps.parchment_mc` and `deps.parchment` are present in the node properties.
@@ -62,17 +70,17 @@
 ## 0.13.0
 
 - Replace Cloth Config (`me.shedaniel.cloth:cloth-config-*:21.11.153`) with YetAnotherConfigLib (`dev.isxander:yet-another-config-lib:3.8.2+1.21.11`) for config screen generation.
-- Delete Cloth Config workaround classes: `LabelTooltipBooleanListEntry`, `LabelTooltipIntegerListEntry`, `LabelTooltipEnumListEntry`, `LabelHitbox` — YACL's native tooltip hover behavior eliminates the need for custom tooltip hit-box restrictions.
-- Rewrite `ConfigTooltipFactory`: change return type from `Supplier<Optional<Component[]>>` to `OptionDescription`; split multi-line tooltips into separate `Component` arguments for proper YACL line wrapping.
-- Rewrite `ConfigScreen`: replace Cloth Config `ConfigBuilder` API with YACL's `YetAnotherConfigLib.createBuilder()` fluent builder; use YACL's `Option<T>`, `OptionGroup`, and built-in controllers (`TickBoxControllerBuilder`, `IntegerSliderControllerBuilder`, `EnumControllerBuilder`).
-- Add explicit max bounds for numeric config defaults in `ConfigDefaults` and wire those ranges into the YACL integer sliders.
+- Delete Cloth Config workaround classes: `LabelTooltipBooleanListEntry`, `LabelTooltipIntegerListEntry`, `LabelTooltipEnumListEntry`, `LabelHitbox` — YetAnotherConfigLib's native tooltip hover behavior eliminates the need for custom tooltip hit-box restrictions.
+- Rewrite `ConfigTooltipFactory`: change return type from `Supplier<Optional<Component[]>>` to `OptionDescription`; split multi-line tooltips into separate `Component` arguments for proper YetAnotherConfigLib line wrapping.
+- Rewrite `ConfigScreen`: replace Cloth Config `ConfigBuilder` API with YetAnotherConfigLib's `YetAnotherConfigLib.createBuilder()` fluent builder; use YetAnotherConfigLib's `Option<T>`, `OptionGroup`, and built-in controllers (`TickBoxControllerBuilder`, `IntegerSliderControllerBuilder`, `EnumControllerBuilder`).
+- Add explicit max bounds for numeric config defaults in `ConfigDefaults` and wire those ranges into the YetAnotherConfigLib integer sliders.
 - Raise numeric config-screen minimums to practical values for `chestFullCooldownTicks` (10) and `maxSpiralDurationTicks` (10).
 - Add `frameRediscoveryInterval` to `ConfigDefaults` with default/min/max (`300` / `15` / `1200`) and expose it in the in-game config screen as an integer slider.
 - Clarify and enforce Mending durability behavior with renamed option `mendingProtection`: `true` consistently means Mending hoes are protected from durability loss caused by this mod across durability modes.
 - Add `yet_another_config_lib_v3` as a required dependency (not optional) in `fabric.mod.json` and `neoforge.mods.toml`.
-- Upgrade Gradle wrapper from 8.14.4 to 9.5.0 (required by Loom 1.14.10, which is compatible with YACL 3.8.2).
+- Upgrade Gradle wrapper from 8.14.4 to 9.5.0 (required by Loom 1.14.10, which is compatible with YetAnotherConfigLib 3.8.2).
 - Upgrade fabric-loom from 1.13-SNAPSHOT to 1.14.10.
-- Update maven repository: replace `maven.shedaniel.me` with `maven.isxander.dev/releases` for YACL dependency resolution.
+- Update maven repository: replace `maven.shedaniel.me` with `maven.isxander.dev/releases` for YetAnotherConfigLib dependency resolution.
 
 ## 0.12.0
 

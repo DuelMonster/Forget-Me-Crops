@@ -21,7 +21,13 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.BarrelBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * FrameDiscovery: The talent scout that finds and validates item-frame farm anchors!
@@ -257,6 +263,76 @@ public class FrameDiscovery {
             if (level.getBlockState(basePos).is(Blocks.NETHER_WART)) return true;
         }
         return false;
+    }
+
+    public static List<Container> discoverAdditionalOutputContainersForAnchor(ServerLevel level, BlockPos framePos, Container anchorChest) {
+        if (level == null || framePos == null || anchorChest == null) return java.util.Collections.emptyList();
+        int rX = Math.min(5, Math.max(1, Config.getScanRangeX()));
+        int rZ = Math.min(5, Math.max(1, Config.getScanRangeZ()));
+        BlockPos anchorChestPos = framePos.below();
+        if (anchorChest instanceof BlockEntity anchorChestBe) {
+            anchorChestPos = anchorChestBe.getBlockPos();
+        }
+        return discoverAdditionalOutputContainers(level, framePos, anchorChestPos, anchorChest, rX, rZ);
+    }
+
+    private static List<Container> discoverAdditionalOutputContainers(ServerLevel level, BlockPos framePos, BlockPos anchorChestPos, Container anchorChest, int rX, int rZ) {
+        int outputRadiusX = rX + 1;
+        int outputRadiusZ = rZ + 1;
+        int frameY = framePos.getY();
+
+        List<BlockPos> candidates = new ArrayList<>();
+        for (int y : new int[] { frameY, frameY - 1 }) {
+            for (int dx = -outputRadiusX; dx <= outputRadiusX; dx++) for (int dz = -outputRadiusZ; dz <= outputRadiusZ; dz++) {
+                BlockPos pos = new BlockPos(framePos.getX() + dx, y, framePos.getZ() + dz);
+                if (pos.equals(anchorChestPos)) continue;
+                BlockState state = level.getBlockState(pos);
+                if (!(state.getBlock() instanceof ChestBlock) && !(state.getBlock() instanceof BarrelBlock)) continue;
+                candidates.add(pos);
+            }
+        }
+
+        candidates.sort(Comparator
+                .comparingInt((BlockPos pos) -> Math.abs(pos.getX() - framePos.getX()) + Math.abs(pos.getY() - framePos.getY()) + Math.abs(pos.getZ() - framePos.getZ()))
+                .thenComparingInt(BlockPos::getY)
+                .thenComparingInt(BlockPos::getX)
+                .thenComparingInt(BlockPos::getZ));
+
+        List<Container> outputContainers = new ArrayList<>();
+        Set<BlockPos> seenKeys = new HashSet<>();
+        for (BlockPos pos : candidates) {
+            BlockEntity be = level.getBlockEntity(pos);
+            Container container = resolveAnchorContainer(level, pos, be);
+            if (container == null || container == anchorChest) continue;
+
+            BlockPos dedupeKey = resolveOutputContainerKey(level, pos, be);
+            if (!seenKeys.add(dedupeKey)) continue;
+
+            outputContainers.add(container);
+        }
+        return outputContainers;
+    }
+
+    private static BlockPos resolveOutputContainerKey(ServerLevel level, BlockPos pos, BlockEntity be) {
+        if (be instanceof ChestBlockEntity) {
+            try {
+                BlockState state = level.getBlockState(pos);
+                if (state.getBlock() instanceof ChestBlock) {
+                    Direction connected = ChestBlock.getConnectedDirection(state);
+                    if (connected != null) {
+                        BlockPos otherPos = pos.relative(connected);
+                        return compareBlockPos(pos, otherPos) <= 0 ? pos : otherPos;
+                    }
+                }
+            } catch (Throwable t) {}
+        }
+        return pos;
+    }
+
+    private static int compareBlockPos(BlockPos left, BlockPos right) {
+        if (left.getX() != right.getX()) return Integer.compare(left.getX(), right.getX());
+        if (left.getY() != right.getY()) return Integer.compare(left.getY(), right.getY());
+        return Integer.compare(left.getZ(), right.getZ());
     }
 
     /**

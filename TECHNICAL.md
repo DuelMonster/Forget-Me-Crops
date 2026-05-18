@@ -76,6 +76,8 @@ Chest requirements:
 
 The anchor is validated at scan time. If the item frame entity or FIF block entity is gone, or if the chest block entity has been replaced, the anchor is immediately unregistered via `FrameRegistry.unregisterFrame(...)` and the scan is aborted.
 
+Additional nearby chests and barrels are discovered at anchor-registration time and stored as output-only containers. Discovery checks both frame Y and frame Y-1, and uses an expanded horizontal search of `scanRangeX + 1` and `scanRangeZ + 1` centered on the frame. They receive harvested crops and excess seeds before the anchor chest is used as overflow. The anchor chest below the frame remains the only inventory consulted for replacement hoes and chest-backed replant seeds.
+
 ---
 
 ## Frame Discovery and Registry
@@ -155,6 +157,8 @@ The current implementation is a **single-pass** model: harvest checks, replantin
 
 At the start of every `tick()` call the task re-validates the anchor via `FrameScanner.isFrameStillPresent(level, center)` and `FrameScanner.isChestStillValid(level, anchor)`. It also re-reads the hoe from the frame to catch mid-scan hoe removal. If any of these checks fail the task exits early and the anchor is unregistered.
 
+`HarvestContext` now carries both the anchor chest and a discovered list of additional output containers. Output routing is handled centrally in `ChestUtils`, which spreads harvest output across extra containers first and falls back to the anchor chest only when necessary.
+
 ---
 
 ## Farm Maintenance
@@ -169,6 +173,8 @@ When an empty tile is encountered during the spiral or neighbour pass:
 4. The dominant type is selected; its seed/replant item is looked up via `CropRegistry.clutterSeed(block)`.
 5. One unit of that item is removed from the chest via `ChestUtils.removeOne(chest, seed, false)` (the `false` bypasses seed reserve for replanting contexts).
 6. The default block state of the crop is placed, then `FrameScanner.setAgeSafe(state, 0)` resets its age to 0 if it has an age property.
+
+Consensus planting and any other chest-backed seed consumption still use the anchor chest only. Nearby output chests/barrels are never used as seed reserves.
 
 Soul sand positions follow the same logic but only consider `NETHER_WART` as a valid neighbour crop.
 
@@ -259,13 +265,13 @@ At `FarmScanTask` construction and at the start of each `tick()`, the physical h
 When a hoe reaches 0 durability, `HarvestUtils.handleBrokenHoe(ctx, before)` is called:
 
 1. The broken hoe is cleared from `ctx.hoe`.
-2. A replacement hoe is searched in the chest via `FrameHoeReplacement.tryReplaceBrokenHoe(ctx)`.
+2. A replacement hoe is searched in the anchor chest via `FrameHoeReplacement.tryReplaceBrokenHoe(ctx)`.
 3. If found, it is set in `ctx.hoe`, `FrameRegistry.updateHoe(...)` is called to update the in-memory entry, and `Services.PLATFORM.updateFrameItem(...)` syncs the new hoe into the physical frame.
 4. Break sounds (`SoundEvents.ITEM_BREAK`) and item particles are played at the frame position.
 
 ### Idle frame re-equip
 
-If a scan finds the frame empty but the chest contains a hoe, `FrameHoeReplacement.tryReplaceBrokenHoe(ctx)` also handles this case — it loads the chest hoe into the frame and `FrameRegistry.updateHoe(...)` schedules that anchor to run immediately (`ticksUntilNextRun = 0` on no-hoe to has-hoe transition).
+If a scan finds the frame empty but the anchor chest contains a hoe, `FrameHoeReplacement.tryReplaceBrokenHoe(ctx)` also handles this case — it loads the chest hoe into the frame and `FrameRegistry.updateHoe(...)` schedules that anchor to run immediately (`ticksUntilNextRun = 0` on no-hoe to has-hoe transition).
 
 ---
 
@@ -329,9 +335,9 @@ Work is spread across ticks by `FarmScanTask`. One task instance per anchor per 
 
 Recent maintenance cleanup addressed null-analysis warnings in Eclipse JDT / VS Code Java diagnostics:
 
-- YACL uses `dev.isxander.yacl3.api.Option<T>` for each config field, with declarative `.binding(default, getter, setter)` and built-in controllers for boolean, integer slider, and enum types.
+- YetAnotherConfigLib uses `dev.isxander.yacl3.api.Option<T>` for each config field, with declarative `.binding(default, getter, setter)` and built-in controllers for boolean, integer slider, and enum types.
 - Numeric server options in `ConfigScreen` use `IntegerSliderControllerBuilder` with explicit min/max bounds sourced from `ConfigDefaults`.
-- Tooltip content is now supplied via YACL's `OptionDescription` API, which handles multi-line wrapping natively without requiring custom hit-box filtering.
+- Tooltip content is now supplied via YetAnotherConfigLib's `OptionDescription` API, which handles multi-line wrapping natively without requiring custom hit-box filtering.
 
 ---
 
@@ -429,10 +435,10 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 | Value     | Behaviour                                                                                                           |
 |-----------|---------------------------------------------------------------------------------------------------------------------|
 | `none`    | Discard seed drops before insertion. Replanting draws from drops first, then chest (subject to `seedReservePerType`) |
-| `normal`  | One drop seed consumed for replanting; all remaining go into the chest unchanged                                    |
-| `reduced` | One drop seed consumed for replanting; remaining drops halved (rounded down) before insertion                       |
+| `normal`  | One drop seed consumed for replanting; all remaining output is routed into nearby extra containers first, then the anchor chest as overflow |
+| `reduced` | One drop seed consumed for replanting; remaining drops halved (rounded down) before insertion and routed with the same extra-container-first policy |
 
-Halving in `reduced` does not apply when the seed item is also the crop fruit (carrot, potato, nether wart, torchflower-type). Chest removal for replanting is always gated by `seedReservePerType`.
+Halving in `reduced` does not apply when the seed item is also the crop fruit (carrot, potato, nether wart, torchflower-type). Chest removal for replanting is always gated by `seedReservePerType` on the anchor chest.
 
 Current scope for seed filtering (clutter/reserve logic):
 
@@ -461,7 +467,7 @@ All paths are relative to `src/main/java/com/forgetmecrops/`.
 | `util/chest/ChestUtils.java`           | Chest insert/remove with reserve enforcement               |
 | `util/durability/DurabilityLogic.java` | Enchantment-aware hoe damage                               |
 | `config/Config.java`                   | Runtime config state and TOML I/O                          |
-| `client/config/ConfigScreen.java`      | Shared YACL config screen builder for both loaders         |
+| `client/config/ConfigScreen.java`      | Shared YetAnotherConfigLib config screen builder for both loaders |
 | `client/config/ConfigTooltipFactory.java` | Shared tooltip content suppliers for config entries     |
 | `client/ModEntry.java`                 | Entry point (Fabric: `ModInitializer`, NeoForge: `@Mod`)   |
 | `ticker/FarmTicker.java`               | Server-tick wiring (Fabric events vs NeoForge bus)         |
