@@ -1,7 +1,14 @@
 # CHANGELOG
 
+## 0.21.0
+
+- Revert in-game config UI from YetAnotherConfigLib back to Cloth Config on both Fabric and NeoForge.
+- Restore shared Cloth custom label-tooltip entry classes so option tooltips show only on label-lane hover.
+
 ## 0.20.0
 
+- Revert in-game config UI from YetAnotherConfigLib back to Cloth Config on both Fabric and NeoForge.
+- Restore shared Cloth custom label-tooltip entry classes so option tooltips show only on label-lane hover.
 - Route harvested ripe crops and excess seeds into nearby extra storage first (chests/barrels), with anchor chest overflow fallback.
 - Keep replacement hoe sourcing and chest-backed seed reserve/replant pulls anchored to the chest below the frame.
 - Add extra-storage discovery around anchors at both frame Y and frame Y-1.

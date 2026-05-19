@@ -28,8 +28,8 @@ issueTrackerURL = "${mod_issue_tracker}"
     side         = "BOTH"
 
 [[dependencies.${mod_id}]]
-    modId        = "yet_another_config_lib_v3"
+    modId        = "cloth_config"
     type         = "required"
-    versionRange = "${yacl_version_range}"
+    versionRange = "${cloth_config_version_range}"
     ordering     = "NONE"
     side         = "CLIENT"

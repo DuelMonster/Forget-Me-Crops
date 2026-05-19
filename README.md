@@ -128,10 +128,10 @@ Mod Menu is optional, but recommended for in-game config editing.
 Drop the matching `Forget-Me-Crops_<version>+<minecraft>-neoforge.jar` into your `mods/` folder.
 Use the Mods list Configure button for the config UI.
 
-YetAnotherConfigLib is pinned per line for compatibility:
+Cloth Config is pinned per line for compatibility:
 
-- `3.8.2+1.21.11` on 1.21.11
-- `3.9.3+26.1` on 26.1.2
+- `21.11.153` on 1.21.11
+- `26.1.154` on 26.1.2
 
 Both loaders use the same unified mixin config: `forgetmecrops.mixins.json`.
 

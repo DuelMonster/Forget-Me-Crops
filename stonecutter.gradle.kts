@@ -46,8 +46,10 @@ allprojects {
         maven("https://maven.neoforged.net/releases")
         // Fabric Maven — Fabric Loader and Fabric API
         maven("https://maven.fabricmc.net/")
-        // Xander Maven — YACL
+        // Xander Maven
         maven("https://maven.isxander.dev/releases")
+        // Shedaniel Maven — Cloth Config
+        maven("https://maven.shedaniel.me/")
         // TerraformersMC — ModMenu
         maven("https://maven.terraformersmc.com/releases/")
         // SpongePowered — Mixin

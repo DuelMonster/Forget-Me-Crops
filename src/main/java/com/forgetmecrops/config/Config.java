@@ -1,6 +1,8 @@
 package com.forgetmecrops.config;
 
-import com.forgetmecrops.enums.*;
+import com.forgetmecrops.enums.DurabilityMode;
+import com.forgetmecrops.enums.RotationMode;
+import com.forgetmecrops.enums.SeedClutterMode;
 import com.forgetmecrops.util.log.LogUtils;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,7 +18,7 @@ import java.util.Map;
  * configuration at a time, and instance management would just add ceremony for no benefit).
  * Handles TOML file loading and saving to separate server and client config files, validates
  * all values with sensible bounds, and provides getters for reads plus setters for the
- * in-game YACL config UI to push changes back through.
+ * in-game config UI to push changes back through.
  * </p>
  * <p>
  * The server/client file split is intentional: server settings affect gameplay mechanics

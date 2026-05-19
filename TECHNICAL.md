@@ -335,9 +335,9 @@ Work is spread across ticks by `FarmScanTask`. One task instance per anchor per 
 
 Recent maintenance cleanup addressed null-analysis warnings in Eclipse JDT / VS Code Java diagnostics:
 
-- YetAnotherConfigLib uses `dev.isxander.yacl3.api.Option<T>` for each config field, with declarative `.binding(default, getter, setter)` and built-in controllers for boolean, integer slider, and enum types.
-- Numeric server options in `ConfigScreen` use `IntegerSliderControllerBuilder` with explicit min/max bounds sourced from `ConfigDefaults`.
-- Tooltip content is now supplied via YetAnotherConfigLib's `OptionDescription` API, which handles multi-line wrapping natively without requiring custom hit-box filtering.
+- Cloth Config uses shared `LabelTooltip*ListEntry` wrappers for boolean, integer, and enum options, with primitive-safe save callbacks to keep diagnostics clean.
+- Numeric server options in `ConfigScreen` apply explicit min/max bounds sourced from `ConfigDefaults`.
+- Tooltip content is supplied through `Supplier<Optional<Component[]>>` via `ConfigTooltipFactory`, and label-lane hover gating is handled by `LabelHitbox`.
 
 ---
 
@@ -467,7 +467,7 @@ All paths are relative to `src/main/java/com/forgetmecrops/`.
 | `util/chest/ChestUtils.java`           | Chest insert/remove with reserve enforcement               |
 | `util/durability/DurabilityLogic.java` | Enchantment-aware hoe damage                               |
 | `config/Config.java`                   | Runtime config state and TOML I/O                          |
-| `client/config/ConfigScreen.java`      | Shared YetAnotherConfigLib config screen builder for both loaders |
+| `client/config/ConfigScreen.java`      | Shared Cloth Config screen builder for both loaders |
 | `client/config/ConfigTooltipFactory.java` | Shared tooltip content suppliers for config entries     |
 | `client/ModEntry.java`                 | Entry point (Fabric: `ModInitializer`, NeoForge: `@Mod`)   |
 | `ticker/FarmTicker.java`               | Server-tick wiring (Fabric events vs NeoForge bus)         |

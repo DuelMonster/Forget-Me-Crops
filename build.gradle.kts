@@ -54,7 +54,7 @@ modstitch {
             "mod_homepage"            to "https://github.com/duelmonster/Forget-Me-Crops",
             "mod_issue_tracker"       to "https://github.com/duelmonster/Forget-Me-Crops/issues",
             "minecraft_version_range" to "[1.21.11,)",
-            "yacl_version_range"      to "[3.8.2,)",
+            "cloth_config_version_range" to "[21.11.153,)",
             "neoforge_loader_range"   to "[10,)"
         ))
     }
@@ -286,8 +286,8 @@ dependencies {
     // ── Fabric-only dependencies ──
     modstitch.loom {
         modstitchModImplementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
-        // YACL config library (Fabric flavour)
-        modstitchModImplementation("dev.isxander:yet-another-config-lib:${property("deps.yacl")}-fabric") {
+        // Cloth Config library (Fabric flavour)
+        modstitchModImplementation("me.shedaniel.cloth:cloth-config-fabric:${property("deps.cloth_config")}") {
             exclude(group = "net.fabricmc.fabric-api")
         }
         // ModMenu — shows a "Config" button in the Fabric mods list
@@ -296,8 +296,8 @@ dependencies {
 
     // ── NeoForge-only dependencies ──
     modstitch.moddevgradle {
-        // YACL config library (NeoForge flavour)
-        modstitchModImplementation("dev.isxander:yet-another-config-lib:${property("deps.yacl")}-neoforge")
+        // Cloth Config library (NeoForge flavour)
+        modstitchModImplementation("me.shedaniel.cloth:cloth-config-neoforge:${property("deps.cloth_config")}")
     }
 
     // ── Common test dependencies ──
@@ -414,7 +414,7 @@ if (!modrinthToken.isNullOrBlank() || !curseForgeToken.isNullOrBlank()) {
                 file = tasks.named<AbstractArchiveTask>(prodJarTask).map { it.archiveFile.get() }
                 changelog = providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
                     .asText.orElse("")
-                requires("P7dR8mSH") // YACL Modrinth project ID
+                requires("cloth-config")
             }
         }
 
@@ -430,7 +430,7 @@ if (!modrinthToken.isNullOrBlank() || !curseForgeToken.isNullOrBlank()) {
                 file = tasks.named<AbstractArchiveTask>(prodJarTask).map { it.archiveFile.get() }
                 changelog = providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
                     .asText.orElse("")
-                requires("yacl")
+                requires("cloth-config")
             }
         }
     }
