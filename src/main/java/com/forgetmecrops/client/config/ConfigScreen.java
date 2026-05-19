@@ -8,8 +8,10 @@ import com.forgetmecrops.enums.RotationMode;
 import com.forgetmecrops.enums.SeedClutterMode;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 import java.util.Locale;
 
@@ -33,9 +35,36 @@ public final class ConfigScreen {
      * @param enumValue the enum constant to humanize
      * @return a Component with the localized enum name
      */
-    private static Component localizedEnumName(String prefix, Enum<?> enumValue) {
+        private static MutableComponent localizedEnumName(String prefix, Enum<?> enumValue) {
         return Component.translatable(prefix + enumValue.name().toLowerCase(Locale.ROOT));
     }
+
+        private static Component durabilityModeName(DurabilityMode mode) {
+                ChatFormatting color = switch (mode) {
+                        case NORMAL -> ChatFormatting.GREEN;
+                        case IGNORE_UNBREAKING -> ChatFormatting.GOLD;
+                        case NONE -> ChatFormatting.RED;
+                };
+                return localizedEnumName("forgetmecrops.enum.durability_mode.", mode).withStyle(color);
+        }
+
+        private static Component rotationModeName(RotationMode mode) {
+                ChatFormatting color = switch (mode) {
+                        case SINGLE_STEP -> ChatFormatting.AQUA;
+                        case FULL_ROTATION -> ChatFormatting.GOLD;
+                        case FOLLOW_ROTATION -> ChatFormatting.GREEN;
+                };
+                return localizedEnumName("forgetmecrops.enum.rotation_mode.", mode).withStyle(color);
+        }
+
+        private static Component seedClutterModeName(SeedClutterMode mode) {
+                ChatFormatting color = switch (mode) {
+                        case NORMAL -> ChatFormatting.GREEN;
+                        case REDUCED -> ChatFormatting.GOLD;
+                        case NONE -> ChatFormatting.RED;
+                };
+                return localizedEnumName("forgetmecrops.enum.seed_clutter_mode.", mode).withStyle(color);
+        }
 
     /**
      * Builds and returns the config screen for Forget-Me-Crops.
@@ -97,7 +126,7 @@ public final class ConfigScreen {
                 Config.getDurabilityMode(),
                 ConfigDefaults.DURABILITY_MODE_DEFAULT,
                 Config::setDurabilityMode,
-                enumValue -> localizedEnumName("forgetmecrops.enum.durability_mode.", enumValue),
+                ConfigScreen::durabilityModeName,
                 ConfigTooltipFactory.durabilityMode()
         ));
 
@@ -141,7 +170,7 @@ public final class ConfigScreen {
                 Config.getRotationMode(),
                 ConfigDefaults.ROTATION_MODE_DEFAULT,
                 Config::setRotationMode,
-                enumValue -> localizedEnumName("forgetmecrops.enum.rotation_mode.", enumValue),
+                ConfigScreen::rotationModeName,
                 ConfigTooltipFactory.rotationMode()
         ));
 
@@ -151,7 +180,7 @@ public final class ConfigScreen {
                 Config.getSeedClutterMode(),
                 ConfigDefaults.SEED_CLUTTER_DEFAULT,
                 Config::setSeedClutterMode,
-                enumValue -> localizedEnumName("forgetmecrops.enum.seed_clutter_mode.", enumValue),
+                ConfigScreen::seedClutterModeName,
                 ConfigTooltipFactory.seedClutterMode()
         ));
 

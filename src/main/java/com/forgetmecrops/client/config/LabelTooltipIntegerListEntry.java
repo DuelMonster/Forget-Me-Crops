@@ -1,6 +1,6 @@
 package com.forgetmecrops.client.config;
 
-import me.shedaniel.clothconfig2.gui.entries.IntegerListEntry;
+import me.shedaniel.clothconfig2.gui.entries.IntegerSliderEntry;
 //? if >=26.1 {
 /*import net.minecraft.client.gui.GuiGraphicsExtractor;*/
 //?} else {
@@ -13,7 +13,7 @@ import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import java.util.function.Supplier;
 
-public final class LabelTooltipIntegerListEntry extends IntegerListEntry {
+public final class LabelTooltipIntegerListEntry extends IntegerSliderEntry {
     private final LabelHitbox hitbox = new LabelHitbox();
 
     private static Consumer<Integer> boxedCallback(IntConsumer saveCallback, int defaultValue) {
@@ -30,14 +30,14 @@ public final class LabelTooltipIntegerListEntry extends IntegerListEntry {
                                         Supplier<Optional<Component[]>> tooltipSupplier) {
         super(
                 fieldName,
-                value,
+                minimum,
+                maximum,
+            value,
                 Component.translatable("text.cloth-config.reset_value"),
                 () -> defaultValue,
                 boxedCallback(saveCallback, defaultValue),
                 tooltipSupplier
         );
-        setMinimum(minimum);
-        setMaximum(maximum);
     }
 
     //? if >=26.1 {
