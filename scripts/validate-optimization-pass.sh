@@ -12,10 +12,27 @@ fi
 
 errors=()
 
+is_binary_file() {
+  local file="$1"
+  LC_ALL=C grep -Iq . "$file"
+  local status=$?
+  if [[ $status -eq 0 ]]; then
+    return 1
+  fi
+  if [[ $status -eq 1 ]]; then
+    return 0
+  fi
+  return 1
+}
+
 for relative in "${staged[@]}"; do
   [[ -z "$relative" ]] && continue
   full_path="$repo_root/$relative"
   [[ -f "$full_path" ]] || continue
+
+  if is_binary_file "$full_path"; then
+    continue
+  fi
 
   if [[ "$relative" =~ \.java$ ]]; then
     mapfile -t imports < <(grep -E '^\s*import\s+.+;\s*$' "$full_path" | sed 's/^\s*//;s/\s*$//')
