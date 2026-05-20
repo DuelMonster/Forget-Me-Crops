@@ -288,6 +288,7 @@ public class FrameDiscovery {
                 if (pos.equals(anchorChestPos)) continue;
                 BlockState state = level.getBlockState(pos);
                 if (!(state.getBlock() instanceof ChestBlock) && !(state.getBlock() instanceof BarrelBlock)) continue;
+                if (!isTouchingFarmlandOnAnySide(level, pos)) continue;
                 candidates.add(pos);
             }
         }
@@ -311,6 +312,23 @@ public class FrameDiscovery {
             outputContainers.add(container);
         }
         return outputContainers;
+    }
+
+    private static boolean isTouchingFarmlandOnAnySide(ServerLevel level, BlockPos pos) {
+        return isValidOutputSupportBlock(level, pos.north())
+                || isValidOutputSupportBlock(level, pos.south())
+                || isValidOutputSupportBlock(level, pos.east())
+                || isValidOutputSupportBlock(level, pos.west())
+                || isValidOutputSupportBlock(level, pos.below())
+                || isValidOutputSupportBlock(level, pos.below().north())
+                || isValidOutputSupportBlock(level, pos.below().south())
+                || isValidOutputSupportBlock(level, pos.below().east())
+                || isValidOutputSupportBlock(level, pos.below().west());
+    }
+
+    private static boolean isValidOutputSupportBlock(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        return state.is(Blocks.FARMLAND) || state.is(Blocks.SOUL_SAND);
     }
 
     private static BlockPos resolveOutputContainerKey(ServerLevel level, BlockPos pos, BlockEntity be) {

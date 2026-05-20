@@ -5,6 +5,7 @@
 - Revert in-game config UI from YetAnotherConfigLib back to Cloth Config on both Fabric and NeoForge.
 - Restore shared Cloth custom label-tooltip entry classes so option tooltips show only on label-lane hover.
 - Stabilize Cloth Config controls: numeric options render as bounded sliders, enum options use dropdown selectors with reliable collapse-on-selection behavior, and enum option text coloring matches tooltip severity cues.
+- Require nearby output storage candidates to be adjacent to farm support blocks, including farmland and soul sand checks across same-level and below-level adjacency positions.
 
 ## 0.20.0
 
