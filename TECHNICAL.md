@@ -13,14 +13,14 @@ Forget-Me-Crops is structured as a Stonecutter + Modstitch project with a single
 comment-based conditional directives. Modstitch abstracts the toolchain differences between
 Fabric Loom and NeoForge ModDevGradle behind a shared DSL.
 
-| Module                   | Role                                                                        |
-|--------------------------|-----------------------------------------------------------------------------|
-| `src/main/java/`         | All game logic and platform glue — conditions select the active platform    |
-| `versions/1.21.11-fabric` | Stonecutter node: `modstitch.platform=fabric-loom-remap`                    |
-| `versions/1.21.11-neoforge` | Stonecutter node: `modstitch.platform=moddevgradle`                     |
-| `versions/26.1.2-fabric` | Stonecutter node: `modstitch.platform=fabric-loom`                          |
-| `versions/26.1.2-neoforge` | Stonecutter node: `modstitch.platform=moddevgradle`                     |
-| `src/main/templates/`    | `fabric.mod.json` and `META-INF/neoforge.mods.toml` with `${property}` tokens |
+| Module                      | Role                                                                          |
+| --------------------------- | ----------------------------------------------------------------------------- |
+| `src/main/java/`            | All game logic and platform glue — conditions select the active platform      |
+| `versions/1.21.11-fabric`   | Stonecutter node: `modstitch.platform=fabric-loom-remap`                      |
+| `versions/1.21.11-neoforge` | Stonecutter node: `modstitch.platform=moddevgradle`                           |
+| `versions/26.1.2-fabric`    | Stonecutter node: `modstitch.platform=fabric-loom`                            |
+| `versions/26.1.2-neoforge`  | Stonecutter node: `modstitch.platform=moddevgradle`                           |
+| `src/main/templates/`       | `fabric.mod.json` and `META-INF/neoforge.mods.toml` with `${property}` tokens |
 
 The VCS (uncommitted working state) always reflects the **Fabric** branch: Fabric code is
 uncommented, NeoForge platform branches are wrapped in `/* ... */` Stonecutter-managed block
@@ -40,23 +40,23 @@ Conditions supported: `fabric`, `neoforge`, `>=1.21.11`, `>=26.1`, compound (`fa
 
 ### Package Structure
 
-| Package                              | Contents                                                                          |
-|--------------------------------------|-----------------------------------------------------------------------------------|
+| Package                              | Contents                                                                                          |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------- |
 | `com.forgetmecrops.frame`            | `FrameScanner`, `FrameRegistry`, `FrameDiscovery`, `FarmScanTask`, `SpiralStep`, `CatchupManager` |
-| `com.forgetmecrops.harvest`          | `HarvestUtils`, `HarvestContext`, `CropRegistry`                                  |
-| `com.forgetmecrops.config`           | `Config`, `ConfigDefaults`                                                        |
-| `com.forgetmecrops.client.config`    | Shared config UI classes: `ConfigScreen`, `ConfigTooltipFactory`                  |
-| `com.forgetmecrops.client`           | `ModMenuEntrypoint` (Fabric), `ConfigScreenFactoryBridge` (NeoForge), `ModEntry`  |
-| `com.forgetmecrops.enums`            | `DurabilityMode`, `RotationMode`, `SeedClutterMode`                               |
-| `com.forgetmecrops.util.chest`       | `ChestUtils` — insert/remove helpers with reserve enforcement                     |
-| `com.forgetmecrops.util.durability`  | `DurabilityLogic` — enchantment-aware hoe damage                                  |
-| `com.forgetmecrops.util.hoe`         | `FrameHoeReplacement` — broken-hoe replacement and frame sync                     |
-| `com.forgetmecrops.util.loot`        | `LootLogic` — Fortune/Silk Touch aware drop calculation                           |
-| `com.forgetmecrops.util.log`         | `LogUtils` — gated debug/trace logging                                            |
-| `com.forgetmecrops.platform`         | `PlatformHelper` (unified SPI impl, conditions pick platform), `Services`         |
-| `com.forgetmecrops.platform.adapter` | `FIF`, `FastItemFrameAdapterImpl` — FastItemFrames integration                    |
-| `com.forgetmecrops.mixin`            | Accessor mixins for chunk enumeration (`MixinMinecraft`, `MixinTitleScreen`)      |
-| `com.forgetmecrops.ticker`           | `FarmTicker` — platform-conditional server-tick event wiring                      |
+| `com.forgetmecrops.harvest`          | `HarvestUtils`, `HarvestContext`, `CropRegistry`                                                  |
+| `com.forgetmecrops.config`           | `Config`, `ConfigDefaults`                                                                        |
+| `com.forgetmecrops.client.config`    | Shared config UI classes: `ConfigScreen`, `ConfigTooltipFactory`                                  |
+| `com.forgetmecrops.client`           | `ModMenuEntrypoint` (Fabric), `ConfigScreenFactoryBridge` (NeoForge), `ModEntry`                  |
+| `com.forgetmecrops.enums`            | `DurabilityMode`, `RotationMode`, `SeedClutterMode`                                               |
+| `com.forgetmecrops.util.chest`       | `ChestUtils` — insert/remove helpers with reserve enforcement                                     |
+| `com.forgetmecrops.util.durability`  | `DurabilityLogic` — enchantment-aware hoe damage                                                  |
+| `com.forgetmecrops.util.hoe`         | `FrameHoeReplacement` — broken-hoe replacement and frame sync                                     |
+| `com.forgetmecrops.util.loot`        | `LootLogic` — Fortune/Silk Touch aware drop calculation                                           |
+| `com.forgetmecrops.util.log`         | `LogUtils` — gated debug/trace logging                                                            |
+| `com.forgetmecrops.platform`         | `PlatformHelper` (unified SPI impl, conditions pick platform), `Services`                         |
+| `com.forgetmecrops.platform.adapter` | `FIF`, `FastItemFrameAdapterImpl` — FastItemFrames integration                                    |
+| `com.forgetmecrops.mixin`            | Accessor mixins for chunk enumeration (`MixinMinecraft`, `MixinTitleScreen`)                      |
+| `com.forgetmecrops.ticker`           | `FarmTicker` — platform-conditional server-tick event wiring                                      |
 
 ---
 
@@ -97,18 +97,18 @@ Additional nearby chests and barrels are discovered at anchor-registration time 
 
 Key operations:
 
-| Method                              | Purpose                                                                          |
-|-------------------------------------|----------------------------------------------------------------------------------|
-| `registerFrame(...)`                | Add or refresh an anchor entry                                                   |
-| `unregisterFrame(...)`              | Remove an anchor (called on frame/chest removal or validation failure)           |
-| `markChunkInactive(dimId, chunkKey)`| Mark all anchors in a chunk inactive when the chunk unloads                      |
-| `markChunkActive(dimId, chunkKey)`  | Re-activate anchors when a chunk reloads                                         |
-| `tickAndCollectReady(dimId, level)` | Decrement per-anchor countdown timers; return anchors due for scanning           |
-| `scheduleRotation(...)`             | Queue a rotation request for the pending-rotation map                            |
-| `tryRotation(...)`                  | Record that a rotation was attempted (cooldown gate)                             |
-| `setAnimating(dimId, pos, flag)`    | Mark/unmark a frame as currently animating; clears pending rotations when set    |
-| `updateHoe(dimId, pos, hoe)`        | Update the stored hoe in an existing registry entry                              |
-| `clearAll()`                        | Purge all entries (called on server/world unload)                                |
+| Method                               | Purpose                                                                       |
+| ------------------------------------ | ----------------------------------------------------------------------------- |
+| `registerFrame(...)`                 | Add or refresh an anchor entry                                                |
+| `unregisterFrame(...)`               | Remove an anchor (called on frame/chest removal or validation failure)        |
+| `markChunkInactive(dimId, chunkKey)` | Mark all anchors in a chunk inactive when the chunk unloads                   |
+| `markChunkActive(dimId, chunkKey)`   | Re-activate anchors when a chunk reloads                                      |
+| `tickAndCollectReady(dimId, level)`  | Decrement per-anchor countdown timers; return anchors due for scanning        |
+| `scheduleRotation(...)`              | Queue a rotation request for the pending-rotation map                         |
+| `tryRotation(...)`                   | Record that a rotation was attempted (cooldown gate)                          |
+| `setAnimating(dimId, pos, flag)`     | Mark/unmark a frame as currently animating; clears pending rotations when set |
+| `updateHoe(dimId, pos, hoe)`         | Update the stored hoe in an existing registry entry                           |
+| `clearAll()`                         | Purge all entries (called on server/world unload)                             |
 
 #### Chunk-based lifecycle
 
@@ -218,17 +218,17 @@ This avoids hardcoded per-crop thresholds and correctly handles beetroot (max ag
 
 ### Crop table
 
-| Crop            | Harvest condition                  | Post-harvest block state             | Replant item               |
-|-----------------|------------------------------------|--------------------------------------|----------------------------|
-| Wheat           | `age == maxAge` (7)                | Air (drops via loot)                 | `WHEAT_SEEDS`              |
-| Carrots         | `age == maxAge` (7)                | Air (drops via loot)                 | `CARROT`                   |
-| Potatoes        | `age == maxAge` (7)                | Air (drops via loot)                 | `POTATO`                   |
-| Beetroots       | `age == maxAge` (3)                | Air (drops via loot)                 | `BEETROOT_SEEDS`           |
-| Torchflower     | `age == maxAge`                    | Air (drops via loot)                 | `TORCHFLOWER_SEEDS` (item) |
-| Sweet Berries   | `age == 3`                         | Reset to `age = 1` (bush stays)      | n/a                        |
-| Nether Wart     | `age == 3`                         | Air (drops via loot)                 | `NETHER_WART`              |
-| Melon           | Fruit block adjacent to stem       | `AIR` (fruit only; stem untouched)   | `MELON_SEEDS` (stem regrows) |
-| Pumpkin         | Fruit block adjacent to stem       | `AIR` (fruit only; stem untouched)   | `PUMPKIN_SEEDS` (stem regrows) |
+| Crop          | Harvest condition            | Post-harvest block state           | Replant item                   |
+| ------------- | ---------------------------- | ---------------------------------- | ------------------------------ |
+| Wheat         | `age == maxAge` (7)          | Air (drops via loot)               | `WHEAT_SEEDS`                  |
+| Carrots       | `age == maxAge` (7)          | Air (drops via loot)               | `CARROT`                       |
+| Potatoes      | `age == maxAge` (7)          | Air (drops via loot)               | `POTATO`                       |
+| Beetroots     | `age == maxAge` (3)          | Air (drops via loot)               | `BEETROOT_SEEDS`               |
+| Torchflower   | `age == maxAge`              | Air (drops via loot)               | `TORCHFLOWER_SEEDS` (item)     |
+| Sweet Berries | `age == 3`                   | Reset to `age = 1` (bush stays)    | n/a                            |
+| Nether Wart   | `age == 3`                   | Air (drops via loot)               | `NETHER_WART`                  |
+| Melon         | Fruit block adjacent to stem | `AIR` (fruit only; stem untouched) | `MELON_SEEDS` (stem regrows)   |
+| Pumpkin       | Fruit block adjacent to stem | `AIR` (fruit only; stem untouched) | `PUMPKIN_SEEDS` (stem regrows) |
 
 ### CropRegistry
 
@@ -243,12 +243,12 @@ This avoids hardcoded per-crop thresholds and correctly handles beetroot (max ag
 
 ## Enchantments
 
-| Enchantment  | Behaviour                                                                                           |
-|--------------|-----------------------------------------------------------------------------------------------------|
-| Fortune      | Applied to all crop drop calculations via `LootLogic`                                               |
-| Silk Touch   | Causes melons to drop the melon block instead of slices                                             |
-| Unbreaking   | Respected in `normal` durability mode; ignored in `ignore_unbreaking` mode                          |
-| Mending      | When `mendingProtection = true`, no durability loss is applied to a hoe bearing Mending |
+| Enchantment | Behaviour                                                                               |
+| ----------- | --------------------------------------------------------------------------------------- |
+| Fortune     | Applied to all crop drop calculations via `LootLogic`                                   |
+| Silk Touch  | Causes melons to drop the melon block instead of slices                                 |
+| Unbreaking  | Respected in `normal` durability mode; ignored in `ignore_unbreaking` mode              |
+| Mending     | When `mendingProtection = true`, no durability loss is applied to a hoe bearing Mending |
 
 Loot calculation is performed by `LootLogic`, which prefers server-side `LootContext` builders where available and falls back to reflective compatibility paths when needed.
 
@@ -302,11 +302,11 @@ The `animating` flag on `FrameEntry` guards both the pending-rotation flush (ski
 
 ### Rotation modes
 
-| Mode                        | Mechanism                                                                              |
-|-----------------------------|----------------------------------------------------------------------------------------|
-| `SINGLE_STEP`               | One `setFrameRotation` call after the full spiral completes, if anything was harvested |
-| `FULL_ROTATION`             | 8-step animation sequence, spread evenly across `numberOfTicksNeeded`                 |
-| `FOLLOW_ROTATION`           | Per-position rotation based on ring index and ring size, applied during the spiral     |
+| Mode              | Mechanism                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| `SINGLE_STEP`     | One `setFrameRotation` call after the full spiral completes, if anything was harvested |
+| `FULL_ROTATION`   | 8-step animation sequence, spread evenly across `numberOfTicksNeeded`                  |
+| `FOLLOW_ROTATION` | Per-position rotation based on ring index and ring size, applied during the spiral     |
 
 ### Applying rotations
 
@@ -322,10 +322,10 @@ The `animating` flag on `FrameEntry` guards both the pending-rotation flush (ski
 
 Hard limits in `FrameScanner`:
 
-| Limit                          | Value | Notes                                                      |
-|--------------------------------|-------|------------------------------------------------------------|
-| Max frames processed per run   | 24    | `FrameScanner.MAX_FRAMES_PER_RUN`                          |
-| Max scan spread                | configurable | `maxSpiralDurationTicks` (default 200)               |
+| Limit                        | Value        | Notes                                  |
+| ---------------------------- | ------------ | -------------------------------------- |
+| Max frames processed per run | 24           | `FrameScanner.MAX_FRAMES_PER_RUN`      |
+| Max scan spread              | configurable | `maxSpiralDurationTicks` (default 200) |
 
 Work is spread across ticks by `FarmScanTask`. One task instance per anchor per cycle; `positionsPerTick = ceil(totalPositions / maxSpiralDurationTicks)`.
 
@@ -393,49 +393,49 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 
 ### Server Config (`forgetmecrops-server.toml`)
 
-| Option                     | Default                     | Type          | Description                                                                 |
-|----------------------------|-----------------------------|---------------|-----------------------------------------------------------------------------|
-| `tickInterval`             | `300`                       | int           | Ticks between anchor runs                                                   |
-| `frameRediscoveryInterval` | `300`                       | int           | Ticks between loaded-chunk rediscovery passes                               |
-| `scanRangeX`               | `4`                         | int           | Scan radius along X from the anchor (1–5 clamped in discovery)              |
-| `scanRangeZ`               | `4`                         | int           | Scan radius along Z from the anchor (1–5 clamped in discovery)              |
-| `durabilityMode`           | `normal`                    | enum string   | `normal` / `ignore_unbreaking` / `none`                                     |
-| `mendingProtection`        | `true`                      | boolean       | When true, suppress durability loss on hoes with Mending |
-| `debugLogging`             | `false`                     | boolean       | Verbose server log output                                                   |
-| `chestFullCooldownTicks`   | `300`                       | int           | Cooldown when chest is full                                                 |
-| `maxSpiralDurationTicks`   | `200`                       | int           | Max ticks to spread one scan cycle across                                   |
-| `rotationMode`             | `FULL_ROTATION`             | enum string   | `SINGLE_STEP` / `FULL_ROTATION` / `FOLLOW_ROTATION`                         |
-| `seedClutterMode`          | `reduced`                   | enum string   | `none` / `normal` / `reduced`                                               |
-| `seedReservePerType`       | `80`                        | int           | Minimum seeds per type kept in chest when pulling for replanting            |
+| Option                     | Default         | Type        | Description                                                      |
+| -------------------------- | --------------- | ----------- | ---------------------------------------------------------------- |
+| `tickInterval`             | `300`           | int         | Ticks between anchor runs                                        |
+| `frameRediscoveryInterval` | `300`           | int         | Ticks between loaded-chunk rediscovery passes                    |
+| `scanRangeX`               | `4`             | int         | Scan radius along X from the anchor (1–5 clamped in discovery)   |
+| `scanRangeZ`               | `4`             | int         | Scan radius along Z from the anchor (1–5 clamped in discovery)   |
+| `durabilityMode`           | `normal`        | enum string | `normal` / `ignore_unbreaking` / `none`                          |
+| `mendingProtection`        | `true`          | boolean     | When true, suppress durability loss on hoes with Mending         |
+| `debugLogging`             | `false`         | boolean     | Verbose server log output                                        |
+| `chestFullCooldownTicks`   | `300`           | int         | Cooldown when chest is full                                      |
+| `maxSpiralDurationTicks`   | `200`           | int         | Max ticks to spread one scan cycle across                        |
+| `rotationMode`             | `FULL_ROTATION` | enum string | `SINGLE_STEP` / `FULL_ROTATION` / `FOLLOW_ROTATION`              |
+| `seedClutterMode`          | `reduced`       | enum string | `none` / `normal` / `reduced`                                    |
+| `seedReservePerType`       | `80`            | int         | Minimum seeds per type kept in chest when pulling for replanting |
 
 ### Client Config (`forgetmecrops-client.toml`)
 
-| Option             | Default | Type    | Description                              |
-|--------------------|---------|---------|------------------------------------------|
+| Option             | Default | Type    | Description                                                 |
+| ------------------ | ------- | ------- | ----------------------------------------------------------- |
 | `harvestParticles` | `true`  | boolean | Enable scan visual particles (spiral trail + harvest burst) |
 
 ### `durabilityMode`
 
-| Value               | Behaviour                                                               |
-|---------------------|-------------------------------------------------------------------------|
-| `normal`            | Vanilla durability loss; Unbreaking enchantment is respected            |
-| `ignore_unbreaking` | Durability loss without Unbreaking reduction                            |
-| `none`              | No durability loss                                                      |
+| Value               | Behaviour                                                    |
+| ------------------- | ------------------------------------------------------------ |
+| `normal`            | Vanilla durability loss; Unbreaking enchantment is respected |
+| `ignore_unbreaking` | Durability loss without Unbreaking reduction                 |
+| `none`              | No durability loss                                           |
 
 ### `rotationMode`
 
-| Value                       | Behaviour                                                                              |
-|-----------------------------|----------------------------------------------------------------------------------------|
-| `SINGLE_STEP`               | One step after each completed harvest cycle with at least one crop                     |
-| `FULL_ROTATION`             | 8-step animation across the full harvest pass                                          |
-| `FOLLOW_ROTATION`           | Per-ring rotation tracking the outward spiral, up to 8 steps per ring                 |
+| Value             | Behaviour                                                             |
+| ----------------- | --------------------------------------------------------------------- |
+| `SINGLE_STEP`     | One step after each completed harvest cycle with at least one crop    |
+| `FULL_ROTATION`   | 8-step animation across the full harvest pass                         |
+| `FOLLOW_ROTATION` | Per-ring rotation tracking the outward spiral, up to 8 steps per ring |
 
 ### `seedClutterMode`
 
-| Value     | Behaviour                                                                                                           |
-|-----------|---------------------------------------------------------------------------------------------------------------------|
-| `none`    | Discard seed drops before insertion. Replanting draws from drops first, then chest (subject to `seedReservePerType`) |
-| `normal`  | One drop seed consumed for replanting; all remaining output is routed into nearby extra containers first, then the anchor chest as overflow |
+| Value     | Behaviour                                                                                                                                           |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `none`    | Discard seed drops before insertion. Replanting draws from drops first, then chest (subject to `seedReservePerType`)                                |
+| `normal`  | One drop seed consumed for replanting; all remaining output is routed into nearby extra containers first, then the anchor chest as overflow         |
 | `reduced` | One drop seed consumed for replanting; remaining drops halved (rounded down) before insertion and routed with the same extra-container-first policy |
 
 Halving in `reduced` does not apply when the seed item is also the crop fruit (carrot, potato, nether wart, torchflower-type). Chest removal for replanting is always gated by `seedReservePerType` on the anchor chest.
@@ -451,28 +451,28 @@ Current scope for seed filtering (clutter/reserve logic):
 
 All paths are relative to `src/main/java/com/forgetmecrops/`.
 
-| File                                   | Purpose                                                    |
-|----------------------------------------|------------------------------------------------------------|
-| `frame/FrameScanner.java`              | Scan orchestration, hoe I/O, rotation apply               |
-| `frame/FarmScanTask.java`              | Incremental tick-based spiral scanner                      |
-| `frame/SpiralStep.java`                | Immutable (pos, direction) spiral record                   |
-| `frame/FrameRegistry.java`             | Anchor registry, chunk lifecycle, rotation batching        |
-| `frame/FrameDiscovery.java`            | Frame discovery for vanilla and FIF frames                 |
-| `frame/CatchupManager.java`            | Gradual discovery queue across ticks                       |
-| `harvest/HarvestUtils.java`            | Harvest execution, drop handling, hoe break events         |
-| `harvest/HarvestContext.java`          | Per-scan mutable state (hoe, chest, counters)              |
-| `harvest/CropRegistry.java`            | Crop → seed mappings, canonical block normalisation        |
-| `util/loot/LootLogic.java`             | Fortune/Silk Touch drop calculation                        |
-| `util/hoe/FrameHoeReplacement.java`    | Broken hoe replacement and frame sync                      |
-| `util/chest/ChestUtils.java`           | Chest insert/remove with reserve enforcement               |
-| `util/durability/DurabilityLogic.java` | Enchantment-aware hoe damage                               |
-| `config/Config.java`                   | Runtime config state and TOML I/O                          |
-| `client/config/ConfigScreen.java`      | Shared Cloth Config screen builder for both loaders |
-| `client/config/ConfigTooltipFactory.java` | Shared tooltip content suppliers for config entries     |
-| `client/ModEntry.java`                 | Entry point (Fabric: `ModInitializer`, NeoForge: `@Mod`)   |
-| `ticker/FarmTicker.java`               | Server-tick wiring (Fabric events vs NeoForge bus)         |
-| `platform/PlatformHelper.java`         | SPI implementation (Stonecutter-conditional per platform)  |
-| `platform/adapter/FIF.java`            | FastItemFrames adapter interface                           |
+| File                                      | Purpose                                                   |
+| ----------------------------------------- | --------------------------------------------------------- |
+| `frame/FrameScanner.java`                 | Scan orchestration, hoe I/O, rotation apply               |
+| `frame/FarmScanTask.java`                 | Incremental tick-based spiral scanner                     |
+| `frame/SpiralStep.java`                   | Immutable (pos, direction) spiral record                  |
+| `frame/FrameRegistry.java`                | Anchor registry, chunk lifecycle, rotation batching       |
+| `frame/FrameDiscovery.java`               | Frame discovery for vanilla and FIF frames                |
+| `frame/CatchupManager.java`               | Gradual discovery queue across ticks                      |
+| `harvest/HarvestUtils.java`               | Harvest execution, drop handling, hoe break events        |
+| `harvest/HarvestContext.java`             | Per-scan mutable state (hoe, chest, counters)             |
+| `harvest/CropRegistry.java`               | Crop → seed mappings, canonical block normalisation       |
+| `util/loot/LootLogic.java`                | Fortune/Silk Touch drop calculation                       |
+| `util/hoe/FrameHoeReplacement.java`       | Broken hoe replacement and frame sync                     |
+| `util/chest/ChestUtils.java`              | Chest insert/remove with reserve enforcement              |
+| `util/durability/DurabilityLogic.java`    | Enchantment-aware hoe damage                              |
+| `config/Config.java`                      | Runtime config state and TOML I/O                         |
+| `client/config/ConfigScreen.java`         | Shared Cloth Config screen builder for both loaders       |
+| `client/config/ConfigTooltipFactory.java` | Shared tooltip content suppliers for config entries       |
+| `client/ModEntry.java`                    | Entry point (Fabric: `ModInitializer`, NeoForge: `@Mod`)  |
+| `ticker/FarmTicker.java`                  | Server-tick wiring (Fabric events vs NeoForge bus)        |
+| `platform/PlatformHelper.java`            | SPI implementation (Stonecutter-conditional per platform) |
+| `platform/adapter/FIF.java`               | FastItemFrames adapter interface                          |
 
 ---
 
@@ -525,15 +525,15 @@ Nodes are registered in `settings.gradle.kts`; Stonecutter reads the active VCS 
 
 Both loaders are configured in `build.gradle.kts` with matching run directory layouts:
 
-| Loader    | Client run dir             | Server run dir             |
-|-----------|----------------------------|----------------------------|
-| Fabric    | `versions/1.21.11-fabric/runs/client`   | `versions/1.21.11-fabric/runs/server`   |
-| NeoForge  | `versions/1.21.11-neoforge/runs/client` | `versions/1.21.11-neoforge/runs/server` |
+| Loader   | Client run dir                          | Server run dir                          |
+| -------- | --------------------------------------- | --------------------------------------- |
+| Fabric   | `versions/1.21.11-fabric/runs/client`   | `versions/1.21.11-fabric/runs/server`   |
+| NeoForge | `versions/1.21.11-neoforge/runs/client` | `versions/1.21.11-neoforge/runs/server` |
 
-Both client runs pass `--username DuelMonster` as program arguments.
-Fabric uses `programArgs("--username", "DuelMonster")`.
+Both client runs pass `--username forgetmecrops_dev` as program arguments.
+Fabric uses `programArgs("--username", "forgetmecrops_dev")`.
 NeoForge uses MDG `programArgument(...)` entries for:
-`--username DuelMonster --width 1960 --height 1080`.
+`--username forgetmecrops_dev --width 1960 --height 1080`.
 This guarantees NeoForge dev runs start at `1960x1080` without relying on `options.txt`
 `overrideWidth` / `overrideHeight` behavior.
 
@@ -555,12 +555,12 @@ not the release artifacts — always use the `releases/` copies.
 Maven and Modrinth/CurseForge publishing is configured in `build.gradle.kts` and activated
 automatically when the corresponding environment variables or `gradle.properties` tokens are set:
 
-| Variable            | Destination                    |
-|---------------------|--------------------------------|
-| `MODRINTH_TOKEN`    | Modrinth releases              |
-| `CURSEFORGE_TOKEN`  | CurseForge releases            |
-| `GITHUB_TOKEN`      | GitHub Packages Maven          |
-| `GITHUB_ACTOR`      | GitHub Packages actor username |
+| Variable           | Destination                    |
+| ------------------ | ------------------------------ |
+| `MODRINTH_TOKEN`   | Modrinth releases              |
+| `CURSEFORGE_TOKEN` | CurseForge releases            |
+| `GITHUB_TOKEN`     | GitHub Packages Maven          |
+| `GITHUB_ACTOR`     | GitHub Packages actor username |
 
 Local Maven publishes to `~/.m2/repository` unconditionally.
 

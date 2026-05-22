@@ -6,7 +6,13 @@
 			"type": "shell",
 			"command": ".\\gradlew.bat",
 			"args": [":${input:mcVersion}-fabric:runClient"],
-			"options": {"cwd": "${workspaceFolder}"},
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"env": {
+					"JAVA_HOME": "${config:java.import.gradle.java.home}",
+					"PATH": "${config:java.import.gradle.java.home}/bin;${env:PATH}"
+				}
+			},
 			"group": "build"
 		},
 		{
@@ -14,7 +20,13 @@
 			"type": "shell",
 			"command": ".\\gradlew.bat",
 			"args": ["-PdmNoRelatedMods=true", ":${input:mcVersion}-fabric:runClient"],
-			"options": {"cwd": "${workspaceFolder}"},
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"env": {
+					"JAVA_HOME": "${config:java.import.gradle.java.home}",
+					"PATH": "${config:java.import.gradle.java.home}/bin;${env:PATH}"
+				}
+			},
 			"group": "build"
 		},
 		{
@@ -22,7 +34,13 @@
 			"type": "shell",
 			"command": ".\\gradlew.bat",
 			"args": [":${input:mcVersion}-neoforge:runClient"],
-			"options": {"cwd": "${workspaceFolder}"},
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"env": {
+					"JAVA_HOME": "${config:java.import.gradle.java.home}",
+					"PATH": "${config:java.import.gradle.java.home}/bin;${env:PATH}"
+				}
+			},
 			"group": "build"
 		},
 		{
@@ -30,7 +48,13 @@
 			"type": "shell",
 			"command": ".\\gradlew.bat",
 			"args": ["-PdmNoRelatedMods=true", ":${input:mcVersion}-neoforge:runClient"],
-			"options": {"cwd": "${workspaceFolder}"},
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"env": {
+					"JAVA_HOME": "${config:java.import.gradle.java.home}",
+					"PATH": "${config:java.import.gradle.java.home}/bin;${env:PATH}"
+				}
+			},
 			"group": "build"
 		},
 		{
@@ -38,7 +62,13 @@
 			"type": "shell",
 			"command": ".\\gradlew.bat",
 			"args": [":${input:mcVersion}-fabric:runServer"],
-			"options": {"cwd": "${workspaceFolder}"},
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"env": {
+					"JAVA_HOME": "${config:java.import.gradle.java.home}",
+					"PATH": "${config:java.import.gradle.java.home}/bin;${env:PATH}"
+				}
+			},
 			"group": "build"
 		},
 		{
@@ -46,7 +76,13 @@
 			"type": "shell",
 			"command": ".\\gradlew.bat",
 			"args": ["-PdmNoRelatedMods=true", ":${input:mcVersion}-fabric:runServer"],
-			"options": {"cwd": "${workspaceFolder}"},
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"env": {
+					"JAVA_HOME": "${config:java.import.gradle.java.home}",
+					"PATH": "${config:java.import.gradle.java.home}/bin;${env:PATH}"
+				}
+			},
 			"group": "build"
 		},
 		{
@@ -54,7 +90,13 @@
 			"type": "shell",
 			"command": ".\\gradlew.bat",
 			"args": [":${input:mcVersion}-neoforge:runServer"],
-			"options": {"cwd": "${workspaceFolder}"},
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"env": {
+					"JAVA_HOME": "${config:java.import.gradle.java.home}",
+					"PATH": "${config:java.import.gradle.java.home}/bin;${env:PATH}"
+				}
+			},
 			"group": "build"
 		},
 		{
@@ -62,7 +104,13 @@
 			"type": "shell",
 			"command": ".\\gradlew.bat",
 			"args": ["-PdmNoRelatedMods=true", ":${input:mcVersion}-neoforge:runServer"],
-			"options": {"cwd": "${workspaceFolder}"},
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"env": {
+					"JAVA_HOME": "${config:java.import.gradle.java.home}",
+					"PATH": "${config:java.import.gradle.java.home}/bin;${env:PATH}"
+				}
+			},
 			"group": "build"
 		}
 	],

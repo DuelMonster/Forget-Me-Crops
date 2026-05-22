@@ -12,6 +12,7 @@ on:
 
 env:
   GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx3G
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build_and_publish:
@@ -22,16 +23,18 @@ jobs:
       packages: write      # needed for GitHub Packages Maven publish
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v6
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: |
+            21
+            25
 
       - name: Cache Gradle
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches

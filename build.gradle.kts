@@ -2,6 +2,9 @@
 // 1.21.11-neoforge, etc.). Modstitch reads the node's gradle.properties to decide which
 // platform toolchain (Loom vs ModDevGradle) to activate. One script to rule them all.
 
+import java.io.DataInputStream
+import java.util.zip.ZipFile
+
 plugins {
     // Modstitch: the unified build plugin that abstracts Fabric Loom and NeoForge MDG.
     // Only one platform is "active" per node — determined by modstitch.platform in
@@ -29,6 +32,7 @@ val loader = name.substringAfterLast("-")
 val isFabric = loader == "fabric"
 val isNeoForge = loader == "neoforge"
 val javaRelease = if (minecraft.startsWith("26.")) 25 else 21
+val javaToolchains = extensions.getByType(org.gradle.jvm.toolchain.JavaToolchainService::class.java)
 
 // ────────────────────────────────────────────────────────────
 //  Modstitch core configuration
@@ -71,7 +75,7 @@ modstitch {
                 setConfigName("Fabric Client")
                 ideConfigGenerated(false)
                 runDir("runs/client")
-                programArgs("--username", "DuelMonster", "--width", "1960", "--height", "1080")
+                programArgs("--username", "fmc_dev", "--width", "1960", "--height", "1080")
             }
             runs.named("server") {
                 setConfigName("Fabric Server")
@@ -97,7 +101,7 @@ modstitch {
                 named("client") {
                     gameDirectory = project.file("runs/client")
                     programArgument("--username")
-                    programArgument("DuelMonster")
+                    programArgument("fmc_dev")
                     programArgument("--width")
                     programArgument("1960")
                     programArgument("--height")
@@ -151,6 +155,57 @@ java {
 
 tasks.withType<JavaCompile> {
     options.release.set(javaRelease)
+}
+
+// Keep game runtime JVM aligned with the MC line:
+// - 1.21.x nodes launch with Java 21
+// - 26.x nodes launch with Java 25
+// Gradle itself may still run on Java 25 for plugin compatibility.
+tasks.withType<JavaExec>().configureEach {
+    if (name.startsWith("run")) {
+        javaLauncher.set(javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(javaRelease))
+        })
+    }
+}
+
+// Verify that the built production jar uses the expected class file major version:
+// Java 21 -> 65, Java 25 -> 69.
+tasks.register("verifyJarBytecode") {
+    group = "verification"
+    description = "Verifies that production jar bytecode matches the expected Java target for this node."
+
+    val productionJarTaskName = if (tasks.findByName("remapJar") != null) "remapJar" else "jar"
+    dependsOn(productionJarTaskName)
+
+    doLast {
+        val jarTask = tasks.named<org.gradle.jvm.tasks.Jar>(productionJarTaskName).get()
+        val jarFile = jarTask.archiveFile.get().asFile
+        check(jarFile.exists()) { "Expected production jar not found: ${jarFile.absolutePath}" }
+
+        val expectedMajor = javaRelease + 44
+        var checkedClassCount = 0
+
+        ZipFile(jarFile).use { zip ->
+            val entries = zip.entries().asSequence().filter { !it.isDirectory && it.name.endsWith(".class") }
+            entries.forEach { entry ->
+                zip.getInputStream(entry).use { input ->
+                    val data = DataInputStream(input)
+                    val magic = data.readInt()
+                    check(magic == 0xCAFEBABE.toInt()) { "Invalid class header in ${entry.name} (${jarFile.name})" }
+                    data.readUnsignedShort() // minor version
+                    val major = data.readUnsignedShort()
+                    check(major == expectedMajor) {
+                        "Unexpected class file major version in ${entry.name}: got $major, expected $expectedMajor (${jarFile.name})"
+                    }
+                    checkedClassCount++
+                }
+            }
+        }
+
+        check(checkedClassCount > 0) { "No .class files found in ${jarFile.name}" }
+        logger.lifecycle("Verified ${jarFile.name}: $checkedClassCount classes at major version $expectedMajor")
+    }
 }
 
 // Ensure Stonecutter preprocessing runs before Java compilation so
@@ -301,7 +356,8 @@ dependencies {
     }
 
     // ── Common test dependencies ──
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.2")
 }
 
 tasks.withType<Test> {
