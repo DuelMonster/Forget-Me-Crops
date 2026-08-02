@@ -3,19 +3,37 @@ set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
 changelog_path="$repo_root/CHANGELOG.md"
+mapfile -t staged_files < <(git -C "$repo_root" diff --cached --name-only --diff-filter=ACMR)
 
-if [[ ! -f "$changelog_path" ]]; then
-  echo "CHANGELOG.md is missing." >&2
+if [[ ${#staged_files[@]} -eq 0 ]]; then
+  echo "CHANGELOG validation passed."
+  exit 0
+fi
+
+changelog_staged=false
+requires_changelog_update=false
+
+for file in "${staged_files[@]}"; do
+  normalized="${file//\\//}"
+  if [[ "$normalized" == "CHANGELOG.md" ]]; then
+    changelog_staged=true
+    continue
+  fi
+
+  if [[ "$normalized" == ".brainbox/state/version-bump-state.txt" ]]; then
+    continue
+  fi
+
+  requires_changelog_update=true
+done
+
+if [[ "$requires_changelog_update" == true && "$changelog_staged" == false ]]; then
+  echo "CHANGELOG update required: stage CHANGELOG.md when committing substantive changes." >&2
   exit 1
 fi
 
-staged="$(git -C "$repo_root" diff --cached --name-only --diff-filter=ACMR)"
-
-staged_code_changes="$(printf '%s\n' "$staged" | grep -E '^(src/main/.+\.(java|kt|kts|groovy|scala|json|toml|yml|yaml|properties|mcmeta|mixins\.json)|src/test/.+\.(java|kt|kts|groovy|scala|json|toml|yml|yaml|properties))$' || true)"
-
-if [[ -n "$staged_code_changes" ]] && ! printf '%s\n' "$staged" | grep -Fxq 'CHANGELOG.md'; then
-  echo "CHANGELOG enforcement failed: staged code changes detected, but CHANGELOG.md is not staged." >&2
-  echo "When code changes are committed, include an appropriate CHANGELOG.md update in the same commit." >&2
+if [[ ! -f "$changelog_path" ]]; then
+  echo "CHANGELOG.md is missing." >&2
   exit 1
 fi
 

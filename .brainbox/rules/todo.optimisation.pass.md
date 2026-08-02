@@ -1,13 +1,15 @@
 # Copilot: NEVER modify this file! Instead use it as a basis for creating your own todo list.
-- [ ] Scan entire workspace for duplicated code  
-# Copilot: identify repeated patterns, utilities, or logic blocks and propose consolidation.
-- [ ] Remove redundant or obsolete code  
-# Copilot: detect unused methods, dead branches, outdated helpers, and safe removal candidates.
-- [ ] Perform structural cleanup  
-# Copilot: fix inconsistent formatting, imports, naming, and style deviations.
-- [ ] Optimise code for clarity and performance  
-# Copilot: suggest micro‑optimisations, simplify logic, and reduce unnecessary allocations.
-- [ ] Reorganise files into logical sub‑packages  
-# Copilot: propose a package structure and generate a file‑move plan.
-- [ ] Run a final consistency pass  
-# Copilot: verify no duplicates remain, no unused imports, and no inconsistent patterns.
+- [ ] Scan entire workspace for duplicated code
+# Copilot: MUST scan the entire workspace source tree on every run, including src/main/java, src/test/java, and any versioned source roots under versions/**/src/. MUST report repeated patterns with exact file paths and line numbers. MUST treat 3+ occurrences as mandatory consolidation candidates and 2 occurrences as optional candidates. MUST proceed autonomously with safe, behavior-preserving refactors and cleanup; user confirmation is not required during a standard optimisation pass.
+- [ ] Remove redundant or obsolete code
+# Copilot: MUST perform a full workspace reference search on every removal candidate before touching it. MUST NOT remove any class, method, field, or import that has at least one live reference. MUST NOT remove code that may be invoked via reflection, dynamic dispatch, service loading, or data-driven registries even if static analysis shows no direct callers. MUST proceed without approval for trivial, verified-safe removals (unused imports, dead private helpers with zero references). MUST only stop for confirmation when behavior risk is non-trivial.
+- [ ] Perform structural cleanup
+# Copilot: MUST fix all of the following where found across the full source tree: duplicate import statements; wildcard imports; unused imports; trailing whitespace; more than two consecutive blank lines; missing blank line between class members of different types; accidental import indentation drift. MUST normalize trailing blank-line runs at file end. MUST NOT reformat, reindent, or re-order any code beyond correcting the violations listed above. MUST NOT change line endings, brace style, or whitespace inside expressions.
+- [ ] Optimise code for clarity and performance
+# Copilot: MUST only apply optimisations with a clear, demonstrable benefit (reduced duplication, fewer allocations, simpler control flow, or lower maintenance cost). MUST introduce helpers/abstractions when they remove 3+ duplicated blocks or meaningfully reduce complexity in hot paths. MUST NOT add speculative error handling, null checks, or defensive guards for impossible scenarios. MUST NOT change method signatures, return types, or access modifiers unless they are provably wrong and validated by compile/tests.
+- [ ] Reorganise files into logical sub‑packages
+# Copilot: MUST propose a concrete package/file move plan whenever reorganisation opportunities are found. If moves are low-risk and internal-only, Copilot MAY execute them in the same pass, then update imports and validate compile/tests. For high-risk moves (public API, loader wiring, generated-resource assumptions), Copilot MUST present the plan and defer execution.
+- [ ] Run a final consistency pass
+# Copilot: MUST run `scripts/validate-optimization-pass.ps1` against all staged files and confirm zero violations. MUST run `scripts/validate-compile-matrix.ps1` and confirm all 4 build nodes compile successfully. MUST run `.\gradlew.bat test` and confirm zero test failures. MUST verify the working tree contains no unintended modifications. MUST stage all intended changes and confirm git status is clean before closing out (or clearly list intentional unstaged files not part of the pass).
+- [ ] Mandatory safeguard: preserve all existing comments
+# Copilot: MUST NEVER delete, rewrite, reorder, paraphrase, bulk-normalise, or otherwise alter any comment, Javadoc block, or inline remark as part of optimisation work — even if comments appear redundant, verbose, boilerplate, or inconsistent with each other. This rule applies unconditionally unless the user explicitly asks for comment edits in the current task.

@@ -8,32 +8,57 @@ if (-not (Test-Path $changelogPath)) {
     exit 1
 }
 
-Set-Location $repoRoot
-$staged = @(git diff --cached --name-only --diff-filter=ACMR)
+$changelogLines = Get-Content -Path $changelogPath
+$stagedFiles = @(git -C $repoRoot diff --cached --name-only --diff-filter=ACMR)
 
-$stagedCodeChanges = @(
-    $staged | Where-Object {
-        $_ -match '^src/main/.+\.(java|kt|kts|groovy|scala|json|toml|yml|yaml|properties|mcmeta|mixins\.json)$' -or
-        $_ -match '^src/test/.+\.(java|kt|kts|groovy|scala|json|toml|yml|yaml|properties)$'
+if ($stagedFiles.Count -eq 0) {
+    Write-Host 'CHANGELOG validation passed.' -ForegroundColor Green
+    exit 0
+}
+
+$changelogStaged = $false
+$requiresChangelogUpdate = $false
+
+foreach ($file in $stagedFiles) {
+    $normalized = ($file -replace '\\', '/').Trim()
+    if ($normalized -eq 'CHANGELOG.md') {
+        $changelogStaged = $true
+        continue
     }
-)
 
-if ($stagedCodeChanges.Count -gt 0 -and -not ($staged -contains 'CHANGELOG.md')) {
-    Write-Host 'CHANGELOG enforcement failed: staged code changes detected, but CHANGELOG.md is not staged.' -ForegroundColor Red
-    Write-Host 'When code changes are committed, include an appropriate CHANGELOG.md update in the same commit.' -ForegroundColor Red
+    if ($normalized -eq '.brainbox/state/version-bump-state.txt') {
+        continue
+    }
+
+    $requiresChangelogUpdate = $true
+}
+
+if ($requiresChangelogUpdate -and -not $changelogStaged) {
+    Write-Host 'CHANGELOG update required: stage CHANGELOG.md when committing substantive changes.' -ForegroundColor Red
     exit 1
 }
 
-$changelog = Get-Content -Raw -Path $changelogPath
+$hasVersionHeader = $false
+$hasBulletEntry = $false
 
-# Check that CHANGELOG has at least one version header (e.g., ## 0.18.0)
-if ($changelog -notmatch '## \d+\.\d+\.\d+') {
+foreach ($line in $changelogLines) {
+    if ($line -match '^## \d+\.\d+\.\d+$') {
+        $hasVersionHeader = $true
+        continue
+    }
+
+    if ($hasVersionHeader -and $line -match '^\s*-\s+.+$') {
+        $hasBulletEntry = $true
+        break
+    }
+}
+
+if (-not $hasVersionHeader) {
     Write-Host 'CHANGELOG.md missing version headers (format: ## X.Y.Z)' -ForegroundColor Yellow
     exit 1
 }
 
-# Check that there is at least one bullet entry anywhere in the file
-if ($changelog -notmatch '(?m)^-\s+') {
+if (-not $hasBulletEntry) {
     Write-Host 'CHANGELOG.md has version headers but no entries (format: - description)' -ForegroundColor Yellow
     exit 1
 }

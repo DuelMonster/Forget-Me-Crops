@@ -1,15 +1,14 @@
-Make sure the README, TECHNICAL docs are fully updated, accurate and cover all aspects of the project. Rewrite when needed and ensure to keep the formatting similar (like tables formatted with space padding).
+Make sure the README, TECHNICAL docs are fully updated, acurate and cover all aspects of the project. Rewrite when needed and ensure to keep the formatting similar (like tables formated with space padding).
 Follow these rules:
 
 README:
 Must be friendly, humanised, aimed at users, with some comedic flare
 - Overview
 - Features
-- How it works
-- Supported crops
+- How each feature works
 - Installation (Fabric + NeoForge)
 - Configuration
-- Compatibility (FastItemFrames)
+- Compatibility (if any)
 - Technical documentation - link to TECHNICAL.md
 - License (MIT)
 - Credits
