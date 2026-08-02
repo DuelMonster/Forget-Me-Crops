@@ -502,10 +502,37 @@ public class HarvestUtils {
         try {
             FrameScanner.Anchor anchor = resolveAnchor(ctx);
             if (anchor != null && ctx.level != null) {
+                ItemStack intended = ctx.getHoe().isEmpty()
+                        ? net.minecraft.world.item.ItemStack.EMPTY
+                        : ctx.getHoe().copy();
+
                 com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(
                         ctx.level,
                         anchor.framePos,
-                        ctx.getHoe().isEmpty() ? net.minecraft.world.item.ItemStack.EMPTY : ctx.getHoe().copy());
+                        intended);
+
+                // Keep registry state in lockstep with the durability-updated hoe, even if
+                // subsequent frame reads are delayed or briefly unavailable.
+                try {
+                    String dimId = ctx.level.dimension().identifier().toString();
+                    FrameRegistry.updateHoe(dimId, anchor.framePos, intended);
+                } catch (Throwable ignored) {}
+
+                // Best-effort writeback verification so durability drift is visible in logs.
+                try {
+                    ItemStack verified = FrameScanner.readHoeFromFrame(ctx.level, anchor.framePos);
+                    if (!intended.isEmpty()) {
+                        if (verified == null || verified.isEmpty()) {
+                            LogUtils.logWarn("[HOE] Frame hoe writeback verification failed at {}: expected damage={}, but frame is empty.",
+                                    anchor.framePos, intended.getDamageValue());
+                        } else if (verified.getDamageValue() != intended.getDamageValue()) {
+                            LogUtils.logWarn("[HOE] Frame hoe damage mismatch at {}: expected damage={}, actual damage={}",
+                                    anchor.framePos, intended.getDamageValue(), verified.getDamageValue());
+                        } else {
+                            LogUtils.logDebug("[HOE] Frame hoe writeback verified at {}: damage={}", anchor.framePos, verified.getDamageValue());
+                        }
+                    }
+                } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {}
     }

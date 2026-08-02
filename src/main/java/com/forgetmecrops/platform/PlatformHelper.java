@@ -126,6 +126,17 @@ public class PlatformHelper implements IPlatformHelper {
         if (level == null || pos == null) return;
         try {
             try { LogUtils.logDebug("[PLATFORM] updateFrameItem called: pos={} incomingItem={} damage={}", pos, stack == null ? "<null>" : stack.getItem(), stack == null ? -1 : stack.getDamageValue()); } catch (Exception e) { LogUtils.logTrace("[PLATFORM] Debug log emit failed", e); }
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be != null && com.forgetmecrops.platform.adapter.FIF.isFastItemFrameBlockEntity(be)) {
+                try {
+                    boolean wrote = com.forgetmecrops.platform.adapter.FIF.writeItemToBE(be, stack == null ? ItemStack.EMPTY : stack.copy());
+                    if (wrote) {
+                        try { LogUtils.logDebug("[PLATFORM] updateFrameItem: wrote to FIF block-entity {} at {}", be.getClass().getName(), pos); } catch (Exception e) { LogUtils.logTrace("[PLATFORM] Debug log emit failed", e); }
+                        try { level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3); } catch (Exception e) { LogUtils.logTrace("[PLATFORM] sendBlockUpdated failed", e); }
+                        return;
+                    }
+                } catch (Exception t) { LogUtils.logDebug("[PLATFORM] updateFrameItem: FIF BE write failed: {}", t.getMessage()); }
+            }
             try {
                 var frames = level.getEntitiesOfClass(ItemFrame.class,
                         new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1), e -> true);
@@ -137,7 +148,6 @@ public class PlatformHelper implements IPlatformHelper {
                 }
             } catch (Exception e) { LogUtils.logTrace("[PLATFORM] Vanilla ItemFrame write path failed", e); }
 
-            BlockEntity be = level.getBlockEntity(pos);
             if (be == null) return;
             try {
                 boolean wrote = com.forgetmecrops.platform.adapter.FastItemFrameAdapterImpl.writeItemToBE(be, stack == null ? ItemStack.EMPTY : stack.copy());

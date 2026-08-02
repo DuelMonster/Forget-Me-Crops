@@ -187,6 +187,25 @@ public class ChestUtils {
     }
 
     /**
+     * Returns a copy of the first hoe found in the container without removing it.
+     *
+     * @param chest container to search
+     * @return a single ItemStack copy of the first hoe found, or ItemStack.EMPTY
+     */
+    public static net.minecraft.world.item.ItemStack peekFirstHoe(Container chest) {
+        if (chest == null) return net.minecraft.world.item.ItemStack.EMPTY;
+        for (int i = 0; i < chest.getContainerSize(); i++) {
+            ItemStack slot = chest.getItem(i);
+            if (slot != null && !slot.isEmpty() && slot.getItem() instanceof HoeItem) {
+                ItemStack found = slot.copy();
+                found.setCount(1);
+                return found;
+            }
+        }
+        return net.minecraft.world.item.ItemStack.EMPTY;
+    }
+
+    /**
      * Returns true if the item is a seed or crop fruit that we track reserves for.
      * This is the gatekeeper list for seed-reserve protection — only items in this list
      * can trigger the "don't remove below reserve count" logic in removeOne().

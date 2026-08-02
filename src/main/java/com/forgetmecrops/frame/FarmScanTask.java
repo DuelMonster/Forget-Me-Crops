@@ -102,13 +102,20 @@ class FarmScanTask {
         this.ctx = new HarvestContext(anchor, level, (anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy()), anchor.chest, null);
         try {
             ItemStack frameHoe = FrameScanner.readHoeFromFrame(level, center);
-            if (frameHoe != null && !frameHoe.isEmpty() && frameHoe.getItem() instanceof HoeItem) {
-                this.ctx.setHoe(frameHoe);
-                ExceptionHandler.silentTry(() -> FrameRegistry.updateHoe(dimId, center, this.ctx.getHoe().copy()));
-            } else if (this.ctx.getHoe().isEmpty()) {
+            if (frameHoe == null || frameHoe.isEmpty()) {
+                this.ctx.setHoe(ItemStack.EMPTY);
                 try {
                     FrameHoeReplacement.tryReplaceBrokenHoe(this.ctx);
+                    if (!this.ctx.getHoe().isEmpty()) {
+                        ExceptionHandler.silentTry(() -> FrameRegistry.updateHoe(dimId, center, this.ctx.getHoe().copy()));
+                    }
                 } catch (Throwable ignored) {}
+            } else {
+                ItemStack chosenHoe = FrameScanner.chooseScanHoe(this.ctx.getHoe(), frameHoe);
+                if (chosenHoe != null && !chosenHoe.isEmpty() && chosenHoe.getItem() instanceof HoeItem) {
+                    this.ctx.setHoe(chosenHoe);
+                    ExceptionHandler.silentTry(() -> FrameRegistry.updateHoe(dimId, center, this.ctx.getHoe().copy()));
+                }
             }
         } catch (Throwable ignored) {}
         this.dimId = dimId;
@@ -184,9 +191,13 @@ class FarmScanTask {
                 ItemStack liveHoe = FrameScanner.readHoeFromFrame(level, center);
                 if (liveHoe == null || liveHoe.isEmpty()) {
                     try { LogUtils.logDebug("[SCAN] Hoe removed from frame at {} during scheduled scan; attempting replacement from chest.", center); } catch (Throwable ignLog1) {}
+                    try { ctx.setHoe(ItemStack.EMPTY); } catch (Throwable ignored) {}
                     try {
                         FrameHoeReplacement.tryReplaceBrokenHoe(ctx);
                         ItemStack replacedHoe = FrameScanner.readHoeFromFrame(level, center);
+                        if ((replacedHoe == null || replacedHoe.isEmpty()) && !ctx.getHoe().isEmpty()) {
+                            replacedHoe = ctx.getHoe().copy();
+                        }
                         if (replacedHoe == null || replacedHoe.isEmpty()) {
                             try { LogUtils.logDebug("[SCAN] Failed to replace hoe from chest for {} during scheduled scan; aborting.", center); } catch (Throwable ignLog2) {}
                             ctx.logSummary();
@@ -200,8 +211,13 @@ class FarmScanTask {
                         return true;
                     }
                 } else {
-                    try { ctx.setHoe(liveHoe); } catch (Throwable ignSet) {}
-                    try { FrameRegistry.updateHoe(dimId, center, ctx.getHoe().copy()); } catch (Throwable ignUpd) {}
+                    try {
+                        ItemStack chosenHoe = FrameScanner.chooseScanHoe(ctx.getHoe(), liveHoe);
+                        if (chosenHoe != null && !chosenHoe.isEmpty()) {
+                            ctx.setHoe(chosenHoe);
+                            FrameRegistry.updateHoe(dimId, center, ctx.getHoe().copy());
+                        }
+                    } catch (Throwable ignSet) {}
                 }
             } catch (Throwable ignored) {}
         } catch (Throwable t) {

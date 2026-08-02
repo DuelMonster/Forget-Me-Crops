@@ -50,44 +50,49 @@ public final class FrameHoeReplacement {
             FrameScanner.Anchor anchor = null;
             try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {}
 
-            // Step 1: grab a replacement hoe from the chest
-            ItemStack replacement = ChestUtils.takeFirstHoe(ctx.chest);
+            // Step 1: peek at the first available hoe without removing it yet.
+            ItemStack replacement = ChestUtils.peekFirstHoe(ctx.chest);
             if (replacement != null && !replacement.isEmpty()) {
+                boolean frameAccepted = false;
+
+                // Step 2: push a copy into the actual item frame entity via the platform layer.
+                try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, replacement.copy()); } catch (Throwable ignored) {}
+
+                if (anchor != null && ctx.level != null) {
+                    try {
+                        ItemStack verified = FrameScanner.readHoeFromFrame(ctx.level, anchor.framePos);
+                        frameAccepted = verified != null && !verified.isEmpty() && verified.getItem() instanceof HoeItem;
+                    } catch (Throwable ignored) {}
+                }
+
+                if (!frameAccepted) {
+                    LogUtils.logDebug("[HOE] Replacement not yet visible in frame at {}; leaving chest untouched for retry.", anchor == null ? "unknown" : anchor.framePos);
+                    return;
+                }
+
+                // Step 3: only now remove the hoe from the chest and commit the replacement.
+                ItemStack removed = ChestUtils.takeFirstHoe(ctx.chest);
+                if (removed == null || removed.isEmpty()) {
+                    try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, ItemStack.EMPTY); } catch (Throwable ignored) {}
+                    LogUtils.logDebug("[HOE] Chest removal failed after frame write at {}; frame cleared and retry deferred.", anchor == null ? "unknown" : anchor.framePos);
+                    return;
+                }
+
                 try {
-                    // Step 2: update the context so the current harvest cycle knows about the new hoe
-                    ItemStack newHoe = replacement.copy(); newHoe.setCount(1);
+                    ItemStack newHoe = removed.copy(); newHoe.setCount(1);
                     ctx.setHoe(newHoe);
                     ctx.setSkipNextDamage(true); // fresh hoe: don't immediately damage it on the first use
                 } catch (Throwable ignored) {}
 
                 try {
-                    // Step 3: update the registry cache so future ticks know the new hoe info
+                    // Step 4: update the registry cache so future ticks know the new hoe info
                     if (anchor != null) {
                         String dimId = ctx.level.dimension().identifier().toString();
-                        FrameRegistry.updateHoe(dimId, anchor.framePos, ctx.getHoe().isEmpty() ? replacement.copy() : ctx.getHoe().copy());
+                        FrameRegistry.updateHoe(dimId, anchor.framePos, ctx.getHoe().isEmpty() ? removed.copy() : ctx.getHoe().copy());
                     }
                 } catch (Throwable ignored) {}
 
-                // Step 4: push the new hoe into the actual item frame entity via the platform layer
-                try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, ctx.getHoe().isEmpty() ? ItemStack.EMPTY : ctx.getHoe().copy()); } catch (Throwable ignored) {}
-
-                if (anchor != null && ctx.level != null) {
-                    try {
-                        // Step 5: read it back and verify the replacement actually stuck to the frame
-                        ItemStack verified = FrameScanner.readHoeFromFrame(ctx.level, anchor.framePos);
-                        if (verified == null || verified.isEmpty() || !(verified.getItem() instanceof HoeItem)) {
-                            // Step 6: frame rejected it — put the hoe back and give up for now
-                            try { ChestUtils.insertAll(ctx.chest, java.util.List.of(replacement)); } catch (Throwable ignored) {}
-                            try { String dimId = ctx.level.dimension().identifier().toString(); FrameRegistry.updateHoe(dimId, anchor.framePos, ItemStack.EMPTY); FrameRegistry.setCooldown(dimId, anchor.framePos, Config.getChestFullCooldownTicks()); } catch (Throwable ignored) {}
-                            try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor.framePos, ItemStack.EMPTY); } catch (Throwable ignored) {}
-                            ctx.setChestFull(true); // reuse the chest-full flag to tell the caller to abort
-                            LogUtils.logDebug("[HOE] Replacement did not persist to frame; returned to chest and aborting for {}", anchor.framePos);
-                            return;
-                        }
-                    } catch (Throwable ignored) {}
-                }
-
-                LogUtils.logDebug("[HOE] Pulled replacement hoe from chest: {}", replacement);
+                LogUtils.logDebug("[HOE] Pulled replacement hoe from chest: {}", removed);
                 return;
             } else {
                 // No hoe found in chest at all — clear the registry entry and set a cooldown

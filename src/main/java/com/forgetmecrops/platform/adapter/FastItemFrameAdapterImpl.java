@@ -155,7 +155,9 @@ public class FastItemFrameAdapterImpl implements FastItemFrameAdapter {
                         "fuzs.fastitemframes.common.blockentity.FastItemFrameBlockEntity",
                         "fuzs.fastitemframes.common.blockentity.FastItemFrame",
                         "fuzs.fastitemframes.common.blockentity.FastItemFrameBlockEntityImpl",
-                        "fuzs.fastitemframes.common.blockentity.ItemFrameBlockEntity"
+                    "fuzs.fastitemframes.common.blockentity.ItemFrameBlockEntity",
+                    "fuzs.fastitemframes.common.world.level.block.entity.ItemFrameBlockEntity",
+                    "fuzs.fastitemframes.common.world.level.block.entity.FastItemFrameBlockEntity"
                 };
                 ClassLoader loader = FastItemFrameAdapterImpl.class.getClassLoader();
                 // Try explicit candidate FQCNs first.

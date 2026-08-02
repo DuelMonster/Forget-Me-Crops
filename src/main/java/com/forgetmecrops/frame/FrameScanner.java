@@ -140,8 +140,9 @@ public class FrameScanner {
         try {
             // Prefer the physical frame-held hoe at scan start; fall back to replacement from chest only when frame is empty.
             ItemStack frameHoe = readHoeFromFrame(level, center);
-            if (frameHoe != null && !frameHoe.isEmpty() && frameHoe.getItem() instanceof HoeItem) {
-                currentHoe = frameHoe.copy();
+            ItemStack chosenHoe = chooseScanHoe(currentHoe, frameHoe);
+            if (chosenHoe != null && !chosenHoe.isEmpty() && chosenHoe.getItem() instanceof HoeItem) {
+                currentHoe = chosenHoe.copy();
                 try { FrameRegistry.updateHoe(dimId, center, currentHoe.copy()); } catch (Throwable ignored) {}
             } else {
                 // Frame is empty; delegate replacement logic to FrameHoeReplacement which encapsulates chest/frame transactions.
@@ -826,6 +827,12 @@ public class FrameScanner {
      */
     public static ItemStack readHoeFromFrame(Level level, BlockPos pos) {
         try {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be != null && FIF.isFastItemFrameBlockEntity(be)) {
+                ItemStack s = FIF.extractHeldItem(be);
+                if (s != null && !s.isEmpty() && s.getItem() instanceof HoeItem) return s.copy();
+            }
+
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class,
                     new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1), e -> true);
             if (!frames.isEmpty()) {
@@ -844,6 +851,20 @@ public class FrameScanner {
         } catch (Throwable ignored) {}
 
         return ItemStack.EMPTY;
+    }
+
+    /**
+     * Chooses which hoe state should drive the current scan.
+     * Empty frames always win so replacement can occur. Otherwise, once a scan has a hoe,
+     * the scan keeps its in-memory stack instead of letting a lagging frame read erase
+     * recently-applied durability.
+     */
+    static ItemStack chooseScanHoe(ItemStack currentHoe, ItemStack liveHoe) {
+        ItemStack current = currentHoe == null ? ItemStack.EMPTY : currentHoe.copy();
+        ItemStack live = liveHoe == null ? ItemStack.EMPTY : liveHoe.copy();
+        if (live.isEmpty()) return ItemStack.EMPTY;
+        if (current.isEmpty()) return live;
+        return current;
     }
 
     /**

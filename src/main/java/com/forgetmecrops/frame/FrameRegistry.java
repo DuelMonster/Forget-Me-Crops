@@ -402,6 +402,20 @@ public class FrameRegistry {
             try {
                 if (fe == null || fe.anchor == null) continue;
                 net.minecraft.world.item.ItemStack stored = fe.anchor.hoe;
+                net.minecraft.world.item.ItemStack liveHoe = net.minecraft.world.item.ItemStack.EMPTY;
+                try {
+                    if (level != null) {
+                        liveHoe = FrameScanner.readHoeFromFrame(level, pos);
+                    }
+                } catch (Throwable ignored) {}
+
+                if (liveHoe != null && !liveHoe.isEmpty()) {
+                    if (stored == null || stored.isEmpty() || stored.getDamageValue() != liveHoe.getDamageValue() || stored.getCount() != liveHoe.getCount()) {
+                        try { updateHoe(dimensionId, pos, liveHoe.copy()); } catch (Throwable ignored) {}
+                    }
+                    continue;
+                }
+
                 if (stored == null || stored.isEmpty()) {
                     try {
                         HarvestContext ctx = new HarvestContext(fe.anchor, level, net.minecraft.world.item.ItemStack.EMPTY, fe.anchor.chest, null);
