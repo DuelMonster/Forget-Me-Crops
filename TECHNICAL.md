@@ -20,6 +20,8 @@ Fabric Loom and NeoForge ModDevGradle behind a shared DSL.
 | `versions/1.21.11-neoforge` | Stonecutter node: `modstitch.platform=moddevgradle`                           |
 | `versions/26.1.2-fabric`    | Stonecutter node: `modstitch.platform=fabric-loom`                            |
 | `versions/26.1.2-neoforge`  | Stonecutter node: `modstitch.platform=moddevgradle`                           |
+| `versions/26.2-fabric`      | Stonecutter node: `modstitch.platform=fabric-loom`                            |
+| `versions/26.2-neoforge`    | Stonecutter node: `modstitch.platform=moddevgradle`                           |
 | `src/main/templates/`       | `fabric.mod.json` and `META-INF/neoforge.mods.toml` with `${property}` tokens |
 
 The VCS (uncommitted working state) always reflects the **Fabric** branch: Fabric code is

@@ -42,6 +42,7 @@ stonecutter {
         // Keep newest entries last for easier maintenance.
         mc("1.21.11", loaders = listOf("fabric", "neoforge"))
         mc("26.1.2", loaders = listOf("fabric", "neoforge"))
+        mc("26.2", loaders = listOf("fabric", "neoforge"))
 
         // VCS reset point: the branch that "clean source" lives in.
         // Running the "Reset active version" Stonecutter task restores the source

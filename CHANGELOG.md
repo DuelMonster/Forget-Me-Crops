@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 0.22.0
+
+- Add Stonecutter support nodes for Minecraft `26.2` on both loaders: `26.2-fabric` and `26.2-neoforge`.
+- Expand root Stonecutter registration in `settings.gradle.kts` to build `1.21.11`, `26.1.2`, and `26.2` for Fabric + NeoForge.
+- Add Fabric `26.2` per-node dependency pins:
+  - Fabric Loader: `0.19.3`
+  - Fabric API: `0.152.1+26.2`
+  - Mod Menu: `20.0.0-beta.2`
+  - Cloth Config: `26.2.155`
+- Add NeoForge `26.2` per-node dependency pins:
+  - NeoForge: `26.2.0.7-beta`
+  - Cloth Config: `26.2.155`
+- Extend VS Code debug-task version picker to include `26.2` for both Fabric and NeoForge run tasks.
+- Update README and TECHNICAL docs to include `26.2` in the supported version matrix.
+
 ## 0.21.0
 
 - Revert in-game config UI from YetAnotherConfigLib back to Cloth Config on both Fabric and NeoForge.

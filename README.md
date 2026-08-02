@@ -8,15 +8,19 @@ Set up one anchor (waterlogged chest + top-mounted item frame + hoe), plant arou
 If you want implementation internals and developer docs, head to [TECHNICAL.md](TECHNICAL.md). This README is intentionally player-focused.
 
 ---
-
 ## Overview
 
 Forget-Me-Crops turns a normal crop area into a self-running farm zone centered on an anchor.
 
 In short: you build the farm once, the mod does the repetitive part forever, and your knees are saved from crouch-harvest duty.
 
----
+![Example usage](https://cdn.modrinth.com/data/7YR2UVAs/images/700b4e3678ad20f59d2f38b6db2681b2f50da9fd.gif)
 
+---
+## Spotlight
+<iframe src="https://www.youtube.com/embed/ztDyyf2CC9Y" title="This Mod Harvests Your Crops AUTOMATICALLY #minecraft #mcyt #farming #mod" frameborder="0" style="width: 240px; height: 430px" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+---
 ## Features
 
 - Harvests mature supported crops automatically
@@ -28,7 +32,6 @@ In short: you build the farm once, the mod does the repetitive part forever, and
 - Rotates the frame during scanning so activity is visible
 
 ---
-
 ## How It Works
 
 Each anchor runs on a timer (`tickInterval`, default 300 ticks / 15s):
@@ -48,7 +51,6 @@ Notes:
 - Nearby chests and barrels inside the farm radius are treated as harvest-output storage only.
 
 ---
-
 ## Create An Anchor (Quick Setup)
 
 1. Place a chest at the same height as your crop layer.
@@ -77,7 +79,6 @@ That is it. Your farm now has a tiny spinning foreman.
 - No valid hoe in the frame or chest.
 
 ---
-
 ## Supported Crops
 
 | Crop          | Harvest condition   | Replant behavior                         |
@@ -98,14 +99,13 @@ Special behavior:
 - Melon and pumpkin stems are never broken; only the fruit is harvested.
 
 ---
-
 ## Installation
 
 ### Requirements
 
 | Component | Version                |
 | --------- | ---------------------- |
-| Minecraft | 1.21.11, 26.1.2        |
+| Minecraft | 1.21.11, 26.1.2, 26.2  |
 | Java      | 21 (1.21.x), 25 (26.x) |
 
 ### Fabric
@@ -114,6 +114,7 @@ Special behavior:
 | -------------- | ------------- | --------------- | ------------- |
 | 1.21.11        | 0.19.2        | 0.140.0+1.21.11 | 17.0.0        |
 | 26.1.2         | 0.19.2        | 0.148.0+26.1.2  | 18.0.0-beta.1 |
+| 26.2           | 0.19.3        | 0.152.1+26.2    | 20.0.0-beta.2 |
 
 Drop the matching `Forget-Me-Crops_<version>+<minecraft>-fabric.jar` into your `mods/` folder with Fabric API.
 Mod Menu is optional, but recommended for in-game config editing.
@@ -124,6 +125,7 @@ Mod Menu is optional, but recommended for in-game config editing.
 | -------------- | -------------- |
 | 1.21.11        | 21.11.42       |
 | 26.1.2         | 26.1.2.43-beta |
+| 26.2           | 26.2.0.7-beta  |
 
 Drop the matching `Forget-Me-Crops_<version>+<minecraft>-neoforge.jar` into your `mods/` folder.
 Use the Mods list Configure button for the config UI.
@@ -132,11 +134,11 @@ Cloth Config is pinned per line for compatibility:
 
 - `21.11.153` on 1.21.11
 - `26.1.154` on 26.1.2
+- `26.2.155` on 26.2
 
 Both loaders use the same unified mixin config: `forgetmecrops.mixins.json`.
 
 ---
-
 ## Configuration
 
 Config files are stored in your instance folder:
@@ -199,7 +201,6 @@ Controls how extra seed drops are handled before insertion and how replanting pu
 In `reduced` mode, halving does not apply when the seed item is also the crop fruit (carrot, potato, nether wart, torchflower-type crops).
 
 ---
-
 ## Compatibility
 
 ### FastItemFrames
@@ -214,7 +215,6 @@ When installed, frame lookup and rotation logic uses FastItemFrames integration 
 - It generally coexists cleanly with growth-rate and crop-behavior mods, though balance may differ depending on your pack.
 
 ---
-
 ## FAQ
 
 ### Does it work in unloaded chunks?
@@ -237,19 +237,16 @@ Check this quick list:
 It can harvest supported crops in range, but replanting uses nearby crop consensus per tile. Cleaner single-crop zones give cleaner results.
 
 ---
-
 ## Technical Documentation
 
 For implementation internals, package structure, scan algorithms, platform glue, and build details, see [TECHNICAL.md](TECHNICAL.md).
 
 ---
-
 ## License
 
 MIT. See [LICENSE](LICENSE).
 
 ---
-
 ## Credits
 
 Developed by **DuelMonster**.
