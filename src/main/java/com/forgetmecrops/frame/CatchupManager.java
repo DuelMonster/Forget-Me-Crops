@@ -2,6 +2,7 @@ package com.forgetmecrops.frame;
 
 import com.forgetmecrops.util.log.LogUtils;
 import com.forgetmecrops.util.ExceptionHandler;
+import com.forgetmecrops.util.LevelHeightBounds;
 import com.forgetmecrops.util.ValidationUtils;
 
 import net.minecraft.server.level.ServerLevel;
@@ -56,7 +57,7 @@ public final class CatchupManager {
         if (ValidationUtils.isNullOrEmpty(positions) || dimId == null) return;
         Queue<BlockPos> q = vanillaQueues.computeIfAbsent(dimId, k -> new ConcurrentLinkedQueue<>());
         q.addAll(positions);
-        ExceptionHandler.silentTry(() -> LogUtils.logTrace("[CATCHUP] Enqueued {} vanilla positions for {} (queue size={})", positions.size(), dimId, q.size()));
+        ExceptionHandler.silentTry(() -> LogUtils.logDebug("[CATCHUP] Enqueued {} vanilla positions for {} (queue size={})", positions.size(), dimId, q.size()));
     }
 
     /**
@@ -71,7 +72,7 @@ public final class CatchupManager {
         if (ValidationUtils.isNullOrEmpty(positions) || dimId == null) return;
         Queue<BlockPos> q = fifQueues.computeIfAbsent(dimId, k -> new ConcurrentLinkedQueue<>());
         q.addAll(positions);
-        ExceptionHandler.silentTry(() -> LogUtils.logTrace("[CATCHUP] Enqueued {} FIF positions for {} (queue size={})", positions.size(), dimId, q.size()));
+        ExceptionHandler.silentTry(() -> LogUtils.logDebug("[CATCHUP] Enqueued {} FIF positions for {} (queue size={})", positions.size(), dimId, q.size()));
     }
 
     /**
@@ -88,10 +89,22 @@ public final class CatchupManager {
         if (level == null || dimId == null) return;
 
         try {
+            int scanMinY = LevelHeightBounds.minY(level);
+            int scanMaxYExclusive = LevelHeightBounds.maxYExclusive(level);
+            LogUtils.logDebug(
+                "[CATCHUP] queueLoadedFrames start for {} (scanY={}..{}, playerCount={})",
+                dimId,
+                scanMinY,
+                scanMaxYExclusive,
+                level.players().size()
+            );
+
             java.util.List<ItemFrame> frames = level.getEntitiesOfClass(
                 ItemFrame.class,
-                new AABB(-30000000, 0, -30000000, 30000000, 256, 30000000)
+                new AABB(-30000000, scanMinY, -30000000, 30000000, scanMaxYExclusive, 30000000)
             );
+
+            LogUtils.logDebug("[CATCHUP] queueLoadedFrames candidate vanilla frames in {}: {}", dimId, frames.size());
 
             Queue<BlockPos> q = vanillaQueues.computeIfAbsent(dimId, k -> new ConcurrentLinkedQueue<>());
             Queue<BlockPos> fq = fifQueues.computeIfAbsent(dimId, k -> new ConcurrentLinkedQueue<>());
@@ -140,8 +153,8 @@ public final class CatchupManager {
                             int maxX = center.getX() + fallbackRadiusBlocks;
                             int minZ = center.getZ() - fallbackRadiusBlocks;
                             int maxZ = center.getZ() + fallbackRadiusBlocks;
-                            int minY = Math.max(0, center.getY() - 2);
-                            int maxY = Math.min(255, center.getY() + 2);
+                            int minY = Math.max(scanMinY, center.getY() - 2);
+                            int maxY = Math.min(scanMaxYExclusive - 1, center.getY() + 2);
 
                             for (int x = minX; x <= maxX; x += step) {
                                 for (int z = minZ; z <= maxZ; z += step) {
@@ -176,8 +189,8 @@ public final class CatchupManager {
                         int maxX = center.getX() + thoroughRadius;
                         int minZ = center.getZ() - thoroughRadius;
                         int maxZ = center.getZ() + thoroughRadius;
-                        int minY = Math.max(0, center.getY() - 3);
-                        int maxY = Math.min(255, center.getY() + 3);
+                        int minY = Math.max(scanMinY, center.getY() - 3);
+                        int maxY = Math.min(scanMaxYExclusive - 1, center.getY() + 3);
 
                         for (int x = minX; x <= maxX; x += thoroughStep) {
                             for (int z = minZ; z <= maxZ; z += thoroughStep) {
@@ -205,7 +218,7 @@ public final class CatchupManager {
             }
 
             try {
-                LogUtils.logTrace(
+                LogUtils.logDebug(
                     "[CATCHUP] queueLoadedFrames added {} vanilla frames and {} FIF block-entities for {} (vanillaQ={} fifQ={})",
                     vanillaDiscovered,
                     fifDiscovered,
@@ -268,7 +281,16 @@ public final class CatchupManager {
             break;
         }
         try {
-            LogUtils.logTrace("[CATCHUP] processBatch({}, {}) processed {} entries", dimId, maxToProcess, processed);
+            if (processed > 0 || !vq.isEmpty() || !fq.isEmpty()) {
+                LogUtils.logDebug(
+                    "[CATCHUP] processBatch({}, {}) processed {} entries (remaining: vanillaQ={}, fifQ={})",
+                    dimId,
+                    maxToProcess,
+                    processed,
+                    vq.size(),
+                    fq.size()
+                );
+            }
         } catch (Throwable ignored) {}
     }
 }

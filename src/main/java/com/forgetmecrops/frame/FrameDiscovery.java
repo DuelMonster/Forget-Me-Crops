@@ -65,7 +65,7 @@ public class FrameDiscovery {
             var held = f.getItem();
             if (f.getDirection() != Direction.UP) { LogUtils.logDebug("[TICK] Frame {} skipped: not facing UP ({}).", f.blockPosition(), f.getDirection()); return false; }
             BlockPos pos = f.blockPosition();
-            try { LogUtils.logInfo("[TICK] registerVanillaFrameIfValid: pos={} dir={} held={} count={}", pos, f.getDirection(), (held == null || held.isEmpty()) ? "empty" : held.getItem().getClass().getName(), held == null ? 0 : held.getCount()); } catch (Throwable t) {}
+            try { LogUtils.logDebug("[TICK] registerVanillaFrameIfValid: pos={} dir={} held={} count={}", pos, f.getDirection(), (held == null || held.isEmpty()) ? "empty" : held.getItem().getClass().getName(), held == null ? 0 : held.getCount()); } catch (Throwable t) {}
             BlockPos chestPos = pos;
             BlockEntity be = level.getBlockEntity(chestPos);
             if (!(be instanceof Container)) {
@@ -85,7 +85,7 @@ public class FrameDiscovery {
                 boolean nearbyFarmlandSoil = isNearbyFarmlandSoil(level, chestPos, rX, rZ);
                 boolean nearbyFarmlandCrop = isNearbyFarmlandCrop(level, chestPos, rX, rZ);
                 boolean isNetherWartFarm = isNearbyNetherWartFarm(level, chestPos, rX, rZ);
-                try { LogUtils.logInfo("[TICK] Chest check pos={} be={} waterlogged={} rX={} rZ={} nearbyFarmlandSoil={} nearbyFarmlandCrop={} isNetherWartFarm={}", chestPos, be.getClass().getName(), chestWaterlogged, rX, rZ, nearbyFarmlandSoil, nearbyFarmlandCrop, isNetherWartFarm); } catch (Throwable t) {}
+                try { LogUtils.logDebug("[TICK] Chest check pos={} be={} waterlogged={} rX={} rZ={} nearbyFarmlandSoil={} nearbyFarmlandCrop={} isNetherWartFarm={}", chestPos, be.getClass().getName(), chestWaterlogged, rX, rZ, nearbyFarmlandSoil, nearbyFarmlandCrop, isNetherWartFarm); } catch (Throwable t) {}
                 if (nearbyFarmlandCrop && !chestWaterlogged && !isNetherWartFarm) {
                     LogUtils.logDebug("[TICK] Skipping anchor at {} in {}: chest not waterlogged but nearby farmland crops present.", pos, dimId);
                     return false;
@@ -95,7 +95,7 @@ public class FrameDiscovery {
                     FrameRegistry.registerFrame(dimId, pos, chest, ItemStack.EMPTY);
                     return true;
                 }
-                try { LogUtils.logInfo("[TICK] Frame {} holds item: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable t) {}
+                try { LogUtils.logDebug("[TICK] Frame {} holds item: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable t) {}
                 if (!(held.getItem() instanceof HoeItem)) { LogUtils.logDebug("[TICK] Frame {} skipped: held item is not a hoe.", pos); return false; }
                 LogUtils.logDebug("[TICK] Discovered anchor (vanilla) at {} in {}; registering active.", pos, dimId);
                 FrameRegistry.registerFrame(dimId, pos, chest, held.copy());

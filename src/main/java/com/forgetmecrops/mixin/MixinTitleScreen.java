@@ -6,7 +6,6 @@ package com.forgetmecrops.mixin;
 // Small, focused, proud of itself.
 
 import com.forgetmecrops.util.log.LogUtils;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -36,6 +35,5 @@ public class MixinTitleScreen {
     @Inject(at = @At("HEAD"), method = "init()V")
     private void init(CallbackInfo info) {
         com.forgetmecrops.client.TitleScreenLogger.logPlatform();
-        LogUtils.logDebug("MC Version: {}", Minecraft.getInstance().getVersionType());
     }
 }

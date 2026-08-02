@@ -8,6 +8,7 @@ import com.forgetmecrops.ForgetMeCrops;
 import com.forgetmecrops.config.Config;
 import com.forgetmecrops.util.log.LogUtils;
 import com.forgetmecrops.util.ExceptionHandler;
+import com.forgetmecrops.util.LevelHeightBounds;
 import com.forgetmecrops.frame.FrameRegistry;
 import com.forgetmecrops.frame.FrameScanner;
 import com.forgetmecrops.frame.CatchupManager;
@@ -86,13 +87,28 @@ public class FarmTicker {
                 int minZ = chunk.getPos().getMinBlockZ();
                 int maxX = minX + 15;
                 int maxZ = minZ + 15;
-                AABB box = new AABB(minX, 0, minZ, maxX + 1, 256, maxZ + 1);
+                int scanMinY = LevelHeightBounds.minY(level);
+                int scanMaxYExclusive = LevelHeightBounds.maxYExclusive(level);
+                AABB box = new AABB(minX, scanMinY, minZ, maxX + 1, scanMaxYExclusive, maxZ + 1);
+
+                LogUtils.logDebug(
+                    "[TICK] Chunk-load scan bounds {} chunk {}: x={}..{}, y={}..{}",
+                    dimId,
+                    chunk.getPos(),
+                    minX,
+                    maxX,
+                    scanMinY,
+                    scanMaxYExclusive
+                );
 
                 var frames = level.getEntitiesOfClass(ItemFrame.class, box);
-                LogUtils.logTrace("[TICK] Found {} item frames in chunk {} (deferring validation).", frames.size(), chunk.getPos());
+                LogUtils.logDebug("[TICK] Found {} item frames in chunk {} (deferring validation).", frames.size(), chunk.getPos());
                 java.util.List<BlockPos> vanillaCandidates = new java.util.ArrayList<>();
                 for (ItemFrame f : frames) {
                     try { vanillaCandidates.add(f.blockPosition()); } catch (Exception e) { LogUtils.logTrace("[TICK] Failed to read frame position while enqueuing candidates", e); }
+                }
+                if (vanillaCandidates.isEmpty()) {
+                    LogUtils.logDebug("[TICK] No vanilla frame candidates enqueued for {} chunk {}.", dimId, chunk.getPos());
                 }
                 if (!vanillaCandidates.isEmpty()) CatchupManager.enqueueVanillaPositions(level, dimId, vanillaCandidates);
 
@@ -105,6 +121,9 @@ public class FarmTicker {
                         if (be == null) continue;
                         if (!FastItemFrameAdapterImpl.isFastItemFrameBlockEntity(be)) continue;
                         fifCandidates.add(pos);
+                    }
+                    if (!fifCandidates.isEmpty()) {
+                        LogUtils.logDebug("[TICK] Enqueuing {} FIF candidates for {} chunk {}.", fifCandidates.size(), dimId, chunk.getPos());
                     }
                     if (!fifCandidates.isEmpty()) CatchupManager.enqueueFifPositions(level, dimId, fifCandidates);
                 } catch (Exception t) {
@@ -122,7 +141,9 @@ public class FarmTicker {
                 int minZ = chunk.getPos().getMinBlockZ();
                 int maxX = minX + 15;
                 int maxZ = minZ + 15;
-                AABB box = new AABB(minX, 0, minZ, maxX + 1, 256, maxZ + 1);
+                int scanMinY = LevelHeightBounds.minY(level);
+                int scanMaxYExclusive = LevelHeightBounds.maxYExclusive(level);
+                AABB box = new AABB(minX, scanMinY, minZ, maxX + 1, scanMaxYExclusive, maxZ + 1);
 
                 var frames = level.getEntitiesOfClass(ItemFrame.class, box, ef -> ef.getDirection() == Direction.UP);
                 for (ItemFrame f : frames) {
@@ -161,14 +182,20 @@ public class FarmTicker {
                     int rem = rediscoveryCountdown.getOrDefault(dimId, Config.getFrameRediscoveryInterval());
                     rem--;
                     if (rem <= 0) {
-                        LogUtils.logTrace("[TICK] Running rediscovery pass for {}", dimId);
+                        LogUtils.logDebug("[TICK] Running rediscovery pass for {}", dimId);
                         CatchupManager.queueLoadedFrames(level, dimId);
                         rem = Config.getFrameRediscoveryInterval();
                     }
                     rediscoveryCountdown.put(dimId, rem);
-                    if (!tickSnapshotLogged) { CatchupManager.queueLoadedFrames(level, dimId); }
+                    if (!tickSnapshotLogged) {
+                        LogUtils.logDebug("[TICK] Initial catchup snapshot for {}.", dimId);
+                        CatchupManager.queueLoadedFrames(level, dimId);
+                    }
                     CatchupManager.processBatch(level, dimId, CATCHUP_TICKS);
                     var ready = FrameRegistry.tickAndCollectReady(dimId, level);
+                    int recorded = FrameRegistry.countRecordedFrames(dimId);
+                    int active = FrameRegistry.countActiveFrames(dimId);
+                    LogUtils.logDebug("[TICK] Registry snapshot {}: recorded={}, active={}, ready={}, rediscoveryInTicks={}", dimId, recorded, active, ready.size(), rem);
                     if (!ready.isEmpty()) {
                         LogUtils.logDebug("[TICK] {} anchors ready in {}", ready.size(), dimId);
                         FrameScanner scanner = new FrameScanner();
@@ -231,7 +258,9 @@ public class FarmTicker {
             int minZ = lc.getPos().getMinBlockZ();
             int maxX = minX + 15;
             int maxZ = minZ + 15;
-            AABB box = new AABB(minX, 0, minZ, maxX + 1, 256, maxZ + 1);
+            int scanMinY = LevelHeightBounds.minY(level);
+            int scanMaxYExclusive = LevelHeightBounds.maxYExclusive(level);
+            AABB box = new AABB(minX, scanMinY, minZ, maxX + 1, scanMaxYExclusive, maxZ + 1);
 
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box, ef -> ef.getDirection() == Direction.UP);
             for (ItemFrame f : frames) {
@@ -262,7 +291,9 @@ public class FarmTicker {
             int minZ = lc.getPos().getMinBlockZ();
             int maxX = minX + 15;
             int maxZ = minZ + 15;
-            AABB box = new AABB(minX, 0, minZ, maxX + 1, 256, maxZ + 1);
+            int scanMinY = LevelHeightBounds.minY(level);
+            int scanMaxYExclusive = LevelHeightBounds.maxYExclusive(level);
+            AABB box = new AABB(minX, scanMinY, minZ, maxX + 1, scanMaxYExclusive, maxZ + 1);
 
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, box);
             String dimId = level.dimension().identifier().toString();
