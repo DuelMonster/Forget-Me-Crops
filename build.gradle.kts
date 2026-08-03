@@ -11,7 +11,7 @@ plugins {
     // the node's versioned gradle.properties.
     id("dev.isxander.modstitch.base") version "0.8.5"
     // mod-publish-plugin: Modrinth + CurseForge publishing (applied conditionally below)
-    id("me.modmuss50.mod-publish-plugin") version "0.8.4" apply false
+    id("me.modmuss50.mod-publish-plugin") version "2.2.0" apply false
     // Maven publish (standard Gradle plugin — no version needed)
     id("maven-publish")
 }
@@ -233,25 +233,25 @@ if (tasks.findByName("compile") == null) {
 tasks.register("copyRelatedMods") {
     group = "run"
     description = "Copy related_mods jars to run directory mods folders."
-    
+
     doLast {
         // Use the actual root project's directory structure.
         val actualRoot = rootProject.projectDir
         val nodeVersionDir = project.projectDir // e.g., versions/1.21.11-fabric
-        
+
         // Extract the loader name and MC version from the project name (e.g., "1.21.11-fabric")
         val projectLoader = project.name.substringAfterLast("-") // e.g., "fabric"
         val projectVersion = project.name.substringBeforeLast("-") // e.g., "1.21.11"
         val loaderModsDir = File(actualRoot, "related_mods/$projectLoader/$projectVersion")
-        
+
         if (loaderModsDir.exists() && loaderModsDir.isDirectory) {
             val clientModsDir = File(nodeVersionDir, "runs/client/mods")
             val serverModsDir = File(nodeVersionDir, "runs/server/mods")
-            
+
             // Ensure directories exist
             clientModsDir.mkdirs()
             serverModsDir.mkdirs()
-            
+
             // Copy all jars from the loader-specific related_mods directory to both run directories
             val jarFiles = loaderModsDir.listFiles { file: File -> file.isFile && file.extension == "jar" }
             jarFiles?.forEach { jar ->
@@ -460,32 +460,39 @@ if (!modrinthToken.isNullOrBlank() || !curseForgeToken.isNullOrBlank()) {
 
         if (!modrinthToken.isNullOrBlank()) {
             modrinth {
-                accessToken = modrinthToken
-                projectId = findProperty("modrinth_project_id") as? String ?: ""
+                accessToken.set(modrinthToken)
+                projectId.set(findProperty("modrinth_project_id") as? String ?: "")
                 minecraftVersions.add(minecraft)
                 modLoaders.add(loader)
-                displayName = "Forget-Me-Crops $modVer+$minecraft-$loader"
-                version = "$modVer+$minecraft-$loader"
-                type = me.modmuss50.mpp.ReleaseType.STABLE
-                file = tasks.named<AbstractArchiveTask>(prodJarTask).map { it.archiveFile.get() }
-                changelog = providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
-                    .asText.orElse("")
+                displayName.set("Forget-Me-Crops $modVer+$minecraft-$loader")
+                version.set("$modVer+$minecraft-$loader")
+                type.set(me.modmuss50.mpp.ReleaseType.STABLE)
+                file.set(tasks.named<AbstractArchiveTask>(prodJarTask).map { it.archiveFile.get() })
+                changelog.set(
+                    providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
+                        .asText.orElse("")
+                )
                 requires("cloth-config")
             }
         }
 
         if (!curseForgeToken.isNullOrBlank()) {
             curseforge {
-                accessToken = curseForgeToken
-                projectId = findProperty("curseforge_project_id") as? String ?: ""
+                accessToken.set(curseForgeToken)
+                projectId.set(findProperty("curseforge_project_id") as? String ?: "")
                 minecraftVersions.add(minecraft)
                 modLoaders.add(loader)
-                displayName = "Forget-Me-Crops $modVer+$minecraft-$loader"
-                version = "$modVer+$minecraft-$loader"
-                type = me.modmuss50.mpp.ReleaseType.STABLE
-                file = tasks.named<AbstractArchiveTask>(prodJarTask).map { it.archiveFile.get() }
-                changelog = providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
-                    .asText.orElse("")
+                // CurseForge now requires an environment selection in addition to version/loader.
+                client.set(true)
+                server.set(true)
+                displayName.set("Forget-Me-Crops $modVer+$minecraft-$loader")
+                version.set("$modVer+$minecraft-$loader")
+                type.set(me.modmuss50.mpp.ReleaseType.STABLE)
+                file.set(tasks.named<AbstractArchiveTask>(prodJarTask).map { it.archiveFile.get() })
+                changelog.set(
+                    providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
+                        .asText.orElse("")
+                )
                 requires("cloth-config")
             }
         }

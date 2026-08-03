@@ -2,6 +2,7 @@
 
 ## 0.22.0
 
+- Update the Mod Publish plugin configuration in the shared Gradle build for the newer plugin API, including the required CurseForge environment selection settings.
 - Add Stonecutter support nodes for Minecraft `26.2` on both loaders: `26.2-fabric` and `26.2-neoforge`.
 - Expand root Stonecutter registration in `settings.gradle.kts` to build `1.21.11`, `26.1.2`, and `26.2` for Fabric + NeoForge.
 - Add Fabric `26.2` per-node dependency pins:
