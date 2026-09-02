@@ -159,7 +159,7 @@ The current implementation is a **single-pass** model: harvest checks, replantin
 
 At the start of every `tick()` call the task re-validates the anchor via `FrameScanner.isFrameStillPresent(level, center)` and `FrameScanner.isChestStillValid(level, anchor)`. It also re-reads the hoe from the frame to catch mid-scan hoe removal. If any of these checks fail the task exits early and the anchor is unregistered.
 
-`HarvestContext` now carries both the anchor chest and a discovered list of additional output containers. Output routing is handled centrally in `ChestUtils`, which spreads harvest output across extra containers first and falls back to the anchor chest only when necessary.
+`HarvestContext` now carries both the anchor chest and a discovered list of additional output containers. Output routing is handled centrally in `ChestUtils`, which spreads harvest output across extra containers first and falls back to the anchor chest only when necessary. Reserve-tracked seed items are the exception: they are inserted into the anchor chest first so the seed reserve stays in the chest directly under the frame, and only their overflow reaches the extra containers.
 
 ---
 
@@ -251,6 +251,8 @@ This avoids hardcoded per-crop thresholds and correctly handles beetroot (max ag
 | Silk Touch  | Causes melons to drop the melon block instead of slices                                 |
 | Unbreaking  | Respected in `normal` durability mode; ignored in `ignore_unbreaking` mode              |
 | Mending     | When `mendingProtection = true`, no durability loss is applied to a hoe bearing Mending |
+
+Enchantment levels are resolved through `HoeUtils`, which looks the enchantment holder up in the level's `Registries.ENCHANTMENT` and reads the level via `EnchantmentHelper.getItemEnchantmentLevel`. `DurabilityLogic` uses that path whenever a `ServerLevel` is available and only falls back to the reflective platform lookup otherwise.
 
 Loot calculation is performed by `LootLogic`, which prefers server-side `LootContext` builders where available and falls back to reflective compatibility paths when needed.
 
@@ -434,13 +436,13 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 
 ### `seedClutterMode`
 
-| Value     | Behaviour                                                                                                                                           |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `none`    | Discard seed drops before insertion. Replanting draws from drops first, then chest (subject to `seedReservePerType`)                                |
-| `normal`  | One drop seed consumed for replanting; all remaining output is routed into nearby extra containers first, then the anchor chest as overflow         |
-| `reduced` | One drop seed consumed for replanting; remaining drops halved (rounded down) before insertion and routed with the same extra-container-first policy |
+| Value     | Behaviour                                                                                                                                             |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `none`    | Discard seed drops before insertion. Replanting draws from drops first, then chest (subject to `seedReservePerType`)                                   |
+| `normal`  | One drop seed consumed for replanting; remaining seed output fills the anchor chest first, other output is routed into nearby extra containers first    |
+| `reduced` | One drop seed consumed for replanting; remaining drops halved (rounded down) before insertion and routed with the same anchor-chest-seeds-first policy  |
 
-Halving in `reduced` does not apply when the seed item is also the crop fruit (carrot, potato, nether wart, torchflower-type). Chest removal for replanting is always gated by `seedReservePerType` on the anchor chest.
+Halving in `reduced` does not apply when the seed item is also the crop fruit (carrot, potato, nether wart, torchflower-type). Chest removal for replanting is always gated by `seedReservePerType` on the anchor chest, and reserve-tracked seed drops are inserted into that anchor chest before any nearby extra container receives them.
 
 Current scope for seed filtering (clutter/reserve logic):
 

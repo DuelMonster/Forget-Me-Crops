@@ -5,6 +5,7 @@
 - Fix `mendingProtection` never taking effect: hoe enchantments are now read through the level enchantment registry instead of a reflective lookup that returned no results on current Minecraft versions, so Mending (and Unbreaking) on a framed hoe is detected again.
 - Add shared `HoeUtils` enchantment-level helpers for Silk Touch, Fortune, Unbreaking, and Mending.
 - Fix seed reserves being stranded outside the anchor chest: reserve-tracked seed and crop-fruit drops are now inserted into the chest directly under the item frame before any nearby extra storage, so replanting can draw on them when a second chest is present.
+- Update README and TECHNICAL docs to describe anchor-chest-first seed routing and registry-backed enchantment lookup.
 
 ## 0.22.0
 

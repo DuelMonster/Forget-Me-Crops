@@ -24,7 +24,8 @@ In short: you build the farm once, the mod does the repetitive part forever, and
 ## Features
 
 - Harvests mature supported crops automatically
-- Sends ripe drops and extra seeds to nearby chests/barrels first, then uses the anchor chest as overflow
+- Sends ripe drops to nearby chests/barrels first, then uses the anchor chest as overflow
+- Keeps seed stock in the anchor chest under the frame, so replanting always has reserves to draw on
 - Replants using fresh drops first, then chest stock
 - Retills nearby dirt/grass gaps back into farmland when possible
 - Replants empty farmland and soul-sand tiles using nearby crop consensus
@@ -49,6 +50,7 @@ Notes:
 - If a frame exists but is empty, the mod can pull a hoe from the anchor chest below the frame and resume automatically.
 - If the frame or chest is removed, that anchor is unregistered cleanly.
 - Nearby chests and barrels inside the farm radius are treated as harvest-output storage only.
+- Seed and crop-fruit drops always go to the anchor chest first; nearby storage only receives the overflow.
 
 ---
 ## Create An Anchor (Quick Setup)
