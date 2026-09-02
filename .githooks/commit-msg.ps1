@@ -9,6 +9,11 @@ if (-not $CommitMsgFile) {
 $CommitMsg = Get-Content -Raw -Path $CommitMsgFile
 $CommitSubject = (Get-Content -Path $CommitMsgFile | Select-Object -First 1).Trim()
 
+if ([string]::IsNullOrWhiteSpace($CommitMsg)) {
+    Write-Host 'ERROR: Empty commit message' -ForegroundColor Red
+    exit 1
+}
+
 # Pattern: TYPE: subject (max 65 chars)
 # Valid types: ✨feature, 🐞fix, ⛏minor, 🎨style, ♻️refactor, 🚧wip, 📝docs, ✅test, 👷build, 🔁merge, 🧹chore
 $ValidTypes = @('✨feature', '🐞fix', '⛏minor', '🎨style', '♻️refactor', '🚧wip', '📝docs', '✅test', '👷build', '🔁merge', '🧹chore')

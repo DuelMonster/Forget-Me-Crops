@@ -11,6 +11,10 @@
 - Resolve the last published version from the public Modrinth version list, falling back to the newest changelog section when the lookup is unavailable.
 - Add `printReleaseChangelog` to preview the release notes without publishing.
 - Correct the documented publish task name to `chiseledPublishAll`.
+- Align the build and governance tooling with the MinersAdvantage repository so both projects behave identically.
+- Adopt the stricter version-bump validator, which now requires a `Next Version` entry in the bump state and an override file for same-day re-bumps.
+- Add a full test-suite gate to the pre-commit hook, backed by new `validate-test-suite` and `run-gradle-java25` scripts.
+- Reject placeholder version-bump entries during changelog validation.
 
 ## 0.22.0
 

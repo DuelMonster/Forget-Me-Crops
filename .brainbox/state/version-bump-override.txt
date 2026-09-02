@@ -1,0 +1,5 @@
+Date:
+Reason:
+
+# Stage this file with today's date and an explicit reason to authorise a second
+# mod_version bump on the same day. See .brainbox/guides/VERSION_BUMP_RULE.md.
