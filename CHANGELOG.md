@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.23.0
+
+- Fix `mendingProtection` never taking effect: hoe enchantments are now read through the level enchantment registry instead of a reflective lookup that returned no results on current Minecraft versions, so Mending (and Unbreaking) on a framed hoe is detected again.
+- Add shared `HoeUtils` enchantment-level helpers for Silk Touch, Fortune, Unbreaking, and Mending.
+
 ## 0.22.0
 
 - Update the Mod Publish plugin configuration in the shared Gradle build for the newer plugin API, including the required CurseForge environment selection settings.

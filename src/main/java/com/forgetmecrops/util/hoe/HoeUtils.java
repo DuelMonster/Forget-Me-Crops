@@ -1,10 +1,12 @@
 package com.forgetmecrops.util.hoe;
 
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.enchantment.Enchantments;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
 
 /**
  * HoeUtils: Quick enchantment checks for the hoe that powers your farm!
@@ -33,9 +35,44 @@ public class HoeUtils {
      * @return true if the tool gleams with Silk Touch, false if it's just a regular dirty hoe
      */
     public static boolean hasSilkTouch(ServerLevel level, ItemStack tool) {
-        // Look up the Silk Touch enchantment holder through the registry — because Mojang said so
-        var silkTouch = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SILK_TOUCH);
-        return EnchantmentHelper.getItemEnchantmentLevel(silkTouch, tool) > 0;
+        return getEnchantmentLevel(level, tool, Enchantments.SILK_TOUCH) > 0;
+    }
+
+    /**
+     * Returns the Unbreaking enchantment level on the provided tool (0 if none).
+     *
+     * @param level the ServerLevel; needed to resolve the enchantment from the registry
+     * @param tool  the tool ItemStack to inspect
+     * @return the Unbreaking level (0 = none)
+     */
+    public static int getUnbreakingLevel(ServerLevel level, ItemStack tool) {
+        return getEnchantmentLevel(level, tool, Enchantments.UNBREAKING);
+    }
+
+    /**
+     * Returns the Mending enchantment level on the provided tool (0 if none).
+     *
+     * @param level the ServerLevel; needed to resolve the enchantment from the registry
+     * @param tool  the tool ItemStack to inspect
+     * @return the Mending level (0 = none)
+     */
+    public static int getMendingLevel(ServerLevel level, ItemStack tool) {
+        return getEnchantmentLevel(level, tool, Enchantments.MENDING);
+    }
+
+    /**
+     * Resolves an enchantment holder from the level registry and reads its level on the tool.
+     *
+     * @param level the ServerLevel used for registry access
+     * @param tool  the tool ItemStack to inspect
+     * @param key   the enchantment resource key to look up
+     * @return the enchantment level, or 0 if the tool/level is unusable or the lookup fails
+     */
+    private static int getEnchantmentLevel(ServerLevel level, ItemStack tool, ResourceKey<Enchantment> key) {
+        if (level == null || tool == null || tool.isEmpty()) return 0;
+        // Enchantment lookups in modern Minecraft require registry access via the level
+        var holder = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(key);
+        return EnchantmentHelper.getItemEnchantmentLevel(holder, tool);
     }
 
     /**
@@ -48,8 +85,6 @@ public class HoeUtils {
      * @return the Fortune level (0 = none, 1-3 = you're eating well tonight)
      */
     public static int getFortuneLevel(ServerLevel level, ItemStack tool) {
-        // Same registry dance as Silk Touch — Minecraft enchantment lookups are a whole thing
-        var fortune = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.FORTUNE);
-        return EnchantmentHelper.getItemEnchantmentLevel(fortune, tool);
+        return getEnchantmentLevel(level, tool, Enchantments.FORTUNE);
     }
 }

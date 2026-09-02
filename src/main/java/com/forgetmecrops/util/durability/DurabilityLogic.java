@@ -4,6 +4,8 @@ import com.forgetmecrops.enums.DurabilityMode;
 import com.forgetmecrops.config.Config;
 import com.forgetmecrops.util.log.LogUtils;
 import com.forgetmecrops.util.ExceptionHandler;
+import com.forgetmecrops.util.hoe.HoeUtils;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import java.util.Map;
@@ -61,16 +63,20 @@ public class DurabilityLogic {
         int unbreakingLevel = 0;
         int mendingLevel = 0;
         try {
-            Map<String, Integer> ench = com.forgetmecrops.platform.Services.PLATFORM.getEnchantments(hoe);
-            if (ench != null) {
-                for (Map.Entry<String, Integer> e : ench.entrySet()) {
-                    String id = e.getKey();
-                    int lvl = (e.getValue() == null) ? 0 : e.getValue();
-                    if (id != null && id.toLowerCase(java.util.Locale.ROOT).contains("unbreaking")) {
-                        unbreakingLevel = Math.max(unbreakingLevel, lvl);
-                    }
-                    if (id != null && id.toLowerCase(java.util.Locale.ROOT).contains("mending")) {
-                        mendingLevel = Math.max(mendingLevel, lvl);
+            // Registry-backed lookup is authoritative; the reflective map is only a fallback for non-server levels.
+            if (level instanceof ServerLevel serverLevel) {
+                unbreakingLevel = HoeUtils.getUnbreakingLevel(serverLevel, hoe);
+                mendingLevel = HoeUtils.getMendingLevel(serverLevel, hoe);
+            } else {
+                Map<String, Integer> ench = com.forgetmecrops.platform.Services.PLATFORM.getEnchantments(hoe);
+                if (ench != null) {
+                    for (Map.Entry<String, Integer> e : ench.entrySet()) {
+                        String id = e.getKey();
+                        int lvl = (e.getValue() == null) ? 0 : e.getValue();
+                        if (id == null) continue;
+                        String lower = id.toLowerCase(java.util.Locale.ROOT);
+                        if (lower.contains("unbreaking")) unbreakingLevel = Math.max(unbreakingLevel, lvl);
+                        if (lower.contains("mending")) mendingLevel = Math.max(mendingLevel, lvl);
                     }
                 }
             }
@@ -105,17 +111,18 @@ public class DurabilityLogic {
                 }
             }
 
-            try {
-                LogUtils.logDebug(
-                    "[DURABILITY] applyDamage pre: item={} currentDamage={} max={} unbreaking={} mending={} willApply={}",
-                    hoe.getItem(),
-                    current,
-                    max,
-                    unbreakingLevel,
-                    mendingLevel,
-                    applyDamage
-                );
-            } catch (Throwable ignored) {}
+            final int unbreaking = unbreakingLevel;
+            final int mending = mendingLevel;
+            final boolean willApply = applyDamage;
+            ExceptionHandler.silentTry(() -> LogUtils.logDebug(
+                "[DURABILITY] applyDamage pre: item={} currentDamage={} max={} unbreaking={} mending={} willApply={}",
+                hoe.getItem(),
+                current,
+                max,
+                unbreaking,
+                mending,
+                willApply
+            ));
 
             if (!applyDamage) return;
 
