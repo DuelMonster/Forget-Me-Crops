@@ -6,6 +6,8 @@
 - Add shared `HoeUtils` enchantment-level helpers for Silk Touch, Fortune, Unbreaking, and Mending.
 - Fix seed reserves being stranded outside the anchor chest: reserve-tracked seed and crop-fruit drops are now inserted into the chest directly under the item frame before any nearby extra storage, so replanting can draw on them when a second chest is present.
 - Update README and TECHNICAL docs to describe anchor-chest-first seed routing and registry-backed enchantment lookup.
+- Publish only the newest `CHANGELOG.md` version section as the Modrinth and CurseForge release notes instead of the entire file.
+- Correct the documented publish task name to `chiseledPublishAll`.
 
 ## 0.22.0
 

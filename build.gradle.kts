@@ -448,6 +448,20 @@ publishing {
 // both old and new Loom versions are handled correctly.
 val prodJarTask: String = if (tasks.findByName("remapJar") != null) "remapJar" else "jar"
 
+// Store pages should show only the release being published, not the whole file.
+fun newestChangelogSection(full: String): String {
+    val lines = full.lines()
+    val start = lines.indexOfFirst { it.startsWith("## ") }
+    if (start < 0) return full.trim()
+    val next = lines.drop(start + 1).indexOfFirst { it.startsWith("## ") }
+    val section = if (next < 0) lines.drop(start) else lines.subList(start, start + 1 + next)
+    return section.joinToString("\n").trim()
+}
+
+val releaseChangelog: Provider<String> =
+    providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
+        .asText.map(::newestChangelogSection).orElse("")
+
 val modrinthToken = System.getenv("MODRINTH_TOKEN")
 val curseForgeToken = System.getenv("CURSEFORGE_TOKEN")
 
@@ -468,10 +482,7 @@ if (!modrinthToken.isNullOrBlank() || !curseForgeToken.isNullOrBlank()) {
                 version.set("$modVer+$minecraft-$loader")
                 type.set(me.modmuss50.mpp.ReleaseType.STABLE)
                 file.set(tasks.named<AbstractArchiveTask>(prodJarTask).map { it.archiveFile.get() })
-                changelog.set(
-                    providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
-                        .asText.orElse("")
-                )
+                changelog.set(releaseChangelog)
                 requires("cloth-config")
             }
         }
@@ -489,10 +500,7 @@ if (!modrinthToken.isNullOrBlank() || !curseForgeToken.isNullOrBlank()) {
                 version.set("$modVer+$minecraft-$loader")
                 type.set(me.modmuss50.mpp.ReleaseType.STABLE)
                 file.set(tasks.named<AbstractArchiveTask>(prodJarTask).map { it.archiveFile.get() })
-                changelog.set(
-                    providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
-                        .asText.orElse("")
-                )
+                changelog.set(releaseChangelog)
                 requires("cloth-config")
             }
         }

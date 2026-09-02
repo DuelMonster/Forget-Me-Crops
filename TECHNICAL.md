@@ -519,11 +519,13 @@ Nodes are registered in `settings.gradle.kts`; Stonecutter reads the active VCS 
 .\gradlew.bat chiseledPackageRelease
 
 # Publish to Modrinth + CurseForge (requires MODRINTH_TOKEN / CURSEFORGE_TOKEN env vars)
-.\gradlew.bat chiseledPublishMods
+.\gradlew.bat chiseledPublishAll
 
 # Switch VCS active branch (e.g. to inspect NeoForge code uncommented)
 .\gradlew.bat stonecutter:Set active version to 1.21.11-neoforge
 ```
+
+The publishing block only applies `me.modmuss50.mod-publish-plugin` when at least one of `MODRINTH_TOKEN` / `CURSEFORGE_TOKEN` is set, and each store is configured only when its own token is present. Release notes uploaded to both stores are the newest `## <version>` section of `CHANGELOG.md` only, extracted by `newestChangelogSection` in `build.gradle.kts`.
 
 ### Dev Run Configuration
 
