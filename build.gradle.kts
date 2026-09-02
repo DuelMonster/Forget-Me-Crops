@@ -3,6 +3,9 @@
 // platform toolchain (Loom vs ModDevGradle) to activate. One script to rule them all.
 
 import java.io.DataInputStream
+import java.net.HttpURLConnection
+import java.net.URI
+import java.util.Comparator
 import java.util.zip.ZipFile
 
 plugins {
@@ -448,25 +451,85 @@ publishing {
 // both old and new Loom versions are handled correctly.
 val prodJarTask: String = if (tasks.findByName("remapJar") != null) "remapJar" else "jar"
 
-// Store pages should show only the release being published, not the whole file.
-fun newestChangelogSection(full: String): String {
+// `mod_version` can be bumped several times between publishes, so release notes must span every
+// CHANGELOG section newer than the version already live on the store, not just the newest one.
+fun changelogSectionsSince(full: String, publishedVersion: String?): String {
     val lines = full.lines()
-    val start = lines.indexOfFirst { it.startsWith("## ") }
-    if (start < 0) return full.trim()
-    val next = lines.drop(start + 1).indexOfFirst { it.startsWith("## ") }
-    val section = if (next < 0) lines.drop(start) else lines.subList(start, start + 1 + next)
-    return section.joinToString("\n").trim()
+    val headings = lines.indices.filter { lines[it].startsWith("## ") }
+    if (headings.isEmpty()) return full.trim()
+    val newestOnly = headings.getOrElse(1) { lines.size }
+    val stop = publishedVersion
+        ?.let { published -> headings.firstOrNull { lines[it].removePrefix("## ").trim() == published } }
+        ?.takeIf { it > headings.first() }
+        ?: newestOnly
+    return lines.subList(headings.first(), stop).joinToString("\n").trim()
 }
 
-val releaseChangelog: Provider<String> =
-    providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
-        .asText.map(::newestChangelogSection).orElse("")
+fun compareModVersions(left: String, right: String): Int {
+    fun parts(v: String) = v.split('.').map { it.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
+    val a = parts(left)
+    val b = parts(right)
+    for (i in 0 until maxOf(a.size, b.size)) {
+        val cmp = a.getOrElse(i) { 0 }.compareTo(b.getOrElse(i) { 0 })
+        if (cmp != 0) return cmp
+    }
+    return 0
+}
+
+// Modrinth's public version list is the only queryable source for the live version: the CurseForge
+// upload API accepts uploads but cannot be queried with the upload token.
+fun fetchPublishedModVersion(projectId: String): String? {
+    if (projectId.isBlank()) return null
+    return runCatching {
+        val connection = URI("https://api.modrinth.com/v2/project/$projectId/version")
+            .toURL().openConnection() as HttpURLConnection
+        connection.connectTimeout = 5_000
+        connection.readTimeout = 5_000
+        connection.setRequestProperty("User-Agent", "Forget-Me-Crops/publish")
+        val body = try {
+            connection.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            connection.disconnect()
+        }
+        Regex("\"version_number\"\\s*:\\s*\"([^\"]+)\"").findAll(body)
+            .map { it.groupValues[1].substringBefore('+') }
+            .distinct()
+            .toList()
+            .maxWithOrNull(Comparator { a: String, b: String -> compareModVersions(a, b) })
+    }.getOrNull()
+}
 
 val modrinthToken = System.getenv("MODRINTH_TOKEN")
 val curseForgeToken = System.getenv("CURSEFORGE_TOKEN")
 
 if (!modrinthToken.isNullOrBlank() || !curseForgeToken.isNullOrBlank()) {
     apply(plugin = "me.modmuss50.mod-publish-plugin")
+
+    val modrinthProjectId = findProperty("modrinth_project_id") as? String ?: ""
+    // Resolved once per build and shared across all Stonecutter nodes.
+    val publishedCacheKey = "forgetMeCrops.publishedModVersion"
+    val publishedVersion = if (rootProject.extra.has(publishedCacheKey)) {
+        rootProject.extra[publishedCacheKey] as String
+    } else {
+        fetchPublishedModVersion(modrinthProjectId).orEmpty().also {
+            rootProject.extra[publishedCacheKey] = it
+            if (it.isBlank()) {
+                logger.lifecycle("[publish] Could not resolve the published version from Modrinth; using the newest CHANGELOG section only.")
+            } else {
+                logger.lifecycle("[publish] Last published version on Modrinth: $it")
+            }
+        }
+    }.ifBlank { null }
+
+    val releaseChangelog: Provider<String> =
+        providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
+            .asText.map { changelogSectionsSince(it, publishedVersion) }.orElse("")
+
+    tasks.register("printReleaseChangelog") {
+        group = "publishing"
+        description = "Prints the release notes that would be uploaded to Modrinth and CurseForge."
+        doLast { println(releaseChangelog.get()) }
+    }
 
     @Suppress("UnstableApiUsage")
     configure<me.modmuss50.mpp.ModPublishExtension> {

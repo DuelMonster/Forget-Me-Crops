@@ -525,7 +525,19 @@ Nodes are registered in `settings.gradle.kts`; Stonecutter reads the active VCS 
 .\gradlew.bat stonecutter:Set active version to 1.21.11-neoforge
 ```
 
-The publishing block only applies `me.modmuss50.mod-publish-plugin` when at least one of `MODRINTH_TOKEN` / `CURSEFORGE_TOKEN` is set, and each store is configured only when its own token is present. Release notes uploaded to both stores are the newest `## <version>` section of `CHANGELOG.md` only, extracted by `newestChangelogSection` in `build.gradle.kts`.
+The publishing block only applies `me.modmuss50.mod-publish-plugin` when at least one of `MODRINTH_TOKEN` / `CURSEFORGE_TOKEN` is set, and each store is configured only when its own token is present.
+
+Release notes are not the whole `CHANGELOG.md`. At configuration time the build queries the public Modrinth version list (`https://api.modrinth.com/v2/project/<id>/version`) for the highest `version_number` already released, strips the `+<mc>-<loader>` suffix, and uploads every `## <version>` section newer than it. That covers the case where `mod_version` is bumped several times between publishes. The lookup is performed once per build and shared across all Stonecutter nodes.
+
+CurseForge is not used as the source of truth: the upload API authenticates uploads but cannot be queried for existing files with the upload token, so it would require a separate CurseForge Core API key.
+
+If the lookup fails (offline, missing/blank project ID, unpublished project), the build logs a notice and falls back to the newest `## <version>` section only.
+
+Preview what would be uploaded without publishing:
+
+```powershell
+.\gradlew.bat :1.21.11-fabric:printReleaseChangelog
+```
 
 ### Dev Run Configuration
 
