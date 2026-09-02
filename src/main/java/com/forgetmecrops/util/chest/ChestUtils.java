@@ -80,6 +80,11 @@ public class ChestUtils {
             if (drop == null || drop.isEmpty()) continue;
             ItemStack remaining = drop.copy();
 
+            // Seed reserves are confined to the anchor chest, so seeds fill it before any secondary container.
+            if (isSeedItem(remaining.getItem())) {
+                insertIntoContainer(anchorChest, remaining, remaining.getCount());
+            }
+
             if (!extraOutputs.isEmpty()) {
                 int consecutiveMisses = 0;
                 while (!remaining.isEmpty() && consecutiveMisses < extraOutputs.size()) {
