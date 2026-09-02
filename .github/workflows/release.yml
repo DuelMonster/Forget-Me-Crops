@@ -60,14 +60,14 @@ jobs:
       # Publish to Modrinth (both Fabric and NeoForge nodes)
       - name: Publish to Modrinth
         if: ${{ env.MODRINTH_TOKEN != '' }}
-        run: ./gradlew chiseledPublishMods --no-daemon
+        run: ./gradlew chiseledPublishAll --no-daemon
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
 
       # Publish to CurseForge (both Fabric and NeoForge nodes)
       - name: Publish to CurseForge
         if: ${{ env.CURSEFORGE_TOKEN != '' }}
-        run: ./gradlew chiseledPublishMods --no-daemon
+        run: ./gradlew chiseledPublishAll --no-daemon
         env:
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
 

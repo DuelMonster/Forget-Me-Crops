@@ -15,6 +15,9 @@
 - Adopt the stricter version-bump validator, which now requires a `Next Version` entry in the bump state and an override file for same-day re-bumps.
 - Add a full test-suite gate to the pre-commit hook, backed by new `validate-test-suite` and `run-gradle-java25` scripts.
 - Reject placeholder version-bump entries during changelog validation.
+- Add `publishPreflight` and `publishPostSummary` reporting around publish tasks, plus a no-op `publishMods` fallback when no tokens are configured.
+- Register `chiseledPublishAllPublicationsToLocalRepository` and the GitHub Packages equivalent so the release workflow resolves the tasks it invokes.
+- Correct the release workflow to call `chiseledPublishAll` instead of the non-existent `chiseledPublishMods`.
 
 ## 0.22.0
 

@@ -502,6 +502,58 @@ fun fetchPublishedModVersion(projectId: String): String? {
 val modrinthToken = System.getenv("MODRINTH_TOKEN")
 val curseForgeToken = System.getenv("CURSEFORGE_TOKEN")
 
+tasks.register("publishPreflight") {
+    group = "publishing"
+    description = "Prints publish token detection before running publish tasks."
+    doLast {
+        val hasModrinthToken = !modrinthToken.isNullOrBlank()
+        val hasCurseForgeToken = !curseForgeToken.isNullOrBlank()
+        logger.lifecycle("Publish preflight for ${project.path}:")
+        logger.lifecycle("- MODRINTH_TOKEN detected: $hasModrinthToken")
+        logger.lifecycle("- CURSEFORGE_TOKEN detected: $hasCurseForgeToken")
+        if (!hasModrinthToken && !hasCurseForgeToken) {
+            logger.lifecycle("- No publish tokens detected; publish tasks will be no-op.")
+        }
+    }
+}
+
+tasks.register("publishPostSummary") {
+    group = "publishing"
+    description = "Prints release jars and publish destinations after publish tasks complete."
+    doLast {
+        val publishArtifact = tasks.named<AbstractArchiveTask>(prodJarTask).get().archiveFile.get().asFile
+
+        val destinations = mutableListOf<String>()
+        if (!modrinthToken.isNullOrBlank()) {
+            val projectId = findProperty("modrinth_project_id") as? String ?: ""
+            destinations += "Modrinth (project: $projectId)"
+        }
+        if (!curseForgeToken.isNullOrBlank()) {
+            val projectId = findProperty("curseforge_project_id") as? String ?: ""
+            destinations += "CurseForge (project: $projectId)"
+        }
+        if (destinations.isEmpty()) {
+            destinations += "No external publish target (token(s) missing)"
+        }
+
+        logger.lifecycle("Publish summary for ${project.path}:")
+        if (publishArtifact.exists()) {
+            logger.lifecycle("- Published artifact: ${publishArtifact.name}")
+        } else {
+            logger.lifecycle("- Published artifact (configured): ${publishArtifact.name}")
+            logger.lifecycle("  - Local file not found at: ${publishArtifact.absolutePath}")
+        }
+        logger.lifecycle("- Published to: ${destinations.joinToString(", ")}")
+    }
+}
+
+tasks.configureEach {
+    if (name.matches(Regex("(?i)^publish(mods|modrinth|curseforge)$"))) {
+        dependsOn("publishPreflight")
+        finalizedBy("publishPostSummary")
+    }
+}
+
 if (!modrinthToken.isNullOrBlank() || !curseForgeToken.isNullOrBlank()) {
     apply(plugin = "me.modmuss50.mod-publish-plugin")
 
@@ -566,6 +618,16 @@ if (!modrinthToken.isNullOrBlank() || !curseForgeToken.isNullOrBlank()) {
                 changelog.set(releaseChangelog)
                 requires("cloth-config")
             }
+        }
+    }
+}
+
+if (tasks.findByName("publishMods") == null) {
+    tasks.register("publishMods") {
+        group = "publishing"
+        description = "No-op local publish task when MODRINTH_TOKEN/CURSEFORGE_TOKEN are missing."
+        doLast {
+            logger.lifecycle("Skipping publishMods: no publishing tokens configured.")
         }
     }
 }
