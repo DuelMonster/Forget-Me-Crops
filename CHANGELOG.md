@@ -18,6 +18,9 @@
 - Add `publishPreflight` and `publishPostSummary` reporting around publish tasks, plus a no-op `publishMods` fallback when no tokens are configured.
 - Register `chiseledPublishAllPublicationsToLocalRepository` and the GitHub Packages equivalent so the release workflow resolves the tasks it invokes.
 - Correct the release workflow to call `chiseledPublishAll` instead of the non-existent `chiseledPublishMods`.
+- Add `AGENTS.md` describing the repository workflow rules for coding agents.
+- Add the shared optimization-rebuild prompt and commit-outstanding-semantic skill under `.github/`.
+- List the full validator set and pre-commit ordering in TECHNICAL.
 
 ## 0.22.0
 

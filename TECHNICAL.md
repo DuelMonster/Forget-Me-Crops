@@ -596,6 +596,12 @@ If you are contributing changes, enable versioned repository hooks so docs and o
 - `scripts/validate-docs.sh` (Bash)
 - `scripts/validate-optimization-pass.ps1` (PowerShell)
 - `scripts/validate-optimization-pass.sh` (Bash)
+- `scripts/validate-version-bump.ps1` / `.sh`
+- `scripts/validate-changelog.ps1` / `.sh`
+- `scripts/validate-test-suite.ps1` / `.sh` (runs the full suite via `scripts/run-gradle-java25.ps1`)
+- `scripts/validate-compile-matrix.ps1` / `.sh` (all six loader/version nodes)
+
+The pre-commit hook runs them in this order: version-bump, optimization, docs, test-suite, compile-matrix, changelog.
 
 The check validates required section headers in `README.md`, verifies the `TECHNICAL.md` link in README, and confirms MIT licensing is stated in both docs.
 
