@@ -60,8 +60,10 @@ modstitch {
             "mod_author"              to "DuelMonster",
             "mod_homepage"            to "https://github.com/duelmonster/Forget-Me-Crops",
             "mod_issue_tracker"       to "https://github.com/duelmonster/Forget-Me-Crops/issues",
-            "minecraft_version_range" to "[1.21.11,)",
-            "cloth_config_version_range" to "[21.11.153,)",
+            // Per-node ranges — must vary per Stonecutter node or the packaged
+            // neoforge.mods.toml (and thus the built jar) is byte-identical across nodes.
+            "minecraft_version_range" to "[$minecraft,)",
+            "cloth_config_version_range" to "[${property("deps.cloth_config")},)",
             "neoforge_loader_range"   to "[10,)"
         ))
     }

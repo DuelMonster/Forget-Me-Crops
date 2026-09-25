@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.24.0
+
+- Fix `26.2-neoforge` and `26.1.2-neoforge` publishing byte-identical jars to CurseForge: `minecraft_version_range` and `cloth_config_version_range` are now derived per Stonecutter node instead of a fixed literal shared by every MC version.
+
 ## 0.23.0
 
 - Fix `mendingProtection` never taking effect: hoe enchantments are now read through the level enchantment registry instead of a reflective lookup that returned no results on current Minecraft versions, so Mending (and Unbreaking) on a framed hoe is detected again.
