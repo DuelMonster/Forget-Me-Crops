@@ -2,10 +2,10 @@ package com.forgetmecrops.client.config;
 
 import me.shedaniel.clothconfig2.gui.entries.DropdownBoxEntry;
 import net.minecraft.client.input.MouseButtonEvent;
-//? if >=26.1 {
-/*import net.minecraft.client.gui.GuiGraphicsExtractor;*/
+//? if mc1 {
+/*import net.minecraft.client.gui.GuiGraphics;*/
 //?} else {
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 //?}
 import net.minecraft.network.chat.Component;
 
@@ -30,12 +30,7 @@ public final class LabelTooltipEnumListEntry<T extends Enum<T>> extends Dropdown
             public boolean mouseClicked(MouseButtonEvent event, boolean focused) {
                 boolean consumed = super.mouseClicked(event, focused);
                 if (consumed) {
-                    getEntry().getSelectionElement().setFocused(null);
-                    getEntry().setFocused(null);
-                    getEntry().updateSelected(false);
-                    if (getEntry().getParent() != null) {
-                        getEntry().getParent().setFocused(null);
-                    }
+                    ((LabelTooltipEnumListEntry<?>) getEntry()).forceCollapseDropdown();
                 }
                 return consumed;
             }
@@ -60,7 +55,7 @@ public final class LabelTooltipEnumListEntry<T extends Enum<T>> extends Dropdown
     private T lastObservedValue;
 
     private void forceCollapseDropdown() {
-        getSelectionElement().setFocused(null);
+        selectionElement.setFocused(null);
         setFocused(null);
         updateSelected(false);
         if (getParent() != null) {
@@ -119,12 +114,12 @@ public final class LabelTooltipEnumListEntry<T extends Enum<T>> extends Dropdown
         setSuggestionMode(false);
     }
 
-    //? if >=26.1 {
+    //? if mc1 {
     /*@Override*/
-    /*public void extractRenderState(GuiGraphicsExtractor graphics,*/
+    /*public void render(GuiGraphics graphics,*/
     //?} else {
     @Override
-    public void render(GuiGraphics graphics,
+    public void extractRenderState(GuiGraphicsExtractor graphics,
     //?}
                        int index,
                        int y,
@@ -141,10 +136,10 @@ public final class LabelTooltipEnumListEntry<T extends Enum<T>> extends Dropdown
             lastObservedValue = currentValue;
         }
         hitbox.update(x, y, entryWidth, entryHeight);
-        //? if >=26.1 {
-        /*super.extractRenderState(graphics, index, y, x, entryWidth, entryHeight, mouseX, mouseY, hovered, delta);*/
+        //? if mc1 {
+        /*super.render(graphics, index, y, x, entryWidth, entryHeight, mouseX, mouseY, hovered, delta);*/
         //?} else {
-        super.render(graphics, index, y, x, entryWidth, entryHeight, mouseX, mouseY, hovered, delta);
+        super.extractRenderState(graphics, index, y, x, entryWidth, entryHeight, mouseX, mouseY, hovered, delta);
         //?}
     }
 

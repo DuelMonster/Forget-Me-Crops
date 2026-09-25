@@ -1,5 +1,5 @@
 Date: 2026-09-25
-Reason: User-authorized second same-day version bump to commit the accumulated 0.25.0 compatibility changes after 0.24.0.
+Reason: User-authorized third same-day version bump to commit the deprecation API fixes after 0.25.0.
 
 # Stage this file with today's date and an explicit reason to authorise a second
 # mod_version bump on the same day. See .brainbox/guides/VERSION_BUMP_RULE.md.

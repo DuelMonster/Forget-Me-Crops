@@ -17,6 +17,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.server.level.ServerLevel;
+//? if neoforge {
+/*import net.neoforged.neoforge.common.extensions.IBlockStateExtension;*/
+//?}
 import java.lang.reflect.Constructor;
 import java.util.Iterator;
 import java.util.List;
@@ -282,7 +285,11 @@ public class HarvestUtils {
     public static void playPlantSound(net.minecraft.world.level.Level level, BlockPos pos, BlockState plantedState) {
         if (level == null || pos == null || plantedState == null) return;
         try {
+            //? if neoforge {
+            /*SoundEvent sound = ((IBlockStateExtension) plantedState).getSoundType(level, pos, null).getPlaceSound();*/
+            //?} else {
             SoundEvent sound = plantedState.getSoundType().getPlaceSound();
+            //?}
             level.playSound(null, pos, sound, SoundSource.BLOCKS, 0.7F, 0.92F + level.getRandom().nextFloat() * 0.16F);
         } catch (Throwable t) {}
     }
@@ -368,7 +375,11 @@ public class HarvestUtils {
      */
     private static void playHarvestBreakSound(HarvestContext ctx, BlockPos pos, BlockState harvestedState) {
         try {
+            //? if neoforge {
+            /*SoundEvent sound = ((IBlockStateExtension) harvestedState).getSoundType(ctx.level, pos, null).getBreakSound();*/
+            //?} else {
             SoundEvent sound = harvestedState.getSoundType().getBreakSound();
+            //?}
             ctx.level.playSound(null, pos, sound, SoundSource.BLOCKS, 0.85F, 0.92F + ctx.level.getRandom().nextFloat() * 0.18F);
         } catch (Throwable t) {}
     }
@@ -513,13 +524,13 @@ public class HarvestUtils {
 
                 // Keep registry state in lockstep with the durability-updated hoe, even if
                 // subsequent frame reads are delayed or briefly unavailable.
-                try {
+                ExceptionHandler.silentTry(() -> {
                     String dimId = ctx.level.dimension().identifier().toString();
                     FrameRegistry.updateHoe(dimId, anchor.framePos, intended);
-                } catch (Throwable ignored) {}
+                });
 
                 // Best-effort writeback verification so durability drift is visible in logs.
-                try {
+                ExceptionHandler.silentTry(() -> {
                     ItemStack verified = FrameScanner.readHoeFromFrame(ctx.level, anchor.framePos);
                     if (!intended.isEmpty()) {
                         if (verified == null || verified.isEmpty()) {
@@ -532,7 +543,7 @@ public class HarvestUtils {
                             LogUtils.logDebug("[HOE] Frame hoe writeback verified at {}: damage={}", anchor.framePos, verified.getDamageValue());
                         }
                     }
-                } catch (Throwable ignored) {}
+                });
             }
         } catch (Throwable t) {}
     }

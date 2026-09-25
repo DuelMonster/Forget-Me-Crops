@@ -72,7 +72,11 @@ public class HoeUtils {
         if (level == null || tool == null || tool.isEmpty()) return 0;
         // Enchantment lookups in modern Minecraft require registry access via the level
         var holder = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(key);
+        //? if neoforge {
+        /*return tool.getEnchantmentLevel(holder);*/
+        //?} else {
         return EnchantmentHelper.getItemEnchantmentLevel(holder, tool);
+        //?}
     }
 
     /**

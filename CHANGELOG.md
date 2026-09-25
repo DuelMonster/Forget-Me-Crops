@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.26.0
+
+- Remove deprecated Cloth Config and NeoForge API calls while preserving dropdown, sound, and enchantment behavior.
+
 ## 0.25.0
 
 - Add initial Minecraft 26.3 compatibility work for Fabric and NeoForge, including Java 25 support.
