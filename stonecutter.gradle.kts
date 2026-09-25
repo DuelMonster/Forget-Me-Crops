@@ -8,7 +8,19 @@ plugins {
 
 // The currently active development node.
 // Switch via the IDE "Stonecutter > Switch version" task or Stonecutter Gradle tasks.
-stonecutter active "1.21.11-fabric"
+stonecutter {
+    active("26.3-fabric")
+
+    // parameters {
+    //     rules {
+    //         // Apply rules only for MC >= 26.3
+    //         if (node.metadata.version >= "26.3") {
+    //             file("mc26.3/replacements.json")
+    //         }
+    //     }
+    // }
+}
+
 
 // chiseledBuild: builds ALL registered nodes in one shot.
 // Run with:  ./gradlew chiseledBuild

@@ -1,7 +1,5 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive",
-    "java.project.sourcePaths": ["common/src/main/java", "fabric/src/main/java", "neoforge/src/main/java"],
-    "java.project.outputPath": "build/classes/java/main",
+    "java.configuration.updateBuildConfiguration": "automatic",
     "java.compile.nullAnalysis.mode": "automatic",
     "java.import.gradle.enabled": true,
     "java.import.gradle.wrapper.enabled": true,
@@ -17,9 +15,6 @@
             "name": "JavaSE-25",
             "path": "C:/Program Files/Eclipse Adoptium/jdk-25.0.2.10-hotspot"
         }
-    ],
-    "java.project.referencedLibraries": [
-        "${workspaceFolder}/.gradle/loom-cache/remapped_mods/remapped/com/terraformersmc/modmenu-*/*/*.jar"
     ],
     "java.jdt.ls.vmargs": "-Xmx2G -XX:+UseG1GC -XX:+UseStringDeduplication",
     "java.errors.incompleteClasspath.severity": "ignore",

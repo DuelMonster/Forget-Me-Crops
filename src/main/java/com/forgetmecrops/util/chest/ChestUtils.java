@@ -5,7 +5,7 @@ import com.forgetmecrops.util.ExceptionHandler;
 import com.forgetmecrops.config.Config;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.item.HoeItem;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -171,7 +171,7 @@ public class ChestUtils {
         if (chest == null) return net.minecraft.world.item.ItemStack.EMPTY;
         for (int i = 0; i < chest.getContainerSize(); i++) {
             ItemStack slot = chest.getItem(i);
-            if (slot != null && !slot.isEmpty() && slot.getItem() instanceof HoeItem) {
+            if (slot != null && !slot.isEmpty() && slot.is(ItemTags.HOES)) {
                 ItemStack taken = slot.copy();
                 taken.setCount(1);
                 try { LogUtils.logDebug("[CHEST] takeFirstHoe: found hoe in slot {} -> item={} damage={} countInSlot={}", i, taken.getItem(), taken.getDamageValue(), slot.getCount()); } catch (Throwable t) {}
@@ -201,7 +201,7 @@ public class ChestUtils {
         if (chest == null) return net.minecraft.world.item.ItemStack.EMPTY;
         for (int i = 0; i < chest.getContainerSize(); i++) {
             ItemStack slot = chest.getItem(i);
-            if (slot != null && !slot.isEmpty() && slot.getItem() instanceof HoeItem) {
+            if (slot != null && !slot.isEmpty() && slot.is(ItemTags.HOES)) {
                 ItemStack found = slot.copy();
                 found.setCount(1);
                 return found;

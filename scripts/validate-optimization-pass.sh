@@ -35,7 +35,35 @@ for relative in "${staged[@]}"; do
   fi
 
   if [[ "$relative" =~ \.java$ ]]; then
-    mapfile -t imports < <(grep -E '^\s*import\s+.+;\s*$' "$full_path" | sed 's/^\s*//;s/\s*$//')
+    mapfile -t imports < <(
+      awk '
+        BEGIN { in_block = 0 }
+        {
+          line = $0
+          while (1) {
+            if (in_block) {
+              end = index(line, "*/")
+              if (!end) { line = ""; break }
+              line = substr(line, end + 2)
+              in_block = 0
+            } else {
+              start = index(line, "/*")
+              if (!start) break
+              end = index(substr(line, start + 2), "*/")
+              if (!end) {
+                line = substr(line, 1, start - 1)
+                in_block = 1
+                break
+              }
+              line = substr(line, 1, start - 1) substr(line, start + end + 2)
+            }
+          }
+          print line
+        }
+      ' "$full_path" |
+      grep -E '^\s*import\s+.+;\s*$' |
+      sed 's/^\s*//;s/\s*$//'
+    )
     if (( ${#imports[@]} > 0 )); then
       dupes=$(printf '%s\n' "${imports[@]}" | sort | uniq -d || true)
       if [[ -n "$dupes" ]]; then

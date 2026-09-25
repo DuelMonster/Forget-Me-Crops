@@ -3,12 +3,15 @@
 // platform toolchain (Loom vs ModDevGradle) to activate. One script to rule them all.
 
 import java.io.DataInputStream
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
 import java.util.Comparator
 import java.util.zip.ZipFile
 
 plugins {
+    // Modstitch 0.8.5 selects an older MDG that cannot recompile Minecraft 26.3 sources.
+    id("net.neoforged.moddev") version "2.0.147" apply false
     // Modstitch: the unified build plugin that abstracts Fabric Loom and NeoForge MDG.
     // Only one platform is "active" per node — determined by modstitch.platform in
     // the node's versioned gradle.properties.
@@ -29,13 +32,23 @@ fun prop(name: String, consumer: (prop: String) -> Unit) {
 
 // The Minecraft version for this node (e.g. "1.21.11")
 val minecraft = property("deps.minecraft") as String
-
+val mcVersion = minecraft.substringBefore(".").toInt()
 // Which loader is this node for? Extracted from the project name (e.g. "1.21.11-fabric" → "fabric")
 val loader = name.substringAfterLast("-")
 val isFabric = loader == "fabric"
 val isNeoForge = loader == "neoforge"
-val javaRelease = if (minecraft.startsWith("26.")) 25 else 21
-val javaToolchains = extensions.getByType(org.gradle.jvm.toolchain.JavaToolchainService::class.java)
+val javaRelease = if (mcVersion >= 26) 25 else 21
+val clothConfigVersion = when ("$minecraft-$loader") {
+    "1.21.11-fabric" -> "21.11.153"
+    "1.21.11-neoforge" -> "21.11.153"
+    "26.1.2-fabric" -> "26.1.154"
+    "26.1.2-neoforge" -> "26.1.154"
+    "26.2-fabric" -> "26.2.155"
+    "26.2-neoforge" -> "26.2.155"
+    "26.3-fabric" -> "26.2.155"
+    "26.3-neoforge" -> "26.2.155"
+    else -> error("No Cloth Config version mapping for $minecraft-$loader")
+}
 
 // ────────────────────────────────────────────────────────────
 //  Modstitch core configuration
@@ -60,10 +73,15 @@ modstitch {
             "mod_author"              to "DuelMonster",
             "mod_homepage"            to "https://github.com/duelmonster/Forget-Me-Crops",
             "mod_issue_tracker"       to "https://github.com/duelmonster/Forget-Me-Crops/issues",
+            "fabric_minecraft_version_range" to ">=$minecraft",
+            "fabric_loader_version_range"    to ">=${findProperty("deps.fabric_loader") ?: "*"}",
+            "fabric_java_version_range"      to ">=$javaRelease",
+            "fabric_api_version_range"       to ">=${findProperty("deps.fabric_api") ?: "*"}",
+            "fabric_cloth_config_version_range" to ">=$clothConfigVersion",
             // Per-node ranges — must vary per Stonecutter node or the packaged
             // neoforge.mods.toml (and thus the built jar) is byte-identical across nodes.
             "minecraft_version_range" to "[$minecraft,)",
-            "cloth_config_version_range" to "[${property("deps.cloth_config")},)",
+            "cloth_config_version_range" to "[$clothConfigVersion,)",
             "neoforge_loader_range"   to "[10,)"
         ))
     }
@@ -104,7 +122,7 @@ modstitch {
             // Match the Fabric layout so both loaders use the same run-dir convention.
             runs {
                 named("client") {
-                    gameDirectory = project.file("runs/client")
+                    gameDirectory = layout.projectDirectory.file("runs/client").asFile
                     programArgument("--username")
                     programArgument("fmc_dev")
                     programArgument("--width")
@@ -113,9 +131,10 @@ modstitch {
                     programArgument("1080")
                 }
                 named("server") {
-                    gameDirectory = project.file("runs/server")
+                    gameDirectory = layout.projectDirectory.file("runs/server").asFile
                 }
             }
+
             val parchmentMc = findProperty("deps.parchment_mc") as? String
             val parchmentMappings = findProperty("deps.parchment") as? String
             if (!parchmentMc.isNullOrBlank() && !parchmentMappings.isNullOrBlank()) {
@@ -126,19 +145,6 @@ modstitch {
             }
         }
     }
-
-    // ── Mixin configuration ──
-    mixin {
-        // Modstitch's FletchingTable automatically inserts the mixin config file references
-        // into fabric.mod.json ("mixins" array) and neoforge.mods.toml ([[mixins]]).
-        // No manual manifest edits needed.
-        addMixinsToModManifest = true
-
-        // One unified mixin config covers both platforms.
-        // Platform-specific mixin classes (MixinTitleScreen) live in the shared package;
-        // loader-only mixins can be registered here with isLoom/isModDevGradle guards.
-        configs.register("forgetmecrops")
-    }
 }
 
 // ────────────────────────────────────────────────────────────
@@ -148,6 +154,7 @@ modstitch {
 // ────────────────────────────────────────────────────────────
 stonecutter {
     constants.match(loader, "fabric", "neoforge")
+    constants.match(if (minecraft.startsWith("1.21.")) "mc1" else "mc26", "mc1", "mc26")
 }
 
 // Java bytecode target per release line.
@@ -160,6 +167,7 @@ java {
 
 tasks.withType<JavaCompile> {
     options.release.set(javaRelease)
+    options.compilerArgs.add("-Xlint:deprecation")
 }
 
 // Keep game runtime JVM aligned with the MC line:
@@ -501,6 +509,8 @@ fun fetchPublishedModVersion(projectId: String): String? {
     }.getOrNull()
 }
 
+// Modrinth + CurseForge publishing via mod-publish-plugin.
+// Tasks are configured only when publishing tokens are available.
 val modrinthToken = System.getenv("MODRINTH_TOKEN")
 val curseForgeToken = System.getenv("CURSEFORGE_TOKEN")
 
@@ -645,7 +655,7 @@ if (tasks.findByName("publishMods") == null) {
 val cleanReleasesTask = if (rootProject.tasks.findByName("cleanReleases") == null) {
     rootProject.tasks.register("cleanReleases") {
         group = "release"
-        description = "Deletes all *.jar files from releases/ before packaging new ones."
+        description = "Deletes all jar files from releases before packaging."
         doLast {
             val releasesDir = rootProject.layout.projectDirectory.dir("releases").asFile
             releasesDir.listFiles { f: File -> f.isFile && f.extension == "jar" }
@@ -658,7 +668,7 @@ val cleanReleasesTask = if (rootProject.tasks.findByName("cleanReleases") == nul
 
 tasks.register<Copy>("packageRelease") {
     group = "release"
-    description = "Copies the remapped production JAR for this loader into releases/."
+    description = "Copies the production jar for this node into releases."
     dependsOn(prodJarTask, cleanReleasesTask)
     from(tasks.named<AbstractArchiveTask>(prodJarTask).map { it.archiveFile })
     into(rootProject.layout.projectDirectory.dir("releases"))

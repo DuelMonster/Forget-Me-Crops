@@ -1,7 +1,7 @@
 # Agent Instructions — Forget-Me-Crops
 
 Multi-loader Minecraft mod built with Stonecutter + Modstitch. One shared source tree in `src/main/java`
-is preprocessed into six nodes: `1.21.11`, `26.1.2`, `26.2` × `fabric`, `neoforge`.
+is preprocessed into eight nodes: `1.21.11`, `26.1.2`, `26.2`, `26.3` × `fabric`, `neoforge`.
 
 Authoritative rules live in [.brainbox/rules](.brainbox/rules) and [.brainbox/guides](.brainbox/guides).
 This file is the summary an agent must follow; the guides win if they disagree.

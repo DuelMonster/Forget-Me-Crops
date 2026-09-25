@@ -11,9 +11,6 @@ issueTrackerURL = "${mod_issue_tracker}"
     authors     = "${mod_author}"
     logoFile    = "assets/forget_me_crops/icon.png"
 
-[[mixins]]
-    config = "forgetmecrops.mixins.json"
-
 [[dependencies.${mod_id}]]
     modId        = "neoforge"
     type         = "required"

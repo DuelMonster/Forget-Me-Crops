@@ -14,7 +14,7 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.HoeItem;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
@@ -115,18 +115,18 @@ public class FrameScanner {
         int cropsFound = 0;
         BlockPos center = anchor.framePos;
         String dimId = "";
-        try { dimId = level.dimension().identifier().toString(); } catch (Throwable ignored) {}
+        try { dimId = level.dimension().identifier().toString(); }  catch (Throwable failure) {}
 
         // Quick anchor validity check: ensure the item-frame (or FIF block-entity) still exists
         try {
             if (!isFrameStillPresent(level, center)) {
-                try { LogUtils.logWarn("[SCAN] Anchor frame missing at {} in {}; unregistering and aborting scan.", center, dimId); } catch (Throwable ignored) {}
-                try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                try { LogUtils.logWarn("[SCAN] Anchor frame missing at {} in {}; unregistering and aborting scan.", center, dimId); }  catch (Throwable failure) {}
+                try { FrameRegistry.unregisterFrame(dimId, center); }  catch (Throwable failure) {}
                 return false;
             }
             if (!isChestStillValid(level, anchor)) {
-                try { LogUtils.logWarn("[SCAN] Anchor chest missing/changed for {}; unregistering and aborting scan.", center); } catch (Throwable ignored) {}
-                try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                try { LogUtils.logWarn("[SCAN] Anchor chest missing/changed for {}; unregistering and aborting scan.", center); }  catch (Throwable failure) {}
+                try { FrameRegistry.unregisterFrame(dimId, center); }  catch (Throwable failure) {}
                 return false;
             }
         } catch (Throwable t) {
@@ -141,9 +141,9 @@ public class FrameScanner {
             // Prefer the physical frame-held hoe at scan start; fall back to replacement from chest only when frame is empty.
             ItemStack frameHoe = readHoeFromFrame(level, center);
             ItemStack chosenHoe = chooseScanHoe(currentHoe, frameHoe);
-            if (chosenHoe != null && !chosenHoe.isEmpty() && chosenHoe.getItem() instanceof HoeItem) {
+            if (chosenHoe != null && !chosenHoe.isEmpty() && chosenHoe.is(ItemTags.HOES)) {
                 currentHoe = chosenHoe.copy();
-                try { FrameRegistry.updateHoe(dimId, center, currentHoe.copy()); } catch (Throwable ignored) {}
+                try { FrameRegistry.updateHoe(dimId, center, currentHoe.copy()); }  catch (Throwable failure) {}
             } else {
                 // Frame is empty; delegate replacement logic to FrameHoeReplacement which encapsulates chest/frame transactions.
                 if (currentHoe.isEmpty()) {
@@ -153,10 +153,10 @@ public class FrameScanner {
                         if (!tempCtx.getHoe().isEmpty()) {
                             currentHoe = tempCtx.getHoe().copy();
                         }
-                    } catch (Throwable ignored) {}
+                    }  catch (Throwable failure) {}
                 }
             }
-        } catch (Throwable ignored) {}
+        }  catch (Throwable failure) {}
 
         if (currentHoe.isEmpty()) {
             LogUtils.logDebug("[SCAN] No hoe available for anchor {}; aborting scan.", anchor);
@@ -207,8 +207,8 @@ public class FrameScanner {
                 for (ItemFrame f : frames) { if (f.blockPosition().equals(center)) { framePresent = true; break; } }
                 BlockEntity be = level.getBlockEntity(center);
                 if (!framePresent && (be == null || !FIF.isFastItemFrameBlockEntity(be))) {
-                    try { LogUtils.logWarn("[SCAN] Anchor frame removed at {} during scan; unregistering and aborting.", center); } catch (Throwable ignored) {}
-                    try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                    try { LogUtils.logWarn("[SCAN] Anchor frame removed at {} during scan; unregistering and aborting.", center); }  catch (Throwable failure) {}
+                    try { FrameRegistry.unregisterFrame(dimId, center); }  catch (Throwable failure) {}
                     ctx.logSummary();
                     return cropsFound > 0;
                 }
@@ -216,8 +216,8 @@ public class FrameScanner {
                     BlockPos chestPos = chestBe.getBlockPos();
                     BlockEntity current = level.getBlockEntity(chestPos);
                     if (current != chestBe || !(current instanceof Container)) {
-                        try { LogUtils.logWarn("[SCAN] Anchor chest removed or changed at {} during scan; unregistering and aborting.", chestPos); } catch (Throwable ignored) {}
-                        try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                        try { LogUtils.logWarn("[SCAN] Anchor chest removed or changed at {} during scan; unregistering and aborting.", chestPos); }  catch (Throwable failure) {}
+                        try { FrameRegistry.unregisterFrame(dimId, center); }  catch (Throwable failure) {}
                         ctx.logSummary();
                         return cropsFound > 0;
                     }
@@ -228,13 +228,13 @@ public class FrameScanner {
             try {
                 ItemStack liveHoe = readHoeFromFrame(level, center);
                 if (liveHoe == null || liveHoe.isEmpty()) {
-                    try { LogUtils.logDebug("[SCAN] Hoe removed from frame at {} during scan; aborting.", center); } catch (Throwable ignored) {}
+                    try { LogUtils.logDebug("[SCAN] Hoe removed from frame at {} during scan; aborting.", center); }  catch (Throwable failure) {}
                     ctx.logSummary();
                     return cropsFound > 0;
                 }
                 // make sure the HarvestContext.hoe matches the live frame hoe
-                try { ctx.setHoe(liveHoe); } catch (Throwable ignored) {}
-            } catch (Throwable ignored) {}
+                try { ctx.setHoe(liveHoe); }  catch (Throwable failure) {}
+            }  catch (Throwable failure) {}
 
             boolean harvested = false;
             try {
@@ -288,7 +288,7 @@ public class FrameScanner {
             if (ctx.isChestFull()) {
                 try {
                     FrameRegistry.setCooldown(dimId, center, Config.getChestFullCooldownTicks());
-                } catch (Throwable ignored) {}
+                }  catch (Throwable failure) {}
                 ctx.logSummary();
                 return cropsFound > 0;
             }
@@ -298,7 +298,7 @@ public class FrameScanner {
             if (ctx.isChestFull()) {
                 try {
                     FrameRegistry.setCooldown(dimId, center, Config.getChestFullCooldownTicks());
-                } catch (Throwable ignored) {}
+                }  catch (Throwable failure) {}
                 ctx.logSummary();
                 return cropsFound > 0;
             }
@@ -424,9 +424,9 @@ public class FrameScanner {
         Item seed = CropRegistry.clutterSeed(chosen);
         if (seed == null || !ChestUtils.removeOne(anchor.chest, seed, false)) return false;
         BlockState plantState = chosen.defaultBlockState();
-        try { if (plantState.getBlock() instanceof CropBlock) plantState = setAgeSafe(plantState, 0); } catch (Throwable ignored) {}
+        try { if (plantState.getBlock() instanceof CropBlock) plantState = setAgeSafe(plantState, 0); }  catch (Throwable failure) {}
         level.setBlock(pos, plantState, 3);
-        try { HarvestUtils.playPlantSound(level, pos, plantState); } catch (Throwable ignored) {}
+        try { HarvestUtils.playPlantSound(level, pos, plantState); }  catch (Throwable failure) {}
         return true;
     }
 
@@ -519,12 +519,12 @@ public class FrameScanner {
             }
             if (farmlandNeighbors >= 1) {
                 level.setBlock(belowPos, Blocks.FARMLAND.defaultBlockState(), 3);
-                try { HarvestUtils.playTillingSound(level, belowPos); } catch (Throwable ignored) {}
+                try { HarvestUtils.playTillingSound(level, belowPos); }  catch (Throwable failure) {}
                 ItemStack before = ctx.getHoe().isEmpty() ? (anchor.hoe == null ? ItemStack.EMPTY : anchor.hoe.copy()) : ctx.getHoe().copy();
                 try {
                     if (ctx.isSkipNextDamage()) { ctx.setSkipNextDamage(false); }
                     else { com.forgetmecrops.util.durability.DurabilityLogic.applyDamage(level, ctx.getHoe(), level.getRandom()); }
-                } catch (Throwable ignored) {}
+                }  catch (Throwable failure) {}
                 if (ctx.getHoe().isEmpty()) HarvestUtils.handleBrokenHoe(ctx, before);
                 Map<Block, Integer> counts = new HashMap<>();
                 for (Direction d : HORIZ_DIRS) {
@@ -653,7 +653,7 @@ public class FrameScanner {
         if (state == null) return -1;
         try {
             return state.getValue(CropBlock.AGE);
-        } catch (Throwable ignored) {}
+        }  catch (Throwable failure) {}
         try {
             for (Property<?> prop : state.getProperties()) {
                 try {
@@ -661,9 +661,9 @@ public class FrameScanner {
                         IntegerProperty ip = (IntegerProperty) prop;
                         return state.getValue(ip);
                     }
-                } catch (Throwable ignored) {}
+                }  catch (Throwable failure) {}
             }
-        } catch (Throwable ignored) {}
+        }  catch (Throwable failure) {}
         return -1;
     }
 
@@ -680,7 +680,7 @@ public class FrameScanner {
         if (state == null) return null;
         try {
             return state.setValue(CropBlock.AGE, age);
-        } catch (Throwable ignored) {}
+        }  catch (Throwable failure) {}
         try {
             for (Property<?> prop : state.getProperties()) {
                 try {
@@ -689,9 +689,9 @@ public class FrameScanner {
                         BlockState ns = state.setValue((Property<Integer>) ip, Integer.valueOf(age));
                         return ns;
                     }
-                } catch (Throwable ignored) {}
+                }  catch (Throwable failure) {}
             }
-        } catch (Throwable ignored) {}
+        }  catch (Throwable failure) {}
         return null;
     }
 
@@ -715,9 +715,9 @@ public class FrameScanner {
                         }
                         return max;
                     }
-                } catch (Throwable ignored) {}
+                }  catch (Throwable failure) {}
             }
-        } catch (Throwable ignored) {}
+        }  catch (Throwable failure) {}
         return (state.is(Blocks.NETHER_WART) || state.is(Blocks.SWEET_BERRY_BUSH)) ? 3 : 7;
     }
 
@@ -801,14 +801,14 @@ public class FrameScanner {
                         fld.setAccessible(true);
                         Object v = fld.get(f);
                         if (v instanceof Number) return ((Number) v).intValue() & 7;
-                    } catch (Throwable ignored) {}
+                    }  catch (Throwable failure) {}
                     return 0;
                 }
             }
 
             BlockEntity be = level.getBlockEntity(pos);
             if (be != null) {
-                try { return FIF.getRotation(be); } catch (Throwable ignored) {}
+                try { return FIF.getRotation(be); }  catch (Throwable failure) {}
             }
         } catch (Throwable t) {
             LogUtils.logDebug("[ROT] getFrameRotation failed at " + pos, t);
@@ -830,7 +830,7 @@ public class FrameScanner {
             BlockEntity be = level.getBlockEntity(pos);
             if (be != null && FIF.isFastItemFrameBlockEntity(be)) {
                 ItemStack s = FIF.extractHeldItem(be);
-                if (s != null && !s.isEmpty() && s.getItem() instanceof HoeItem) return s.copy();
+                if (s != null && !s.isEmpty() && s.is(ItemTags.HOES)) return s.copy();
             }
 
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class,
@@ -838,17 +838,17 @@ public class FrameScanner {
             if (!frames.isEmpty()) {
                 ItemFrame frame = frames.get(0);
                 ItemStack s = frame.getItem();
-                if (s != null && !s.isEmpty() && s.getItem() instanceof HoeItem) return s.copy();
+                if (s != null && !s.isEmpty() && s.is(ItemTags.HOES)) return s.copy();
             }
-        } catch (Throwable ignored) {}
+        }  catch (Throwable failure) {}
 
         try {
             BlockEntity be = level.getBlockEntity(pos);
             if (be != null) {
                 ItemStack s = FIF.extractHeldItem(be);
-                if (s != null && !s.isEmpty() && s.getItem() instanceof HoeItem) return s.copy();
+                if (s != null && !s.isEmpty() && s.is(ItemTags.HOES)) return s.copy();
             }
-        } catch (Throwable ignored) {}
+        }  catch (Throwable failure) {}
 
         return ItemStack.EMPTY;
     }
@@ -888,15 +888,15 @@ public class FrameScanner {
      */
     static void setFrameRotation(Level level, BlockPos pos, int newRotation, boolean bypassCooldown) {
         long gameTime = -1L;
-        try { gameTime = level != null ? level.getGameTime() : -1L; } catch (Throwable ignored) {}
+        try { gameTime = level != null ? level.getGameTime() : -1L; }  catch (Throwable failure) {}
 
         String dimId = "";
-        try { dimId = level != null ? level.dimension().identifier().toString() : ""; } catch (Throwable ignored) {}
+        try { dimId = level != null ? level.dimension().identifier().toString() : ""; }  catch (Throwable failure) {}
 
         if (bypassCooldown) {
-            try { FrameRegistry.tryRotation(dimId, pos, gameTime); } catch (Throwable ignored) {}
+            try { FrameRegistry.tryRotation(dimId, pos, gameTime); }  catch (Throwable failure) {}
             try {
-                try { LogUtils.logDebug("[ROT] Direct apply (bypass) for {} -> {} (gametime={})", pos, newRotation & 7, gameTime); } catch (Throwable ignored) {}
+                try { LogUtils.logDebug("[ROT] Direct apply (bypass) for {} -> {} (gametime={})", pos, newRotation & 7, gameTime); }  catch (Throwable failure) {}
                 applyScheduledRotation(level, pos, newRotation);
             } catch (Throwable t) {
                 LogUtils.logDebug("[ROT] applyScheduledRotation failed at " + pos, t);
@@ -906,21 +906,21 @@ public class FrameScanner {
 
             try {
             if (!FrameRegistry.tryRotation(dimId, pos, gameTime)) {
-                if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Skipped rotation for {} due to cooldown (gametime={})", pos, gameTime); } catch (Throwable ignored) {}
+                if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Skipped rotation for {} due to cooldown (gametime={})", pos, gameTime); }  catch (Throwable failure) {}
                 return;
             }
-        } catch (Throwable ignored) {}
+        }  catch (Throwable failure) {}
 
             try {
             int cur = getFrameRotation(level, pos) & 7;
             if (cur == (newRotation & 7)) {
-                if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] No-op rotation for {} (already {})", pos, cur); } catch (Throwable ignored) {}
+                if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] No-op rotation for {} (already {})", pos, cur); }  catch (Throwable failure) {}
                 return;
             }
-        } catch (Throwable ignored) {}
+        }  catch (Throwable failure) {}
 
         try {
-            try { LogUtils.logDebug("[ROT] Request scheduleRotation for {} -> {} (gametime={})", pos, newRotation & 7, gameTime); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[ROT] Request scheduleRotation for {} -> {} (gametime={})", pos, newRotation & 7, gameTime); }  catch (Throwable failure) {}
             FrameRegistry.scheduleRotation(dimId, pos, newRotation, gameTime);
         } catch (Throwable t) {
             LogUtils.logDebug("[ROT] Failed to schedule rotation for " + pos, t);
@@ -945,7 +945,7 @@ public class FrameScanner {
             } catch (Exception e) {
                 LogUtils.logTrace("[ROT] Could not read game time while applying scheduled rotation", e);
             }
-            try { LogUtils.logDebug("[ROT] applyScheduledRotation pos={} newRot={} mode={} gametime={}", pos, newRotation, Config.getRotationMode(), gameTime); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[ROT] applyScheduledRotation pos={} newRot={} mode={} gametime={}", pos, newRotation, Config.getRotationMode(), gameTime); }  catch (Throwable failure) {}
 
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(pos));
             for (ItemFrame f : frames) {
@@ -957,7 +957,7 @@ public class FrameScanner {
                             try {
                                 if (p == int.class || p == Integer.class) {
                                     m.invoke(f, newRotation);
-                                    if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
+                                    if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); }  catch (Throwable failure) {}
                                     int got = -999;
                                     try {
                                         got = f.getRotation();
@@ -979,7 +979,7 @@ public class FrameScanner {
                                 }
                                 if (p == byte.class || p == Byte.class) {
                                     m.invoke(f, (byte) newRotation);
-                                    if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); } catch (Throwable ignored) {}
+                                    if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Applied rotation on ItemFrame entity at {} => {} (method {})", pos, newRotation, m.getName()); }  catch (Throwable failure) {}
                                     int got = -999;
                                     try {
                                         got = f.getRotation();
@@ -1000,7 +1000,7 @@ public class FrameScanner {
                                     return;
                                 }
                             } catch (Throwable t) {
-                                if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Failed to invoke setter " + m.getName() + " on ItemFrame " + pos, t); } catch (Throwable ignored) {}
+                                if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Failed to invoke setter " + m.getName() + " on ItemFrame " + pos, t); }  catch (Throwable failure) {}
                             }
                         }
                     }
@@ -1008,7 +1008,7 @@ public class FrameScanner {
                         Field fld = f.getClass().getDeclaredField("rotation");
                         fld.setAccessible(true);
                         fld.setInt(f, newRotation & 7);
-                        if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Applied rotation via field on ItemFrame at {} => {}", pos, newRotation & 7); } catch (Throwable ignored) {}
+                        if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Applied rotation via field on ItemFrame at {} => {}", pos, newRotation & 7); }  catch (Throwable failure) {}
                         int got = -999;
                         try {
                             got = f.getRotation();
@@ -1038,7 +1038,7 @@ public class FrameScanner {
                         try {
                             BlockState beforeState = level.getBlockState(pos);
                             LogUtils.logDebug("[ROT-DIAG] Pre FIF.setRotation pos={} requested={} beClass={} state={}", pos, newRotation & 7, be.getClass().getName(), beforeState);
-                        } catch (Throwable ignored) {}
+                        }  catch (Throwable failure) {}
                     }
                     boolean applied = FIF.setRotation(be, newRotation);
                     if (!applied) {
@@ -1047,7 +1047,7 @@ public class FrameScanner {
                                 BlockState afterState = level.getBlockState(pos);
                                 int rb = FIF.getRotation(be);
                                 LogUtils.logDebug("[ROT] FastItemFrames rotation write did not verify at {} => {} (readBack={} stateAfter={} beClass={})", pos, newRotation & 7, rb, afterState, be.getClass().getName());
-                            } catch (Throwable ignored) {
+                            }  catch (Throwable failure) {
                                 try { LogUtils.logDebug("[ROT] FastItemFrames rotation write did not verify at {} => {}", pos, newRotation & 7); } catch (Throwable ignored2) {}
                             }
                         }
@@ -1060,7 +1060,7 @@ public class FrameScanner {
                                 BlockState afterState = level.getBlockState(pos);
                                 LogUtils.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack={} stateAfter={} beClass={})", pos, newRotation & 7, rb, afterState, be.getClass().getName());
                             } catch (Throwable logEx1) {
-                                try { LogUtils.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack={})", pos, newRotation & 7, rb); } catch (Throwable ignored) {}
+                                try { LogUtils.logDebug("[ROT] Applied rotation on FIF block-entity at {} => {} (readBack={})", pos, newRotation & 7, rb); }  catch (Throwable failure) {}
                             }
                         }
                     } catch (Throwable exGet) {
@@ -1068,7 +1068,7 @@ public class FrameScanner {
                     }
                     return;
                 } catch (Throwable t) {
-                    if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Failed to apply rotation on FIF block-entity at " + pos, t); } catch (Throwable ignored) {}
+                    if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] Failed to apply rotation on FIF block-entity at " + pos, t); }  catch (Throwable failure) {}
                 }
             }
         } catch (Throwable t) {

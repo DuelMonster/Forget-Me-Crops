@@ -18,7 +18,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.item.HoeItem;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.BarrelBlock;
@@ -96,7 +96,7 @@ public class FrameDiscovery {
                     return true;
                 }
                 try { LogUtils.logDebug("[TICK] Frame {} holds item: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable t) {}
-                if (!(held.getItem() instanceof HoeItem)) { LogUtils.logDebug("[TICK] Frame {} skipped: held item is not a hoe.", pos); return false; }
+                if (!held.is(ItemTags.HOES)) { LogUtils.logDebug("[TICK] Frame {} skipped: held item is not a hoe.", pos); return false; }
                 LogUtils.logDebug("[TICK] Discovered anchor (vanilla) at {} in {}; registering active.", pos, dimId);
                 FrameRegistry.registerFrame(dimId, pos, chest, held.copy());
                 return true;
@@ -154,7 +154,7 @@ public class FrameDiscovery {
             net.minecraft.world.item.ItemStack held = FIF.extractHeldItem(be);
             if (held != null && !held.isEmpty()) {
                 try { LogUtils.logDebug("[FIF] Held item at {}: {} x{}", pos, held.getItem().getClass().getName(), held.getCount()); } catch (Throwable t) {}
-                boolean isHoe = held.getItem() instanceof HoeItem;
+                boolean isHoe = held.is(ItemTags.HOES);
                 try { LogUtils.logDebug("[FIF] Held is HoeItem: {}", isHoe); } catch (Throwable t) {}
                 if (!isHoe) return false;
             } else {

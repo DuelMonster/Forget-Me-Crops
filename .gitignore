@@ -22,10 +22,18 @@ build
 eclipse
 run
 runs
+CurseForge.md
 
-# Local artifacts
+# Local third-party artifacts
 related_mods/
 releases/
+config/local.properties
 versions/
-*grow*
-local.properties
+!versions/
+versions/*
+!versions/*/
+versions/*/**
+!versions/*/gradle.properties
+.github/prompts/
+
+.refact/*

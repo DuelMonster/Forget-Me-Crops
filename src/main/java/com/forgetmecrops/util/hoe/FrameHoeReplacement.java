@@ -8,7 +8,7 @@ import com.forgetmecrops.util.log.LogUtils;
 import com.forgetmecrops.config.Config;
 
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.HoeItem;
+import net.minecraft.tags.ItemTags;
 
 /**
  * FrameHoeReplacement: The emergency response team when a hoe breaks mid-harvest!
@@ -48,7 +48,7 @@ public final class FrameHoeReplacement {
         try {
             // Safely cast the anchor; if it's not our type, proceed without it
             FrameScanner.Anchor anchor = null;
-            try { anchor = (FrameScanner.Anchor) ctx.anchor; } catch (Throwable ignored) {}
+            try { anchor = (FrameScanner.Anchor) ctx.anchor; }  catch (Throwable failure) {}
 
             // Step 1: peek at the first available hoe without removing it yet.
             ItemStack replacement = ChestUtils.peekFirstHoe(ctx.chest);
@@ -56,13 +56,13 @@ public final class FrameHoeReplacement {
                 boolean frameAccepted = false;
 
                 // Step 2: push a copy into the actual item frame entity via the platform layer.
-                try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, replacement.copy()); } catch (Throwable ignored) {}
+                try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, replacement.copy()); }  catch (Throwable failure) {}
 
                 if (anchor != null && ctx.level != null) {
                     try {
                         ItemStack verified = FrameScanner.readHoeFromFrame(ctx.level, anchor.framePos);
-                        frameAccepted = verified != null && !verified.isEmpty() && verified.getItem() instanceof HoeItem;
-                    } catch (Throwable ignored) {}
+                        frameAccepted = verified != null && !verified.isEmpty() && verified.is(ItemTags.HOES);
+                    }  catch (Throwable failure) {}
                 }
 
                 if (!frameAccepted) {
@@ -73,7 +73,7 @@ public final class FrameHoeReplacement {
                 // Step 3: only now remove the hoe from the chest and commit the replacement.
                 ItemStack removed = ChestUtils.takeFirstHoe(ctx.chest);
                 if (removed == null || removed.isEmpty()) {
-                    try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, ItemStack.EMPTY); } catch (Throwable ignored) {}
+                    try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, ItemStack.EMPTY); }  catch (Throwable failure) {}
                     LogUtils.logDebug("[HOE] Chest removal failed after frame write at {}; frame cleared and retry deferred.", anchor == null ? "unknown" : anchor.framePos);
                     return;
                 }
@@ -82,7 +82,7 @@ public final class FrameHoeReplacement {
                     ItemStack newHoe = removed.copy(); newHoe.setCount(1);
                     ctx.setHoe(newHoe);
                     ctx.setSkipNextDamage(true); // fresh hoe: don't immediately damage it on the first use
-                } catch (Throwable ignored) {}
+                }  catch (Throwable failure) {}
 
                 try {
                     // Step 4: update the registry cache so future ticks know the new hoe info
@@ -90,15 +90,15 @@ public final class FrameHoeReplacement {
                         String dimId = ctx.level.dimension().identifier().toString();
                         FrameRegistry.updateHoe(dimId, anchor.framePos, ctx.getHoe().isEmpty() ? removed.copy() : ctx.getHoe().copy());
                     }
-                } catch (Throwable ignored) {}
+                }  catch (Throwable failure) {}
 
                 LogUtils.logDebug("[HOE] Pulled replacement hoe from chest: {}", removed);
                 return;
             } else {
                 // No hoe found in chest at all — clear the registry entry and set a cooldown
                 LogUtils.logDebug("[HOE] No replacement hoe available in chest for frame at {}", anchor == null ? "unknown" : anchor.framePos);
-                try { if (anchor != null) { String dimId = ctx.level.dimension().identifier().toString(); FrameRegistry.updateHoe(dimId, anchor.framePos, ItemStack.EMPTY); FrameRegistry.setCooldown(dimId, anchor.framePos, Config.getChestFullCooldownTicks()); } } catch (Throwable ignored) {}
-                try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, ItemStack.EMPTY); } catch (Throwable ignored) {}
+                try { if (anchor != null) { String dimId = ctx.level.dimension().identifier().toString(); FrameRegistry.updateHoe(dimId, anchor.framePos, ItemStack.EMPTY); FrameRegistry.setCooldown(dimId, anchor.framePos, Config.getChestFullCooldownTicks()); } }  catch (Throwable failure) {}
+                try { com.forgetmecrops.platform.Services.PLATFORM.updateFrameItem(ctx.level, anchor == null ? null : anchor.framePos, ItemStack.EMPTY); }  catch (Throwable failure) {}
                 ctx.setChestFull(true);
             }
         } catch (Throwable t) { LogUtils.logWarn("[HOE] Error attempting to replace broken hoe", t); }

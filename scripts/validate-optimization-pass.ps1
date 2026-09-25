@@ -54,7 +54,8 @@ foreach ($relative in $javaFiles) {
 
     $lines = Get-Content -Path $fullPath
 
-    $imports = @($lines | Where-Object { $_ -match '^\s*import\s+.+;\s*$' } | ForEach-Object { $_.Trim() })
+    $importLines = [regex]::Replace(($lines -join "`n"), '(?s)/\*.*?\*/', '') -split "`r?`n"
+    $imports = @($importLines | Where-Object { $_ -match '^\s*import\s+.+;\s*$' } | ForEach-Object { $_.Trim() })
     if ($imports.Count -gt 0) {
         $duplicateImports = $imports | Group-Object | Where-Object { $_.Count -gt 1 } | Select-Object -ExpandProperty Name
         foreach ($dup in $duplicateImports) {

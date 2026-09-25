@@ -23,7 +23,7 @@ plugins {
     // Foojay JVM toolchain resolver — auto-provisions the right JDK
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
     // Stonecutter — the star of the show for multi-version/multi-loader magic
-    id("dev.kikugie.stonecutter") version "0.9.3"
+    id("dev.kikugie.stonecutter") version "0.9.8"
 }
 
 stonecutter {
@@ -35,19 +35,18 @@ stonecutter {
     create(rootProject) {
         // Helper that registers both a fabric and neoforge node for a given MC version.
         // Each node gets a name like "1.21.11-fabric" and targets the given MC version.
-        fun mc(mcVersion: String, loaders: Iterable<String>) =
-            loaders.forEach { version("$mcVersion-$it", mcVersion) }
+        fun mc(mcVersion: String, loaders: Iterable<String>) {
+            loaders.forEach { loader ->
+                version("$mcVersion-$loader", mcVersion)
+            }
+        }
 
-        // Supported stable release lines.
-        // Keep newest entries last for easier maintenance.
-        mc("1.21.11", loaders = listOf("fabric", "neoforge"))
-        mc("26.1.2", loaders = listOf("fabric", "neoforge"))
-        mc("26.2", loaders = listOf("fabric", "neoforge"))
+        mc("1.21.11", listOf("fabric", "neoforge"))
+        mc("26.1.2", listOf("fabric", "neoforge"))
+        mc("26.2", listOf("fabric", "neoforge"))
+        mc("26.3", listOf("fabric", "neoforge"))
 
-        // VCS reset point: the branch that "clean source" lives in.
-        // Running the "Reset active version" Stonecutter task restores the source
-        // to this state before committing — keeps the git history diff-friendly.
-        vcsVersion = "1.21.11-fabric"
+        vcsVersion = "26.3-fabric"
     }
 }
 

@@ -12,7 +12,7 @@ import com.forgetmecrops.util.ExceptionHandler;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.item.HoeItem;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 
 // package-private: shared with FrameScanner which defines the canonical constant
@@ -109,15 +109,15 @@ class FarmScanTask {
                     if (!this.ctx.getHoe().isEmpty()) {
                         ExceptionHandler.silentTry(() -> FrameRegistry.updateHoe(dimId, center, this.ctx.getHoe().copy()));
                     }
-                } catch (Throwable ignored) {}
+                }  catch (Throwable failure) {}
             } else {
                 ItemStack chosenHoe = FrameScanner.chooseScanHoe(this.ctx.getHoe(), frameHoe);
-                if (chosenHoe != null && !chosenHoe.isEmpty() && chosenHoe.getItem() instanceof HoeItem) {
+                if (chosenHoe != null && !chosenHoe.isEmpty() && chosenHoe.is(ItemTags.HOES)) {
                     this.ctx.setHoe(chosenHoe);
                     ExceptionHandler.silentTry(() -> FrameRegistry.updateHoe(dimId, center, this.ctx.getHoe().copy()));
                 }
             }
-        } catch (Throwable ignored) {}
+        }  catch (Throwable failure) {}
         this.dimId = dimId;
 
         int rX = Math.max(1, Config.getScanRangeX());
@@ -174,14 +174,14 @@ class FarmScanTask {
         // Validate anchor presence and chest integrity at the start of this tick
         try {
             if (!FrameScanner.isFrameStillPresent(level, center)) {
-                try { LogUtils.logWarn("[SCAN] Anchor frame missing at {} during scheduled scan; unregistering.", center); } catch (Throwable ignored) {}
-                try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                try { LogUtils.logWarn("[SCAN] Anchor frame missing at {} during scheduled scan; unregistering.", center); }  catch (Throwable failure) {}
+                try { FrameRegistry.unregisterFrame(dimId, center); }  catch (Throwable failure) {}
                 ctx.logSummary();
                 return true;
             }
             if (!FrameScanner.isChestStillValid(level, anchor)) {
-                try { LogUtils.logWarn("[SCAN] Anchor chest missing/changed for {} during scheduled scan; unregistering.", center); } catch (Throwable ignored) {}
-                try { FrameRegistry.unregisterFrame(dimId, center); } catch (Throwable ignored) {}
+                try { LogUtils.logWarn("[SCAN] Anchor chest missing/changed for {} during scheduled scan; unregistering.", center); }  catch (Throwable failure) {}
+                try { FrameRegistry.unregisterFrame(dimId, center); }  catch (Throwable failure) {}
                 ctx.logSummary();
                 return true;
             }
@@ -191,7 +191,7 @@ class FarmScanTask {
                 ItemStack liveHoe = FrameScanner.readHoeFromFrame(level, center);
                 if (liveHoe == null || liveHoe.isEmpty()) {
                     try { LogUtils.logDebug("[SCAN] Hoe removed from frame at {} during scheduled scan; attempting replacement from chest.", center); } catch (Throwable ignLog1) {}
-                    try { ctx.setHoe(ItemStack.EMPTY); } catch (Throwable ignored) {}
+                    try { ctx.setHoe(ItemStack.EMPTY); }  catch (Throwable failure) {}
                     try {
                         FrameHoeReplacement.tryReplaceBrokenHoe(ctx);
                         ItemStack replacedHoe = FrameScanner.readHoeFromFrame(level, center);
@@ -219,7 +219,7 @@ class FarmScanTask {
                         }
                     } catch (Throwable ignSet) {}
                 }
-            } catch (Throwable ignored) {}
+            }  catch (Throwable failure) {}
         } catch (Throwable t) {
             LogUtils.logDebug("[SCAN] Anchor re-check failed for " + center, t);
         }
@@ -237,30 +237,30 @@ class FarmScanTask {
                 if (shouldApply) {
                     if (!fullAnimationSequence.isEmpty() && fullAnimationIndex < fullAnimationSequence.size()) {
                         int next = fullAnimationSequence.get(fullAnimationIndex);
-                        try { LogUtils.logDebug("[ROT] Animation step (apply) for {} tick={} next={} idx={} remaining={}", center, tickCounter, next, fullAnimationIndex, animationStepsRemaining); } catch (Throwable ignored) {}
+                        try { LogUtils.logDebug("[ROT] Animation step (apply) for {} tick={} next={} idx={} remaining={}", center, tickCounter, next, fullAnimationIndex, animationStepsRemaining); }  catch (Throwable failure) {}
                         FrameScanner.setFrameRotation(level, center, next, true);
                         fullAnimationIndex++;
                         animationStepsRemaining--;
                     } else {
-                        if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] No animation sequence available for {} (idx={} size={})", center, fullAnimationIndex, fullAnimationSequence.size()); } catch (Throwable ignored) {}
+                        if (Config.isDebugLogging()) try { LogUtils.logDebug("[ROT] No animation sequence available for {} (idx={} size={})", center, fullAnimationIndex, fullAnimationSequence.size()); }  catch (Throwable failure) {}
                     }
                 }
-            } catch (Throwable ignored) {}
+            }  catch (Throwable failure) {}
         }
 
         if (fullAnimationScheduled && animationStepsRemaining <= 0) {
-            try { FrameRegistry.setAnimating(dimId, center, false); } catch (Throwable ignored) {}
+            try { FrameRegistry.setAnimating(dimId, center, false); }  catch (Throwable failure) {}
             fullAnimationScheduled = false;
-            try { fullAnimationSequence.clear(); } catch (Throwable ignored) {}
+            try { fullAnimationSequence.clear(); }  catch (Throwable failure) {}
             fullAnimationIndex = 0;
             fullAnimationTickCounter = 0;
-            try { LogUtils.logDebug("[ROT] Full animation complete for {} — cleared sequence", center); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[ROT] Full animation complete for {} — cleared sequence", center); }  catch (Throwable failure) {}
         }
 
         // Refresh startRotation at the start of each new cycle so a manual player rotation is honoured.
         if (currentIndex == 0) {
             startRotation = FrameScanner.getFrameRotation(level, center) & 7;
-            try { LogUtils.logDebug("[ROT] startRotation refreshed for {} => {}", center, startRotation); } catch (Throwable ignored) {}
+            try { LogUtils.logDebug("[ROT] startRotation refreshed for {} => {}", center, startRotation); }  catch (Throwable failure) {}
         }
 
         // FULL_ROTATION should begin with the scan progression, not only after a mature crop is found.
@@ -314,7 +314,7 @@ class FarmScanTask {
                     BlockState state = level.getBlockState(pos);
                     ctx.incrementBlocksScanned();
                     if (shouldEmitTrailParticles(level, pos, state)) {
-                        try { HarvestUtils.emitSpiralTrailParticles(level, pos); } catch (Throwable ignored) {}
+                        try { HarvestUtils.emitSpiralTrailParticles(level, pos); }  catch (Throwable failure) {}
                     }
 
                     // Temporary detailed debug: log per-position block/maturity and chest-space checks
@@ -323,9 +323,9 @@ class FarmScanTask {
                         int ageDbg = FrameScanner.getAgeSafe(state);
                         int thresholdDbg = FrameScanner.getMaturityThreshold(state);
                         boolean chestSpaceDbg = false;
-                    try { chestSpaceDbg = ChestUtils.hasSpace(ctx.chest); } catch (Throwable ignored) {}
-                        try { LogUtils.logDebug("[SCAN-DBG] pos={} block={} isCrop={} age={} threshold={} chestHasSpace={} beforeHarvest={}", pos, state.getBlock().getClass().getName(), isCropDbg, ageDbg, thresholdDbg, chestSpaceDbg, beforeHarvest); } catch (Throwable ignored) {}
-                    } catch (Throwable ignored) {}
+                    try { chestSpaceDbg = ChestUtils.hasSpace(ctx.chest); }  catch (Throwable failure) {}
+                        try { LogUtils.logDebug("[SCAN-DBG] pos={} block={} isCrop={} age={} threshold={} chestHasSpace={} beforeHarvest={}", pos, state.getBlock().getClass().getName(), isCropDbg, ageDbg, thresholdDbg, chestSpaceDbg, beforeHarvest); }  catch (Throwable failure) {}
+                    }  catch (Throwable failure) {}
 
                     Block block = state.getBlock();
                     boolean harvested = false;
@@ -370,7 +370,7 @@ class FarmScanTask {
                     if (harvested) ringHarvested = true;
                     if (harvested) { anyHarvested = true; lastHarvestedRing = ring; }
 
-                    try { FrameScanner.tryAutoPlantAndTill(anchor, ctx, pos, level); } catch (Throwable ignored) {}
+                    try { FrameScanner.tryAutoPlantAndTill(anchor, ctx, pos, level); }  catch (Throwable failure) {}
 
                 } catch (Throwable t) {
                     LogUtils.logDebug("[SCAN] Exception while scanning " + center, t);
@@ -481,13 +481,13 @@ class FarmScanTask {
                 fullAnimationIndex++;
                 animationStepsRemaining--;
             }
-            try { LogUtils.logDebug("[ROT] Prepared full animation sequence for {} start={} seq={}", center, start, fullAnimationSequence); } catch (Throwable ignored) {}
-        } catch (Throwable ignored) {
+            try { LogUtils.logDebug("[ROT] Prepared full animation sequence for {} start={} seq={}", center, start, fullAnimationSequence); }  catch (Throwable failure) {}
+        }  catch (Throwable failure) {
             animationStepsRemaining = 8;
             int remainingScanTicks = Math.max(1, numberOfTicksNeeded - tickCounter + 1);
             animationInterval = Math.max(1, (int) Math.ceil((double) remainingScanTicks / 8.0));
         }
-        try { FrameRegistry.setAnimating(dimId, center, true); } catch (Throwable ignored) {}
+        try { FrameRegistry.setAnimating(dimId, center, true); }  catch (Throwable failure) {}
     }
 }
 

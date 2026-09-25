@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 0.25.0
+
+- Add initial Minecraft 26.3 compatibility work for Fabric and NeoForge, including Java 25 support.
+- Support NeoForge 26.3 with a compatible ModDevGradle toolchain.
+- Add startup lifecycle diagnostics and remove mixin-based startup hooks and configuration.
+
 ## 0.24.0
 
 - Fix `26.2-neoforge` and `26.1.2-neoforge` publishing byte-identical jars to CurseForge: `minecraft_version_range` and `cloth_config_version_range` are now derived per Stonecutter node instead of a fixed literal shared by every MC version.

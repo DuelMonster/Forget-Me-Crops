@@ -46,6 +46,8 @@ public class ForgetMeCrops {
      * </p>
      */
     public static void init() {
+        LogUtils.logInfo("[INIT] ForgetMeCrops.init() entered; config loaded={}, debugLogging={}", CONFIG != null, Config.isDebugLogging());
+
         // This method is called by loader-specific entrypoints (ModEntry for Fabric, different path for NeoForge)
         // The assumption: CONFIG has already been populated by the time we get here
         // The result: everything below this comment works with that assumption as gospel
@@ -54,10 +56,17 @@ public class ForgetMeCrops {
         // Let the world know we're alive. This line is our flag in the sand, our "we're here!"
         LogUtils.logInfo("Mod initialization started! If you see this, the core logic is alive and kicking.");
 
+        try {
+            LogUtils.logInfo("[INIT] Core init sanity check complete; thread={}, loader={}", Thread.currentThread().getName(), System.getProperty("java.vendor", "unknown"));
+        } catch (Throwable t) {
+            LogUtils.logWarn("[INIT] Startup sanity check threw", t);
+        }
+
         // FastItemFrames adapter detection is deferred to first use, not here.
         // Why? Because classloading during startup is expensive. We'll probe when we actually need it.
 
         // Debug-status messaging is now emitted at server/world load time.
+        LogUtils.logInfo("[INIT] ForgetMeCrops.init() finished.");
     }
 
     /**

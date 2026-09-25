@@ -75,10 +75,11 @@ public class FarmTicker {
     //? if fabric {
     // Registers all Fabric lifecycle event listeners (chunk load/unload, server tick, server stop).
     public static void init() {
-        //? if >=26.1 {
-        /*ServerChunkEvents.CHUNK_LOAD.register((level, chunk, generated) -> {*/
+        LogUtils.logInfo("[TICK] FarmTicker.init() starting; thread={}", Thread.currentThread().getName());
+        //? if mc1 {
+        /*ServerChunkEvents.CHUNK_LOAD.register((level, chunk) -> {*/
         //?} else {
-        ServerChunkEvents.CHUNK_LOAD.register((level, chunk) -> {
+        ServerChunkEvents.CHUNK_LOAD.register((level, chunk, generated) -> {
         //?}
             try {
                 LogUtils.logTrace("[TICK] Chunk-load event for chunk {} in {}", chunk.getPos(), level.dimension().identifier().toString());
@@ -172,10 +173,16 @@ public class FarmTicker {
         // Announce debug-logging status now that the server is fully loaded and config is settled.
         // (We don't do this at mod init because config might still be in flux.)
         ServerLifecycleEvents.SERVER_STARTED.register((MinecraftServer server) -> {
+            LogUtils.logInfo("[TICK] SERVER_STARTED received; attempting world-load debug status announcement.");
             try { ForgetMeCrops.logDebugStatusAtWorldLoad(); } catch (Exception t) { LogUtils.logWarn("[TICK] Failed to announce debug logging status on server start", t); }
         });
 
         ServerTickEvents.END_SERVER_TICK.register((MinecraftServer server) -> {
+            int worldCount = 0;
+            for (ServerLevel ignored : server.getAllLevels()) {
+                worldCount++;
+            }
+            LogUtils.logTrace("[TICK] END_SERVER_TICK received; world count={}", worldCount);
             try {
                 for (ServerLevel level : server.getAllLevels()) {
                     String dimId = level.dimension().identifier().toString();

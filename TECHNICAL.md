@@ -22,11 +22,13 @@ Fabric Loom and NeoForge ModDevGradle behind a shared DSL.
 | `versions/26.1.2-neoforge`  | Stonecutter node: `modstitch.platform=moddevgradle`                           |
 | `versions/26.2-fabric`      | Stonecutter node: `modstitch.platform=fabric-loom`                            |
 | `versions/26.2-neoforge`    | Stonecutter node: `modstitch.platform=moddevgradle`                           |
+| `versions/26.3-fabric`      | Stonecutter node: `modstitch.platform=fabric-loom`                            |
+| `versions/26.3-neoforge`    | Stonecutter node: `modstitch.platform=moddevgradle`                           |
 | `src/main/templates/`       | `fabric.mod.json` and `META-INF/neoforge.mods.toml` with `${property}` tokens |
 
 The VCS (uncommitted working state) always reflects the **Fabric** branch: Fabric code is
 uncommented, NeoForge platform branches are wrapped in `/* ... */` Stonecutter-managed block
-comments. The `stonecutter active "1.21.11-fabric"` line in `stonecutter.gradle.kts` records this.
+comments. The `stonecutter active "26.3-fabric"` line in `stonecutter.gradle.kts` records this.
 
 ### Stonecutter Condition Syntax
 
@@ -57,7 +59,6 @@ Conditions supported: `fabric`, `neoforge`, `>=1.21.11`, `>=26.1`, compound (`fa
 | `com.forgetmecrops.util.log`         | `LogUtils` — gated debug/trace logging                                                            |
 | `com.forgetmecrops.platform`         | `PlatformHelper` (unified SPI impl, conditions pick platform), `Services`                         |
 | `com.forgetmecrops.platform.adapter` | `FIF`, `FastItemFrameAdapterImpl` — FastItemFrames integration                                    |
-| `com.forgetmecrops.mixin`            | Accessor mixins for chunk enumeration (`MixinMinecraft`, `MixinTitleScreen`)                      |
 | `com.forgetmecrops.ticker`           | `FarmTicker` — platform-conditional server-tick event wiring                                      |
 
 ---
@@ -389,7 +390,6 @@ Falls back cleanly to vanilla paths when FIF is not installed.
 - Ticker: `ServerTickEvent.Post` drives the per-tick scan. Wired via `IEventBus.addListener` in `FarmTicker.init(IEventBus)`.
 - Config files: uses the same shared TOML loader/saver as Fabric (`Config.load()` / `Config.save()` writing `forgetmecrops-client.toml` and `forgetmecrops-server.toml`).
 - Config screen: registered via `ModContainer.registerExtensionPoint(IConfigScreenFactory.class, ...)` in `ModEntry`, using `ConfigScreenFactoryBridge` as the factory implementation. This is what enables the Configure button in NeoForge's Mods list.
-- Mixin config: both loaders share `forgetmecrops.mixins.json` (registered in `META-INF/neoforge.mods.toml` `[[mixins]]` section).
 
 ---
 
@@ -484,7 +484,7 @@ All paths are relative to `src/main/java/com/forgetmecrops/`.
 
 ### Prerequisites
 
-- JDK 21
+- JDK 21 and JDK 25 (Gradle runs on JDK 25; Minecraft 1.21.11 targets Java 21 and 26.x targets Java 25)
 - Gradle (wrapper included — `gradlew` / `gradlew.bat`)
 
 ### Build System
@@ -492,6 +492,8 @@ All paths are relative to `src/main/java/com/forgetmecrops/`.
 Forget-Me-Crops uses [Stonecutter](https://stonecutter.kikugie.dev/) for version/platform slicing
 and [Modstitch](https://github.com/isXander/modstitch) to abstract Fabric Loom vs NeoForge
 ModDevGradle. Publishing uses [mod-publish-plugin](https://github.com/modmuss50/mod-publish-plugin).
+The root build pins ModDevGradle 2.0.147 because Modstitch 0.8.5's transitive 2.0.141 version
+fails to recompile Minecraft 26.3 sources.
 
 Nodes are registered in `settings.gradle.kts`; Stonecutter reads the active VCS version from
 `stonecutter.gradle.kts`. Each node's `versions/<name>/gradle.properties` sets `modstitch.platform`.

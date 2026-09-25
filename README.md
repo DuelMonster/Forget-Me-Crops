@@ -107,7 +107,7 @@ Special behavior:
 
 | Component | Version                |
 | --------- | ---------------------- |
-| Minecraft | 1.21.11, 26.1.2, 26.2  |
+| Minecraft | 1.21.11, 26.1.2, 26.2, 26.3 |
 | Java      | 21 (1.21.x), 25 (26.x) |
 
 ### Fabric
@@ -117,6 +117,7 @@ Special behavior:
 | 1.21.11        | 0.19.2        | 0.140.0+1.21.11 | 17.0.0        |
 | 26.1.2         | 0.19.2        | 0.148.0+26.1.2  | 18.0.0-beta.1 |
 | 26.2           | 0.19.3        | 0.152.1+26.2    | 20.0.0-beta.2 |
+| 26.3           | 0.19.5        | 0.160.5+26.3    | 20.0.0        |
 
 Drop the matching `Forget-Me-Crops_<version>+<minecraft>-fabric.jar` into your `mods/` folder with Fabric API.
 Mod Menu is optional, but recommended for in-game config editing.
@@ -128,6 +129,9 @@ Mod Menu is optional, but recommended for in-game config editing.
 | 1.21.11        | 21.11.42       |
 | 26.1.2         | 26.1.2.43-beta |
 | 26.2           | 26.2.0.7-beta  |
+| 26.3           | 26.3.0.16-beta |
+
+NeoForge 26.3 is supported with the current ModDevGradle toolchain.
 
 Drop the matching `Forget-Me-Crops_<version>+<minecraft>-neoforge.jar` into your `mods/` folder.
 Use the Mods list Configure button for the config UI.
@@ -137,8 +141,7 @@ Cloth Config is pinned per line for compatibility:
 - `21.11.153` on 1.21.11
 - `26.1.154` on 26.1.2
 - `26.2.155` on 26.2
-
-Both loaders use the same unified mixin config: `forgetmecrops.mixins.json`.
+- `26.2.155` on 26.3 (verify a newer 26.3 release before publishing)
 
 ---
 ## Configuration

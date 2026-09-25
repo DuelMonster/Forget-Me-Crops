@@ -26,14 +26,43 @@ public class ModEntry implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        Config.load();
+        LogUtils.logInfo("[INIT] ModEntry.onInitialize starting; thread={}, java={}.", Thread.currentThread().getName(), System.getProperty("java.version", "unknown"));
         try {
+            LogUtils.logInfo("[INIT] Loading config...");
+            Config.load();
+            LogUtils.logInfo("[INIT] Config load complete.");
+        } catch (Throwable t) {
+            LogUtils.logError("[INIT] Config.load() threw an exception", t);
+            throw t;
+        }
+
+        try {
+            LogUtils.logInfo("[INIT] Applying configured logging...");
             LogUtils.applyConfiguredLogging();
+            LogUtils.logInfo("[INIT] Logging configuration applied.");
         } catch (Exception e) {
             LogUtils.logDebug("[INIT] Failed to apply configured logging early", e);
         }
-        ForgetMeCrops.init();
-        FarmTicker.init();
+
+        try {
+            LogUtils.logInfo("[INIT] Starting ForgetMeCrops.init()...");
+            ForgetMeCrops.init();
+            LogUtils.logInfo("[INIT] ForgetMeCrops.init() completed.");
+        } catch (Throwable t) {
+            LogUtils.logError("[INIT] ForgetMeCrops.init() threw an exception", t);
+            throw t;
+        }
+
+        try {
+            LogUtils.logInfo("[INIT] Starting FarmTicker.init()...");
+            FarmTicker.init();
+            LogUtils.logInfo("[INIT] FarmTicker.init() completed.");
+        } catch (Throwable t) {
+            LogUtils.logError("[INIT] FarmTicker.init() threw an exception", t);
+            throw t;
+        }
+
+        LogUtils.logInfo("[INIT] ModEntry.onInitialize complete.");
     }
 }
 //?} else {
