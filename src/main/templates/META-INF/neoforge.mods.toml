@@ -9,7 +9,7 @@ issueTrackerURL = "${mod_issue_tracker}"
     displayName = "${mod_name}"
     description = '''${mod_description}'''
     authors     = "${mod_author}"
-    logoFile    = "assets/forget_me_crops/icon.png"
+    iconFile    = "assets/forget_me_crops/icon.png"
 
 [[dependencies.${mod_id}]]
     modId        = "neoforge"

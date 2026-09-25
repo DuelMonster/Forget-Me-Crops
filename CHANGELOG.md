@@ -3,6 +3,7 @@
 ## 0.26.0
 
 - Remove deprecated Cloth Config and NeoForge API calls while preserving dropdown, sound, and enchantment behavior.
+- Replace NeoForge's deprecated `logoFile` metadata field with the supported `iconFile` property.
 
 ## 0.25.0
 
